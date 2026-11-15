@@ -1,0 +1,106 @@
+# =========================
+# macOS
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+.DocumentRevisions-V100/
+.TemporaryItems/
+.VolumeIcon.icns
+
+# =========================
+# Xcode
+# =========================
+DerivedData/
+build/
+Build/
+*.xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Xcode workspace user data
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# =========================
+# Build products
+# =========================
+*.app
+*.appex
+*.dSYM
+*.dSYM.zip
+*.xcarchive
+*.ipa
+
+# =========================
+# Swift Package Manager
+# =========================
+.build/
+.swiftpm/
+
+# Keep Package.resolved tracked for app projects.
+
+# =========================
+# CocoaPods
+# =========================
+Pods/
+
+# =========================
+# Carthage
+# =========================
+Carthage/Build/
+
+# =========================
+# Fastlane generated files
+# =========================
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# =========================
+# Profiling and coverage
+# =========================
+*.profraw
+*.profdata
+default.profraw
+*.gcda
+*.gcno
+
+# =========================
+# Local configuration
+# =========================
+.env
+.env.*
+!.env.example
+!.env.sample
+
+
+opencode.json
+
+# Uncomment if these files are local-only
+# local.xcconfig
+# Secrets.xcconfig
+
+# =========================
+# Logs and temporary files
+# =========================
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Sparkle signing key exports
+sparkle-private-key*
