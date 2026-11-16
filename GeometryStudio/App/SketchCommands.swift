@@ -26,12 +26,20 @@ struct SketchCommands: Commands {
         }
 
         CommandGroup(replacing: .undoRedo) {
-            Button("Undo") { model.undo() }
+            Button(model.undoActionName.map { "Undo \($0)" } ?? "Undo") { model.undo() }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(!model.canUndo)
-            Button("Redo") { model.redo() }
+            Button(model.redoActionName.map { "Redo \($0)" } ?? "Redo") { model.redo() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(!model.canRedo)
+            Menu("Undo History") {
+                Text("Current State")
+                Divider()
+                ForEach(model.undoHistory.reversed()) { step in
+                    Button(step.name) { model.revert(toUndoDepth: step.id) }
+                }
+            }
+            .disabled(!model.canUndo)
         }
 
         CommandGroup(after: .pasteboard) {

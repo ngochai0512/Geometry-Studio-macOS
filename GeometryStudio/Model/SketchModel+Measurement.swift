@@ -43,7 +43,7 @@ extension SketchModel {
             refs = [id]
         }
         _ = e
-        checkpoint()
+        checkpoint("Measure \(kind.title)")
         let id = commit(kind: .measurement(kind, refs: refs), label: "")
         selection = [id]
         statusMessage = "\(kind.title) measured"
@@ -52,7 +52,7 @@ extension SketchModel {
     func addCalculation(expression: String) {
         let trimmed = expression.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        checkpoint()
+        checkpoint("Add Calculation")
         let id = commit(kind: .calculation(trimmed), label: "")
         selection = [id]
         isDirty = true

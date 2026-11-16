@@ -237,7 +237,7 @@ struct InspectorView: View {
         HStack(spacing: 6) {
             ForEach(RGBA.palette, id: \.0) { name, color in
                 Button {
-                    applyToSelection { object in
+                    applyToSelection("Change Color") { object in
                         object.style.color = color
                     }
                 } label: {
@@ -490,7 +490,7 @@ struct InspectorView: View {
             get: { model.objectByID(id)?.label ?? "" },
             set: { value in
                 guard let i = model.index(of: id) else { return }
-                model.checkpoint()
+                model.checkpoint("Edit Label", coalescing: "label-\(id)")
                 model.objects[i].label = value
                 model.isDirty = true
             }
@@ -506,6 +506,7 @@ struct InspectorView: View {
             set: { value in
                 guard let i = model.index(of: id) else { return }
                 if case .caption = model.objects[i].kind {
+                    model.checkpoint("Edit Text", coalescing: "caption-\(id)")
                     model.objects[i].kind = .caption(value)
                     model.isDirty = true
                 }
@@ -518,7 +519,7 @@ struct InspectorView: View {
             get: { model.objectByID(id)?.showLabel ?? true },
             set: { value in
                 guard let i = model.index(of: id) else { return }
-                model.checkpoint()
+                model.checkpoint(value ? "Show Label" : "Hide Label")
                 model.objects[i].showLabel = value
                 model.isDirty = true
             }
@@ -530,7 +531,7 @@ struct InspectorView: View {
             get: { model.objectByID(id)?.visible ?? true },
             set: { value in
                 guard let i = model.index(of: id) else { return }
-                model.checkpoint()
+                model.checkpoint(value ? "Show Object" : "Hide Object")
                 model.objects[i].visible = value
                 model.isDirty = true
             }
@@ -540,35 +541,47 @@ struct InspectorView: View {
     private var lineWidthBinding: Binding<Double> {
         Binding(
             get: { model.selectedObjects.first?.style.lineWidth ?? 1.5 },
-            set: { value in applyToSelection { $0.style.lineWidth = value } }
+            set: { value in
+                applyToSelection("Change Line Width", coalescing: "line-width") {
+                    $0.style.lineWidth = value
+                }
+            }
         )
     }
 
     private var dashBinding: Binding<DashStyle> {
         Binding(
             get: { model.selectedObjects.first?.style.dash ?? .solid },
-            set: { value in applyToSelection { $0.style.dash = value } }
+            set: { value in applyToSelection("Change Dash") { $0.style.dash = value } }
         )
     }
 
     private var pointShapeBinding: Binding<PointShape> {
         Binding(
             get: { model.selectedObjects.first?.style.pointShape ?? .filled },
-            set: { value in applyToSelection { $0.style.pointShape = value } }
+            set: { value in applyToSelection("Change Point Shape") { $0.style.pointShape = value } }
         )
     }
 
     private var pointSizeBinding: Binding<Double> {
         Binding(
             get: { model.selectedObjects.first?.style.pointSize ?? 5.5 },
-            set: { value in applyToSelection { $0.style.pointSize = value } }
+            set: { value in
+                applyToSelection("Change Point Size") {
+                    $0.style.pointSize = value
+                }
+            }
         )
     }
 
     private var fillBinding: Binding<Double> {
         Binding(
             get: { model.selectedObjects.first?.style.fillOpacity ?? 0.1 },
-            set: { value in applyToSelection { $0.style.fillOpacity = value } }
+            set: { value in
+                applyToSelection("Change Fill", coalescing: "fill") {
+                    $0.style.fillOpacity = value
+                }
+            }
         )
     }
 
@@ -581,7 +594,7 @@ struct InspectorView: View {
             set: { newValue in
                 let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .black
                 let c = RGBA(Double(ns.redComponent), Double(ns.greenComponent), Double(ns.blueComponent))
-                applyToSelection { $0.style.color = c }
+                applyToSelection("Change Color", coalescing: "colour") { $0.style.color = c }
             }
         )
     }
@@ -590,9 +603,10 @@ struct InspectorView: View {
         model.selectedObjects.contains { isRegionObject($0) }
     }
 
-    private func applyToSelection(_ change: (inout SketchObject) -> Void) {
+    private func applyToSelection(_ name: String, coalescing key: String? = nil,
+                                  _ change: (inout SketchObject) -> Void) {
         guard !model.selection.isEmpty else { return }
-        model.checkpoint()
+        model.checkpoint(name, coalescing: key)
         for id in model.selection {
             if let i = model.index(of: id) {
                 change(&model.objects[i])

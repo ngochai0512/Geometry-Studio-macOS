@@ -22,7 +22,7 @@ extension SketchModel {
 
     func deleteSelection() {
         guard !selection.isEmpty else { return }
-        checkpoint()
+        checkpoint(selection.count == 1 ? "Delete Object" : "Delete \(selection.count) Objects")
         var doomed = Set(selection)
         var changed = true
         while changed {
@@ -64,7 +64,7 @@ extension SketchModel {
 
     func hideSelection() {
         guard !selection.isEmpty else { return }
-        checkpoint()
+        checkpoint(selection.count == 1 ? "Hide Object" : "Hide \(selection.count) Objects")
         for id in selection {
             if let i = index(of: id) { objects[i].visible = false }
         }
@@ -74,7 +74,7 @@ extension SketchModel {
     }
 
     func showAll() {
-        checkpoint()
+        checkpoint("Show All Objects")
         for i in objects.indices { objects[i].visible = true }
         isDirty = true
         statusMessage = "All hidden objects are visible again"
@@ -82,7 +82,7 @@ extension SketchModel {
 
     func toggleLabels(for ids: [UUID]) {
         guard !ids.isEmpty else { return }
-        checkpoint()
+        checkpoint("Toggle Labels")
         for id in ids {
             if let i = index(of: id) { objects[i].showLabel.toggle() }
         }
@@ -99,7 +99,6 @@ extension SketchModel {
         guard let hit = hitTest(p, tolerance: tolerance), let object = objectByID(hit) else { return nil }
         switch object.kind {
         case .freePoint, .pointOnPath:
-            checkpoint()
             return hit
         default:
             return nil
@@ -180,7 +179,7 @@ extension SketchModel {
     func setCaptionText(_ id: UUID, _ text: String) {
         guard let i = index(of: id) else { return }
         if case .caption = objects[i].kind {
-            checkpoint()
+            checkpoint("Edit Text")
             objects[i].kind = .caption(text)
             isDirty = true
         }

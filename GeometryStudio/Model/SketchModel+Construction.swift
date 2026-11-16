@@ -30,7 +30,7 @@ extension SketchModel {
     func constructMidpoint() {
         let pts = selectedPoints()
         if pts.count >= 2 {
-            checkpoint()
+            checkpoint("Construct Midpoint")
             let id = commit(kind: .midpoint(a: pts[0], b: pts[1]), label: nextPointLabel())
             selection = [id]
             statusMessage = "Midpoint created"
@@ -38,7 +38,7 @@ extension SketchModel {
         }
         var e = evaluator()
         if let pathID = selectedPaths().first, let s = e.path(pathID)?.straight {
-            checkpoint()
+            checkpoint("Construct Midpoint")
             let a = ensureSilentPoint(at: s.a)
             let b = ensureSilentPoint(at: s.b)
             let id = commit(kind: .midpoint(a: a, b: b), label: nextPointLabel())
@@ -56,7 +56,7 @@ extension SketchModel {
             statusMessage = "Select a point and a straight object"
             return
         }
-        checkpoint()
+        checkpoint("Construct Perpendicular")
         let id = commit(kind: .perpendicular(line: line, point: point), label: "")
         selection = [id]
         statusMessage = "Perpendicular created"
@@ -69,7 +69,7 @@ extension SketchModel {
             statusMessage = "Select a point and a straight object"
             return
         }
-        checkpoint()
+        checkpoint("Construct Parallel")
         let id = commit(kind: .parallel(line: line, point: point), label: "")
         selection = [id]
         statusMessage = "Parallel created"
@@ -81,7 +81,7 @@ extension SketchModel {
             statusMessage = "Select three points, with the vertex in the middle"
             return
         }
-        checkpoint()
+        checkpoint("Construct Angle Bisector")
         let id = commit(kind: .angleBisector(a: pts[0], vertex: pts[1], c: pts[2]), label: "")
         selection = [id]
         statusMessage = "Angle bisector created"
@@ -100,7 +100,7 @@ extension SketchModel {
             statusMessage = "Those objects do not meet"
             return
         }
-        checkpoint()
+        checkpoint("Construct Intersection")
         var created: [UUID] = []
         for i in hits.indices {
             let id = commit(kind: .intersection(a: paths[0], b: paths[1], index: i), label: nextPointLabel())
@@ -116,7 +116,7 @@ extension SketchModel {
             statusMessage = "Select at least two points"
             return
         }
-        checkpoint()
+        checkpoint("Construct Segment")
         var created: [UUID] = []
         for i in 0..<(pts.count - 1) {
             created.append(commit(kind: .segment(a: pts[i], b: pts[i + 1]), label: ""))
@@ -131,7 +131,7 @@ extension SketchModel {
             statusMessage = "Select a center point and a point on the circle"
             return
         }
-        checkpoint()
+        checkpoint("Construct Circle")
         let id = commit(kind: .circle(center: pts[0], through: pts[1]), label: "")
         selection = [id]
         statusMessage = "Circle created"
@@ -143,7 +143,7 @@ extension SketchModel {
             statusMessage = "Select at least three points"
             return
         }
-        checkpoint()
+        checkpoint("Construct Polygon")
         let id = commit(kind: .polygon(vertices: pts), label: "")
         selection = [id]
         statusMessage = "Polygon created"
@@ -158,7 +158,7 @@ extension SketchModel {
         var e = evaluator()
         guard let path = e.path(id) else { return }
         let worldCenter = settings.center
-        checkpoint()
+        checkpoint("Construct Point on Path")
         let newID = commit(kind: .pointOnPath(path: id, param: path.nearestParam(to: worldCenter)),
                             label: nextPointLabel())
         selection = [newID]
@@ -194,7 +194,7 @@ extension SketchModel {
             statusMessage = "That expression could not be read"
             return
         }
-        checkpoint()
+        checkpoint("Plot Function")
         let id = commit(kind: .functionPlot(trimmed), label: "")
         selection = [id]
         isDirty = true

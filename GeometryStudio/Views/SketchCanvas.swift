@@ -13,6 +13,7 @@ struct SketchCanvas: View {
     @State var dragLabelBaseOffset: Vec2 = .zero
     @State var dragLabelBasePosition: Vec2 = .zero
     @State var dragLabelIsCaption = false
+    @State var dragCheckpointed = false
     @State var didMove = false
     @State var marqueeStart: CGPoint?
     @State var marqueeCurrent: CGPoint?

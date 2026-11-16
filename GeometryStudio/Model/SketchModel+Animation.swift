@@ -106,7 +106,7 @@ extension SketchModel {
             statusMessage = "Select the driven point after its driver"
             return
         }
-        checkpoint()
+        checkpoint("Construct Locus")
         var object = SketchObject(kind: .locus(driver: driver.id, target: target.id))
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.style.color = .violet

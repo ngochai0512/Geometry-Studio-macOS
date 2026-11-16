@@ -13,6 +13,7 @@ extension SketchCanvas {
                 if dragStartScreen == nil {
                     dragStartScreen = value.startLocation
                     dragStartWorld = world
+                    dragCheckpointed = false
                     didMove = false
 
                     if model.tool == .select {
@@ -29,7 +30,6 @@ extension SketchCanvas {
                                 dragLabelBaseOffset = object.offset
                                 dragLabelBasePosition = object.position ?? .zero
                                 if case .caption = object.kind { dragLabelIsCaption = true } else { dragLabelIsCaption = false }
-                                model.checkpoint()
                                 model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
                             } else {
                                 model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
@@ -48,8 +48,17 @@ extension SketchCanvas {
                 }
 
                 if let id = dragPointID, didMove {
+                    if !dragCheckpointed {
+                        let label = model.objectByID(id)?.label ?? ""
+                        model.checkpoint(label.isEmpty ? "Move Point" : "Move \(label)")
+                        dragCheckpointed = true
+                    }
                     model.dragPoint(id, to: current)
                 } else if let id = dragLabelID, didMove {
+                    if !dragCheckpointed {
+                        model.checkpoint("Move Label")
+                        dragCheckpointed = true
+                    }
                     let total = Vec2((value.location.x - value.startLocation.x) / model.settings.scale,
                                      -(value.location.y - value.startLocation.y) / model.settings.scale)
                     if dragLabelIsCaption {
@@ -68,6 +77,7 @@ extension SketchCanvas {
                     dragPointID = nil
                     dragLabelID = nil
                     dragLabelIsCaption = false
+                    dragCheckpointed = false
                     didMove = false
                     marqueeStart = nil
                     marqueeCurrent = nil
@@ -91,33 +101,36 @@ extension SketchCanvas {
 
                 if didMove {
                     if [.segment, .ray, .line].contains(model.tool) {
-                        model.draft = []
-                        let a = model.ensurePoint(at: start, tolerance: tol)
-                        let b = model.ensurePoint(at: end, tolerance: tol)
-                        guard a != b else { return }
-                        model.checkpoint()
-                        let kind: ObjectKind = model.tool == .segment ? .segment(a: a, b: b)
-                            : model.tool == .ray ? .ray(a: a, b: b) : .line(a: a, b: b)
-                        var object = SketchObject(kind: kind)
-                        object.order = (model.objects.map(\.order).max() ?? 0) + 1
-                        model.objects.append(object)
-                        model.selection = [object.id]
-                        model.isDirty = true
-                        model.statusMessage = "\(model.tool.title) created"
+                        let tool = model.tool
+                        model.perform("Draw \(tool.title)") {
+                            model.draft = []
+                            let a = model.ensurePoint(at: start, tolerance: tol)
+                            let b = model.ensurePoint(at: end, tolerance: tol)
+                            guard a != b else { return }
+                            let kind: ObjectKind = tool == .segment ? .segment(a: a, b: b)
+                                : tool == .ray ? .ray(a: a, b: b) : .line(a: a, b: b)
+                            var object = SketchObject(kind: kind)
+                            object.order = (model.objects.map(\.order).max() ?? 0) + 1
+                            model.objects.append(object)
+                            model.selection = [object.id]
+                            model.isDirty = true
+                            model.statusMessage = "\(tool.title) created"
+                        }
                         return
                     }
                     if model.tool == .circle {
-                        model.draft = []
-                        let center = model.ensurePoint(at: start, tolerance: tol)
-                        let edge = model.ensurePoint(at: end, tolerance: tol)
-                        guard center != edge else { return }
-                        model.checkpoint()
-                        var object = SketchObject(kind: .circle(center: center, through: edge))
-                        object.order = (model.objects.map(\.order).max() ?? 0) + 1
-                        model.objects.append(object)
-                        model.selection = [object.id]
-                        model.isDirty = true
-                        model.statusMessage = "Circle created"
+                        model.perform("Draw Circle") {
+                            model.draft = []
+                            let center = model.ensurePoint(at: start, tolerance: tol)
+                            let edge = model.ensurePoint(at: end, tolerance: tol)
+                            guard center != edge else { return }
+                            var object = SketchObject(kind: .circle(center: center, through: edge))
+                            object.order = (model.objects.map(\.order).max() ?? 0) + 1
+                            model.objects.append(object)
+                            model.selection = [object.id]
+                            model.isDirty = true
+                            model.statusMessage = "Circle created"
+                        }
                         return
                     }
                 }

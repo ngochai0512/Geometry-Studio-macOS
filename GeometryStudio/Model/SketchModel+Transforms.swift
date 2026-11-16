@@ -14,7 +14,7 @@ extension SketchModel {
             statusMessage = "Select objects to reflect as well as the mirror"
             return
         }
-        checkpoint()
+        checkpoint("Reflect")
         var created: [UUID] = []
         for source in sources {
             let spec = TransformSpec(kind: .reflect, reference: mirror)
@@ -30,7 +30,7 @@ extension SketchModel {
             statusMessage = "Select objects to rotate as well as the center"
             return
         }
-        checkpoint()
+        checkpoint("Rotate")
         var created: [UUID] = []
         for source in sources {
             let spec = TransformSpec(kind: .rotate, reference: center, angle: degrees)
@@ -46,7 +46,7 @@ extension SketchModel {
             statusMessage = "Select objects to dilate as well as the center"
             return
         }
-        checkpoint()
+        checkpoint("Dilate")
         var created: [UUID] = []
         for source in sources {
             let spec = TransformSpec(kind: .dilate, reference: center, factor: factor)
@@ -59,7 +59,7 @@ extension SketchModel {
     func translateSelection(dx: Double, dy: Double) {
         let sources = selection
         guard !sources.isEmpty else { statusMessage = "Select objects to translate"; return }
-        checkpoint()
+        checkpoint("Translate")
         var created: [UUID] = []
         for source in sources {
             let spec = TransformSpec(kind: .translate, dx: dx, dy: dy)
