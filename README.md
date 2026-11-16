@@ -8,33 +8,31 @@ lines, circles and polygons, then drag a free point and watch every dependent ob
 
 ## Build and run
 
-The window and every control are SwiftUI. Craft Anything's build runner looks for a Rust package
-in `app/`, so a small Rust program (`src/main.rs`) is the entry point: its build script builds the
-Swift package and it starts the SwiftUI program, passing on every argument.
+A Swift package: no Xcode project, no package dependencies.
 
 ```sh
-cd app
-cargo build
-./target/debug/geometry-studio
+swift build
+swift run GeometryStudio
 ```
 
-The Swift package alone also builds and runs:
+Release build:
 
 ```sh
 swift build -c release
 ./.build/release/GeometryStudio
 ```
 
-The package targets macOS 13 or newer and builds `arm64` on Apple silicon.
+The package targets macOS 13 or newer and builds `arm64` on Apple silicon. `swift test` runs the
+geometry and document suites.
 
 ## Screenshot mode
 
 ```sh
-./target/debug/geometry-studio --screenshot shots/now.png
+./.build/release/GeometryStudio --screenshot /tmp/geometry-studio.png
 ```
 
 This opens a borderless window without activating the app, draws for 120 frames, writes the
-window as a PNG and exits. It is used by Craft Anything's after-build check.
+window as a PNG and exits.
 
 ## Core features
 
