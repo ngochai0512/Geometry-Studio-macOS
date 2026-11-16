@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Show tool versions
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build package
+        run: swift build
+
+      - name: Test package
+        run: swift test
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build app target
+        run: |
+          xcodebuild \
+            -project GeometryStudio.xcodeproj \
+            -scheme GeometryStudio \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Screenshot smoke test
+        run: |
+          ./.build/debug/GeometryStudio --screenshot "$RUNNER_TEMP/geometry-studio.png"
+          test -s "$RUNNER_TEMP/geometry-studio.png"
