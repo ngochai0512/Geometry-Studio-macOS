@@ -11,6 +11,11 @@ let package = Package(
         .executableTarget(
             name: "GeometryStudio",
             path: "Sources/GeometryStudio"
+        ),
+        .testTarget(
+            name: "GeometryStudioTests",
+            dependencies: ["GeometryStudio"],
+            path: "Tests/GeometryStudioTests"
         )
     ]
 )
