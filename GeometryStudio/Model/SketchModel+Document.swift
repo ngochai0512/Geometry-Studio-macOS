@@ -18,7 +18,7 @@ extension SketchModel {
         let panel = NSSavePanel()
         panel.title = "Save Sketch"
         panel.nameFieldStringValue = document.title.hasSuffix(".gsp") ? document.title : "\(document.title).gsp"
-        panel.allowedContentTypes = [UTType(filenameExtension: "gsp") ?? .json]
+        panel.allowedContentTypes = [.geometryStudioSketch]
         panel.canCreateDirectories = true
         if panel.runModal() == .OK, let url = panel.url {
             write(to: url)
@@ -51,7 +51,7 @@ extension SketchModel {
     func open() {
         let panel = NSOpenPanel()
         panel.title = "Open Sketch"
-        panel.allowedContentTypes = [UTType(filenameExtension: "gsp") ?? .json, .json]
+        panel.allowedContentTypes = [.geometryStudioSketch, .json]
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
             open(url: url)

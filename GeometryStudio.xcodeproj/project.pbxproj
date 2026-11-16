@@ -1,0 +1,476 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14EE8E59899A6B4CEE8DAA15 /* SketchModel+Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8DD4BF90DBAC1E2A2E2089 /* SketchModel+Animation.swift */; };
+		1B61E4208705088E2DEDAD6E /* CanvasGestures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC37130557CCCAC5266E3412 /* CanvasGestures.swift */; };
+		1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */; };
+		1DC8DFD35102CC82FD1D865E /* SketchModel+Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */; };
+		201210E8796702D94029395D /* SketchFileType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6871105ED6530E352D506C92 /* SketchFileType.swift */; };
+		264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6FB36DE4B209586B261A8D9 /* FlowChips.swift */; };
+		2B927B8FFADA6563BE26A524 /* Vec2.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7CE4D4166BA82AE96C89FC /* Vec2.swift */; };
+		32719F743D3D96E961F8B46D /* SketchModel+Measurement.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA967A89B8DDAC13140B973 /* SketchModel+Measurement.swift */; };
+		33218E02121C46D250A02473 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21056A4CBEA9102B7A633016 /* AppPreferences.swift */; };
+		33F4FF25F20332C380C5FCBE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 974C9AAAADD178B2F891A6EF /* SettingsView.swift */; };
+		413BBEC323A38A20ADF6591A /* SketchCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD2AFA7548106CEEBBB5CC8 /* SketchCanvas.swift */; };
+		52C2520C9243975422883406 /* ObjectModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */; };
+		67D19938E4DAE806E7FB5863 /* SketchCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA0B98068B8910DB665EC1A /* SketchCommands.swift */; };
+		730327073EEB52FCEFCB09CC /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3565491E3C34157DFB2DA5D /* Style.swift */; };
+		76008DD6BEB15A98EB96EF30 /* CanvasDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */; };
+		78653049FF99B1AEB423C4F0 /* Units.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE812B7A2607107B1662098 /* Units.swift */; };
+		7A9751786EE46AF3910FCD27 /* SketchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD94619FE28C1A84A15F234 /* SketchModel.swift */; };
+		7D110007C69433E9D00CF00C /* SketchModel+ToolActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7A3A2632A524E4A2442C3C2 /* SketchModel+ToolActions.swift */; };
+		913070FC776E0178999C03EB /* Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C88C96DAAA8F36C4AA4F10 /* Document.swift */; };
+		9AE5BD39B082AE1C8C59DDA3 /* SketchModel+Construction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEF0D062D574EBCC1500345 /* SketchModel+Construction.swift */; };
+		9EE8CEE82FC0465DA11AD86A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 727F065C238FED4F7D4752EF /* Assets.xcassets */; };
+		A152B0518F680FBA18DF900E /* SketchModel+Editing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */; };
+		A1DD7605A40C2622A702D660 /* DocumentRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9D5F5A216DDEEA43DED7C1 /* DocumentRecovery.swift */; };
+		A67DCB97BAFB82E9E7EC13AE /* SketchModel+Transforms.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76807891B2874426D4693D2 /* SketchModel+Transforms.swift */; };
+		AAF47E7FEE2CDFC480520747 /* Screenshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F29B45506E99E9917D36 /* Screenshot.swift */; };
+		AE145A66C363197F6771192B /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0175EEB4CA34D2001C398FC /* InspectorView.swift */; };
+		B5EB5244755B10A628200F4A /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90511DD8EE80C641A87A0547 /* AboutView.swift */; };
+		BD57E62A90232E51EF78544C /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 351FBEF1D414BA5044D76F8B /* main.swift */; };
+		CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987F7F66DD38C75F1D729436 /* EvalPath.swift */; };
+		D9F459FEE6D63C39CBDF2DCA /* SketchModel+Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = 943AB5074D23FD89B8256FD5 /* SketchModel+Document.swift */; };
+		DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */; };
+		EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB58632CC8F51EBE9099D9C2 /* Expression.swift */; };
+		EE60F31F6E7148993377E610 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A28D11FAD1ACA69B2FD090 /* ContentView.swift */; };
+		F41B301D645636947C4E408F /* SketchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CBF4F3CF6F57DFEED22C979 /* SketchTool.swift */; };
+		FA3DF62EF19D9A0ACF5375B6 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4594827027731B183A45097B /* Notifications.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		08A28D11FAD1ACA69B2FD090 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0921F29B45506E99E9917D36 /* Screenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screenshot.swift; sourceTree = "<group>"; };
+		0B9D5F5A216DDEEA43DED7C1 /* DocumentRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRecovery.swift; sourceTree = "<group>"; };
+		14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectModel.swift; sourceTree = "<group>"; };
+		21056A4CBEA9102B7A633016 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		2CBF4F3CF6F57DFEED22C979 /* SketchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchTool.swift; sourceTree = "<group>"; };
+		2FEF0D062D574EBCC1500345 /* SketchModel+Construction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Construction.swift"; sourceTree = "<group>"; };
+		351FBEF1D414BA5044D76F8B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasDrawing.swift; sourceTree = "<group>"; };
+		4594827027731B183A45097B /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
+		4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Editing.swift"; sourceTree = "<group>"; };
+		4DD94619FE28C1A84A15F234 /* SketchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchModel.swift; sourceTree = "<group>"; };
+		6871105ED6530E352D506C92 /* SketchFileType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchFileType.swift; sourceTree = "<group>"; };
+		6AD2AFA7548106CEEBBB5CC8 /* SketchCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchCanvas.swift; sourceTree = "<group>"; };
+		6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryEval.swift; sourceTree = "<group>"; };
+		727F065C238FED4F7D4752EF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8CE812B7A2607107B1662098 /* Units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Units.swift; sourceTree = "<group>"; };
+		90511DD8EE80C641A87A0547 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		943AB5074D23FD89B8256FD5 /* SketchModel+Document.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Document.swift"; sourceTree = "<group>"; };
+		974C9AAAADD178B2F891A6EF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		987F7F66DD38C75F1D729436 /* EvalPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvalPath.swift; sourceTree = "<group>"; };
+		AB58632CC8F51EBE9099D9C2 /* Expression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expression.swift; sourceTree = "<group>"; };
+		AC37130557CCCAC5266E3412 /* CanvasGestures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasGestures.swift; sourceTree = "<group>"; };
+		B2C88C96DAAA8F36C4AA4F10 /* Document.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Document.swift; sourceTree = "<group>"; };
+		BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Geometry.swift"; sourceTree = "<group>"; };
+		BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryStudioApp.swift; sourceTree = "<group>"; };
+		BCA967A89B8DDAC13140B973 /* SketchModel+Measurement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Measurement.swift"; sourceTree = "<group>"; };
+		C7A3A2632A524E4A2442C3C2 /* SketchModel+ToolActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+ToolActions.swift"; sourceTree = "<group>"; };
+		D76807891B2874426D4693D2 /* SketchModel+Transforms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Transforms.swift"; sourceTree = "<group>"; };
+		DAA0B98068B8910DB665EC1A /* SketchCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchCommands.swift; sourceTree = "<group>"; };
+		DB8DD4BF90DBAC1E2A2E2089 /* SketchModel+Animation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Animation.swift"; sourceTree = "<group>"; };
+		E0175EEB4CA34D2001C398FC /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
+		E6FB36DE4B209586B261A8D9 /* FlowChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowChips.swift; sourceTree = "<group>"; };
+		E94BD59BC83A8F9EC6FC9EAE /* GeometryStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeometryStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3565491E3C34157DFB2DA5D /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
+		FA7CE4D4166BA82AE96C89FC /* Vec2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vec2.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0B9C81C96556813477C33743 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */,
+				4594827027731B183A45097B /* Notifications.swift */,
+				0921F29B45506E99E9917D36 /* Screenshot.swift */,
+				DAA0B98068B8910DB665EC1A /* SketchCommands.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		499E0CAC2D88C6BF7E6107F8 /* Geometry */ = {
+			isa = PBXGroup;
+			children = (
+				987F7F66DD38C75F1D729436 /* EvalPath.swift */,
+				AB58632CC8F51EBE9099D9C2 /* Expression.swift */,
+				F3565491E3C34157DFB2DA5D /* Style.swift */,
+				8CE812B7A2607107B1662098 /* Units.swift */,
+				FA7CE4D4166BA82AE96C89FC /* Vec2.swift */,
+			);
+			path = Geometry;
+			sourceTree = "<group>";
+		};
+		54943C2C3A14D734B9517891 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E94BD59BC83A8F9EC6FC9EAE /* GeometryStudio.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		56F2ECC38BF2D20A5F641BCC /* App */ = {
+			isa = PBXGroup;
+			children = (
+				727F065C238FED4F7D4752EF /* Assets.xcassets */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		6305C66E8BCB457233DA59B6 /* GeometryStudio */ = {
+			isa = PBXGroup;
+			children = (
+				351FBEF1D414BA5044D76F8B /* main.swift */,
+				0B9C81C96556813477C33743 /* App */,
+				499E0CAC2D88C6BF7E6107F8 /* Geometry */,
+				BBBC9468D48FBBBFEF38A4B7 /* Model */,
+				ACFD166EE2E67A3122422D36 /* Views */,
+			);
+			path = GeometryStudio;
+			sourceTree = "<group>";
+		};
+		ACFD166EE2E67A3122422D36 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				90511DD8EE80C641A87A0547 /* AboutView.swift */,
+				3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */,
+				AC37130557CCCAC5266E3412 /* CanvasGestures.swift */,
+				08A28D11FAD1ACA69B2FD090 /* ContentView.swift */,
+				E6FB36DE4B209586B261A8D9 /* FlowChips.swift */,
+				E0175EEB4CA34D2001C398FC /* InspectorView.swift */,
+				974C9AAAADD178B2F891A6EF /* SettingsView.swift */,
+				6AD2AFA7548106CEEBBB5CC8 /* SketchCanvas.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		BBBC9468D48FBBBFEF38A4B7 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				21056A4CBEA9102B7A633016 /* AppPreferences.swift */,
+				B2C88C96DAAA8F36C4AA4F10 /* Document.swift */,
+				0B9D5F5A216DDEEA43DED7C1 /* DocumentRecovery.swift */,
+				6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */,
+				14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */,
+				6871105ED6530E352D506C92 /* SketchFileType.swift */,
+				4DD94619FE28C1A84A15F234 /* SketchModel.swift */,
+				DB8DD4BF90DBAC1E2A2E2089 /* SketchModel+Animation.swift */,
+				2FEF0D062D574EBCC1500345 /* SketchModel+Construction.swift */,
+				943AB5074D23FD89B8256FD5 /* SketchModel+Document.swift */,
+				4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */,
+				BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */,
+				BCA967A89B8DDAC13140B973 /* SketchModel+Measurement.swift */,
+				C7A3A2632A524E4A2442C3C2 /* SketchModel+ToolActions.swift */,
+				D76807891B2874426D4693D2 /* SketchModel+Transforms.swift */,
+				2CBF4F3CF6F57DFEED22C979 /* SketchTool.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		C40D64D45D7BD4496BB57FE8 = {
+			isa = PBXGroup;
+			children = (
+				56F2ECC38BF2D20A5F641BCC /* App */,
+				6305C66E8BCB457233DA59B6 /* GeometryStudio */,
+				54943C2C3A14D734B9517891 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5739AD860436FE0D192B040F /* GeometryStudio */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38FFC9F555030B7FD7020ADD /* Build configuration list for PBXNativeTarget "GeometryStudio" */;
+			buildPhases = (
+				85A9AF737D4E43D52D82B047 /* Sources */,
+				4B438F9EAC0AA2A6E978D8CD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GeometryStudio;
+			packageProductDependencies = (
+			);
+			productName = GeometryStudio;
+			productReference = E94BD59BC83A8F9EC6FC9EAE /* GeometryStudio.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3D1BB8D493D0980E1F88DACD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					5739AD860436FE0D192B040F = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = E18BC143D706AFBA329B97F6 /* Build configuration list for PBXProject "GeometryStudio" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C40D64D45D7BD4496BB57FE8;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 54943C2C3A14D734B9517891 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5739AD860436FE0D192B040F /* GeometryStudio */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4B438F9EAC0AA2A6E978D8CD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EE8CEE82FC0465DA11AD86A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		85A9AF737D4E43D52D82B047 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B5EB5244755B10A628200F4A /* AboutView.swift in Sources */,
+				33218E02121C46D250A02473 /* AppPreferences.swift in Sources */,
+				76008DD6BEB15A98EB96EF30 /* CanvasDrawing.swift in Sources */,
+				1B61E4208705088E2DEDAD6E /* CanvasGestures.swift in Sources */,
+				EE60F31F6E7148993377E610 /* ContentView.swift in Sources */,
+				913070FC776E0178999C03EB /* Document.swift in Sources */,
+				A1DD7605A40C2622A702D660 /* DocumentRecovery.swift in Sources */,
+				CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */,
+				EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */,
+				264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */,
+				DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */,
+				1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */,
+				AE145A66C363197F6771192B /* InspectorView.swift in Sources */,
+				FA3DF62EF19D9A0ACF5375B6 /* Notifications.swift in Sources */,
+				52C2520C9243975422883406 /* ObjectModel.swift in Sources */,
+				AAF47E7FEE2CDFC480520747 /* Screenshot.swift in Sources */,
+				33F4FF25F20332C380C5FCBE /* SettingsView.swift in Sources */,
+				413BBEC323A38A20ADF6591A /* SketchCanvas.swift in Sources */,
+				67D19938E4DAE806E7FB5863 /* SketchCommands.swift in Sources */,
+				201210E8796702D94029395D /* SketchFileType.swift in Sources */,
+				14EE8E59899A6B4CEE8DAA15 /* SketchModel+Animation.swift in Sources */,
+				9AE5BD39B082AE1C8C59DDA3 /* SketchModel+Construction.swift in Sources */,
+				D9F459FEE6D63C39CBDF2DCA /* SketchModel+Document.swift in Sources */,
+				A152B0518F680FBA18DF900E /* SketchModel+Editing.swift in Sources */,
+				1DC8DFD35102CC82FD1D865E /* SketchModel+Geometry.swift in Sources */,
+				32719F743D3D96E961F8B46D /* SketchModel+Measurement.swift in Sources */,
+				7D110007C69433E9D00CF00C /* SketchModel+ToolActions.swift in Sources */,
+				A67DCB97BAFB82E9E7EC13AE /* SketchModel+Transforms.swift in Sources */,
+				7A9751786EE46AF3910FCD27 /* SketchModel.swift in Sources */,
+				F41B301D645636947C4E408F /* SketchTool.swift in Sources */,
+				730327073EEB52FCEFCB09CC /* Style.swift in Sources */,
+				78653049FF99B1AEB423C4F0 /* Units.swift in Sources */,
+				2B927B8FFADA6563BE26A524 /* Vec2.swift in Sources */,
+				BD57E62A90232E51EF78544C /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1615C50363D172256B6582C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.geometrystudio.GeometryStudio;
+				PRODUCT_NAME = GeometryStudio;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		30895B1AEC6436B49953F09B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		344C12CAE8868AE4BEE4A36C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.geometrystudio.GeometryStudio;
+				PRODUCT_NAME = GeometryStudio;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		F7DDF77F0B8302EAA634A2E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		38FFC9F555030B7FD7020ADD /* Build configuration list for PBXNativeTarget "GeometryStudio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				344C12CAE8868AE4BEE4A36C /* Debug */,
+				1615C50363D172256B6582C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E18BC143D706AFBA329B97F6 /* Build configuration list for PBXProject "GeometryStudio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7DDF77F0B8302EAA634A2E7 /* Debug */,
+				30895B1AEC6436B49953F09B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3D1BB8D493D0980E1F88DACD /* Project object */;
+}

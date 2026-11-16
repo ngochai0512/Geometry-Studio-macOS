@@ -1,0 +1,45 @@
+name: GeometryStudio
+
+options:
+  bundleIdPrefix: com.geometrystudio
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  xcodeVersion: "15.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+
+targets:
+  GeometryStudio:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: GeometryStudio
+      - path: App/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_NAME: GeometryStudio
+        PRODUCT_BUNDLE_IDENTIFIER: com.geometrystudio.GeometryStudio
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+
+schemes:
+  GeometryStudio:
+    build:
+      targets:
+        GeometryStudio: all
+    run:
+      config: Debug
+    archive:
+      config: Release

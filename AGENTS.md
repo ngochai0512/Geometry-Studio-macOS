@@ -7,13 +7,13 @@ This file instructs AI coding agents working in this repo. Humans: `README.md` i
 Read this before exploring; it saves a full README pass.
 
 - Native macOS SwiftUI app: a dynamic geometry sketchpad (points, lines, circles, polygons, constructions, measurements, transforms, a graph). Built for Apple silicon; macOS 13 floor.
-- Build system: **Swift Package Manager only.** No `.xcodeproj`, no CocoaPods, no CI workflows. `Package.swift` is the single build description; the target declares `path: "Sources/GeometryStudio"`.
+- Build system: two descriptions, one source of truth per job. `Package.swift` defines the executable and test targets and drives `swift build`, `swift test` and `swift run`. `project.yml` (XcodeGen 2.46) generates `GeometryStudio.xcodeproj`, the app target that carries `Info.plist`, the exported `gsp` document type and the icon. Never hand-edit the generated project: change `project.yml` and run `xcodegen generate`.
 - Entry point: `main.swift` → `GeometryStudioApp.main()` in `App/GeometryStudioApp.swift`. That file must not gain `@main` while `main.swift` exists — two entry points do not compile.
 - Layering, one concern per file:
   - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`).
   - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`, revision and salvage), `DocumentRecovery.swift` (autosave drafts, recovery offers), `AppPreferences.swift` (new-sketch defaults), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms,Document}.swift`.
   - `Views/` — `ContentView.swift` (chrome, toolbar, sheets, alerts), `InspectorView.swift`, `SettingsView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
-  - `App/` — `GeometryStudioApp.swift` (scene), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path).
+  - `App/` — `GeometryStudioApp.swift` (scene), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path); bundle resources in `App/Info.plist` and `App/Assets.xcassets`.
 - `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
 - Persisted shape: `SketchDocument { version, objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The document carries a schema revision (`SketchDocument.currentVersion`) and migrates older revisions while decoding; models decode missing keys with their defaults, so a new field does not invalidate old sketches. Refuse a revision from a newer build instead of dropping keys.
@@ -52,24 +52,26 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 ## 1. Verify, Don't Assume
 
 - Read the code before changing it. Never edit from memory of an earlier turn.
-- Use SwiftPM directly (no wrapper scripts, no `xcodebuild`):
+- Use the two build paths directly, with no wrapper scripts:
 
   ```sh
-  # Debug build while iterating
+  # Package targets: fast loop, tests and the headless render
   swift build
-
-  # Release build
   swift build -c release
-
-  # Run the windowed app
+  swift test
   swift run GeometryStudio
-
-  # Headless render used for visual checks: 120 frames, writes a PNG, exits
   ./.build/release/GeometryStudio --screenshot /tmp/geometry-studio.png
+
+  # App bundle: Info.plist, exported gsp type, icon
+  xcodegen generate
+  open GeometryStudio.xcodeproj
+  xcodebuild -project GeometryStudio.xcodeproj -scheme GeometryStudio -configuration Debug build
   ```
 
+  Both paths compile the same `GeometryStudio/` sources; keep both green. The generated project is disposable — regenerate it from `project.yml` rather than editing it.
+
 - Tests cover the pure-value core: `swift test` runs the `GeometryStudioTests` suite. They use no windows, timers, files or network — keep them that way.
-- If SwiftPM's own manifest sandbox cannot start because it is already nested inside a sandbox (`sandbox-exec: sandbox_apply: Operation not permitted`), pass `--disable-sandbox` to the SwiftPM command. That disables SwiftPM's redundant nested sandbox only; never weaken the app's App Sandbox or entitlements.
+- If a build fails because a nested sandbox blocks SwiftPM's manifest or the compiler's macro plugin server, stop and report it. Do not add sandbox-bypass flags such as `--disable-sandbox` (section 2).
 - Automated visual checks use `--screenshot`. It must keep working without activating the app or stealing focus; a normal `swift run` does activate it, so don't leave one running in a background job.
 - After any change: rebuild and confirm zero new warnings. The warning bar is zero — today's warning is tomorrow's build error.
 - When behavior is in question, `MECHANICS.md` wins over "how other geometry apps do it". Do not quietly substitute a standard convention for a documented observation.
@@ -86,7 +88,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 - Never skip hooks or amend someone else's commit.
 - Never run `sudo`, `rm -rf`, or `defaults write` / `defaults delete`. Don't touch system settings or files outside the repo.
 - Only touch files/folders explicitly named in the task or a path the user gives you. If a task seems to require anything outside that scope, stop and ask rather than assuming it is in bounds.
-- Off-limits without an explicit ask: `Package.swift` (target layout and manifest), `MECHANICS.md` (the observed spec), `.gitignore`. Structural changes here invalidate the build or the record of what was verified.
+- Off-limits without an explicit ask: `Package.swift` (target layout and manifest), `project.yml` (bundle identity, resources and app settings), `MECHANICS.md` (the observed spec), `.gitignore`. Structural changes here invalidate the build or the record of what was verified.
 
 ### File Deletion Policy
 
@@ -116,9 +118,11 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 ## 5. Toolchain
 
 - `swift-tools-version: 5.9`; Swift 5 language mode; minimum deployment target macOS 13.0; builds `arm64` on Apple silicon.
-- Xcode 15 or later to open the package (`open Package.swift`, or `xed .`). Xcode is optional: `swift build` is the source of truth, and the build must succeed without an `.xcodeproj`.
+- XcodeGen 2.46 generates `GeometryStudio.xcodeproj` from `project.yml`; run `xcodegen generate` after changing the spec. The generated project is not the source of truth.
+- Xcode 15 or later builds the app target. Xcode is still optional for the package targets: `swift build` and `swift test` must keep working without opening the project, and both paths compile the same sources.
 - If local Xcode and the command line differ, say which one you built with rather than silently reporting a result from the other.
-- There is no app bundle, `Info.plist`, entitlement, or code signing in this build. Consequence to remember: without an exported `gsp` type declaration, `UTType(filenameExtension: "gsp")` returns `nil` and the open/save panels fall back to `.json`. Don't add a workaround that only works when bundled.
+- The app bundle declares `com.geometrystudio.gsp` (conforms to `public.json`) and owns `.gsp` files. `UTType.geometryStudioSketch` mirrors that declaration so the open and save panels filter correctly under `swift run` too. Bundle identifier `com.geometrystudio.GeometryStudio` and marketing version `0.1.0` are provisional.
+- There are no entitlements and no App Sandbox yet; signing is automatic/ad-hoc, and notarization is not set up (item #9). Do not claim the app is sandboxed or notarized.
 
 ## 6. Conventions
 
@@ -172,6 +176,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
+- [ ] `xcodegen generate` reflects `project.yml`, and the app target builds with zero new warnings.
 - [ ] `swift test` passes (37 tests, 7 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
@@ -204,8 +209,6 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 
 ## 12. Shipping Status
 
-Nothing is set up yet: no CI workflow, no release process, no signed `.app`, no icon, no versioning scheme. The repo builds and runs as an unbundled executable.
-
-Anything in that list is a design decision, not a chore: propose the approach and get approval before building it. Two constraints to carry into that discussion: a real bundle needs an exported `gsp` document type for the open/save panels to filter correctly, and distributing an app that reimplements a trademarked product needs its own naming and legal review.
+A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. Still missing: CI, a real signing identity, notarization, Sparkle updates and a release process. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. Two constraints remain: a distributed app needs its signing and notarization plan, and shipping a reimplementation of a trademarked product needs its own naming and legal review.
 
 `README.md` still describes a Rust launcher and `cargo build` from the project this code came from; that launcher is not in this repo. When you next touch the README, correct the build section to the SwiftPM commands in section 1.

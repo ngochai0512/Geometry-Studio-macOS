@@ -8,11 +8,27 @@ lines, circles and polygons, then drag a free point and watch every dependent ob
 
 ## Build and run
 
-A Swift package: no Xcode project, no package dependencies.
+Two build descriptions share one source tree. `Package.swift` drives the SwiftPM targets and
+tests; `project.yml` generates the Xcode app that carries `Info.plist`, the exported `gsp`
+document type and the icon.
+
+App bundle:
+
+```sh
+xcodegen generate
+open GeometryStudio.xcodeproj
+```
+
+Choose the `GeometryStudio` scheme and Run. Generate the project again after changing
+`project.yml`; the project file itself is disposable. XcodeGen is the only extra tool
+(`brew install xcodegen`).
+
+Package targets, for a fast edit/run loop and for tests:
 
 ```sh
 swift build
 swift run GeometryStudio
+swift test
 ```
 
 Release build:
@@ -22,8 +38,8 @@ swift build -c release
 ./.build/release/GeometryStudio
 ```
 
-The package targets macOS 13 or newer and builds `arm64` on Apple silicon. `swift test` runs the
-geometry and document suites.
+Both target macOS 13 or newer and build `arm64` on Apple silicon. `swift test` runs the
+geometry, document and undo suites.
 
 ## Screenshot mode
 
@@ -32,7 +48,7 @@ geometry and document suites.
 ```
 
 This opens a borderless window without activating the app, draws for 120 frames, writes the
-window as a PNG and exits.
+window as a PNG and exits. The app-bundle binary accepts the same flag.
 
 ## Core features
 
