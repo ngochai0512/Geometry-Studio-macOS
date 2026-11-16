@@ -237,13 +237,6 @@ extension SketchCanvas {
             for pt in pts.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
             context.stroke(p, with: .color(color.opacity(glow ? 0.18 : 1)), style: strokeStyle)
 
-        case .polyline(let pts):
-            guard pts.count > 1 else { break }
-            var p = Path()
-            p.move(to: model.screenPoint(pts[0], size: size))
-            for pt in pts.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
-            context.stroke(p, with: .color(color.opacity(glow ? 0.18 : 1)), style: strokeStyle)
-
         case .functionPlot(let expression):
             drawFunction(expression: expression, style: style, selected: selected, glow: glow,
                          context: &context, size: size, rect: rect)
@@ -261,8 +254,6 @@ extension SketchCanvas {
         var current: Path?
         var path = Path()
         var began = false
-        var e = model.evaluator()
-        _ = e
         while x <= rect.maxX {
             if let y = p.evaluate(x: x), y.isFinite, abs(y) < 1e7 {
                 let pt = model.screenPoint(Vec2(x, y), size: size)

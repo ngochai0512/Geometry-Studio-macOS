@@ -206,7 +206,7 @@ enum EvalPath {
     func length(settings: CanvasSettings) -> Double? {
         switch self {
         case .segment(let a, let b): return a.distance(to: b)
-        case .circle(let _, let r): return 2 * .pi * r
+        case .circle(_, let r): return 2 * .pi * r
         case .polygon(let pts): return polygonLength(pts)
         case .polyline(let pts): return polygonLength(pts)
         case .ray, .line, .functionPlot: return nil

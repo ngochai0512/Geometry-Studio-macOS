@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 struct ContentView: View {
     @ObservedObject var model: SketchModel
@@ -204,7 +205,7 @@ struct ContentView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("\(tool.title) (\(tool.shortcut.character))")
+                .help("\(tool.title) (\(String(tool.shortcut.character)))")
             }
         }
         .padding(3)

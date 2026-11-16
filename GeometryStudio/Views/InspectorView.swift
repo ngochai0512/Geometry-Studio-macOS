@@ -480,7 +480,7 @@ struct InspectorView: View {
         case .calculation: return "Calculation"
         case .caption: return "Caption"
         case .functionPlot: return "Function plot"
-        case .transformed(let _, let spec): return "\(spec.kind.title) image"
+        case .transformed(_, let spec): return "\(spec.kind.title) image"
         case .locus: return "Locus"
         }
     }

@@ -88,7 +88,7 @@ final class SketchModel: ObservableObject {
         }
         let ab = add(kind: .segment(a: a, b: b), silent: true)
         let bc = add(kind: .segment(a: b, b: c), silent: true)
-        let ca = add(kind: .segment(a: c, b: a), silent: true)
+        _ = add(kind: .segment(a: c, b: a), silent: true)
 
         let d = add(kind: .midpoint(a: a, b: b), label: "D", silent: true)
         let e = add(kind: .midpoint(a: b, b: c), label: "E", silent: true)

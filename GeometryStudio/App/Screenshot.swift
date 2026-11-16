@@ -32,18 +32,22 @@ enum ScreenshotRunner {
         var frames = 0
         var finished = false
         let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { timer in
-            frames += 1
-            hosting.layoutSubtreeIfNeeded()
-            hosting.displayIfNeeded()
-            if frames >= 120 && !finished {
-                finished = true
-                timer.invalidate()
-                let saved = capture(window: window, hosting: hosting, fallbackContent: content,
-                                    width: width, height: height, path: outputPath)
-                if !saved {
-                    fputs("Could not save the screenshot to \(outputPath)\n", stderr)
+            // The timer is scheduled on RunLoop.main, so this is already the main
+            // thread; assumeIsolated states that for the main-actor work below.
+            MainActor.assumeIsolated {
+                frames += 1
+                hosting.layoutSubtreeIfNeeded()
+                hosting.displayIfNeeded()
+                if frames >= 120 && !finished {
+                    finished = true
+                    timer.invalidate()
+                    let saved = capture(window: window, hosting: hosting, fallbackContent: content,
+                                        width: width, height: height, path: outputPath)
+                    if !saved {
+                        fputs("Could not save the screenshot to \(outputPath)\n", stderr)
+                    }
+                    app.terminate(nil)
                 }
-                app.terminate(nil)
             }
         }
         RunLoop.main.add(timer, forMode: .common)
