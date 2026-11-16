@@ -11,9 +11,9 @@ Read this before exploring; it saves a full README pass.
 - Entry point: `main.swift` → `GeometryStudioApp.main()` in `App/GeometryStudioApp.swift`. That file must not gain `@main` while `main.swift` exists — two entry points do not compile.
 - Layering, one concern per file:
   - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`).
-  - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`, revision and salvage), `DocumentRecovery.swift` (autosave drafts, recovery offers), `AppPreferences.swift` (new-sketch defaults), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms,Document}.swift`.
-  - `Views/` — `ContentView.swift` (chrome, toolbar, sheets, alerts), `InspectorView.swift`, `SettingsView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
-  - `App/` — `GeometryStudioApp.swift` (scene), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path); bundle resources in `App/Info.plist` and `App/Assets.xcassets`.
+  - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`, revision and salvage), `SketchFileDocument.swift` (the `FileDocument` SwiftUI reads and writes), `AppPreferences.swift` (new-sketch defaults), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms}.swift`.
+  - `Views/` — `ContentView.swift` (chrome, toolbar, sheets), `DocumentWorkspace.swift` (document/model sync and focused values), `InspectorView.swift`, `SettingsView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
+  - `App/` — `GeometryStudioApp.swift` (document scene), `FocusedSketchModel.swift` (active window for menus), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path); bundle resources in `App/Info.plist` and `App/Assets.xcassets`.
 - `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
 - Persisted shape: `SketchDocument { version, objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The document carries a schema revision (`SketchDocument.currentVersion`) and migrates older revisions while decoding; models decode missing keys with their defaults, so a new field does not invalidate old sketches. Refuse a revision from a newer build instead of dropping keys.
@@ -156,7 +156,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 ## 7. Error Handling
 
-- Document I/O reports through `statusMessage` and names the operation ("Could not save: …", "That file could not be opened: …"). Never crash and never fail silently.
+- SwiftUI's `DocumentGroup`/`FileDocument` owns opening and saving. `SketchFileDocument` throws on unreadable files and falls back to `SketchDocument.salvage` for partly damaged ones; the window surfaces that once. Do not reintroduce hand-rolled open/save panels. Interactive failures still report through `statusMessage`. Never crash and never fail silently.
 - `try?` and empty `catch` blocks require a one-line comment explaining why ignoring the error is safe.
 - Decoding must tolerate a missing new field. Never add a non-optional `Codable` property without a default value; that turns every previously saved sketch into an error. When a change cannot be additive, bump `SketchDocument.currentVersion` and add a step to its migration ladder.
 - No force-unwraps or `try!` in model or math code. `!` is acceptable only where the invariant is local and obvious within a few lines.
@@ -164,7 +164,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 ## 8. Testing
 
-- The test target is `GeometryStudioTests`, built from `Tests/GeometryStudioTests/` and linked with `@testable import GeometryStudio`. Do not add a second test target without a reason.
+- The test target is `GeometryStudioTests`, built from `GeometryStudioTests/` and linked with `@testable import GeometryStudio`. Do not add a second test target without a reason.
 - Keep the suites pure-value: `EvalPath` intersections (line/line, line/circle, circle/circle), `Expression` parsing and evaluation, unit conversion, `GeometryEval` parent ordering, document round-trip. Construct `SketchObject` values directly.
 - A new pure type arrives with a test in the matching suite. UI behavior is verified with `--screenshot`, never by adding test infrastructure that needs a window.
 - Determinism: no windows, no timers, no wall-clock, no filesystem.
@@ -177,7 +177,7 @@ Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `xcodegen generate` reflects `project.yml`, and the app target builds with zero new warnings.
-- [ ] `swift test` passes (37 tests, 7 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (39 tests, 7 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
@@ -209,6 +209,6 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 
 ## 12. Shipping Status
 
-A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. Still missing: CI, a real signing identity, notarization, Sparkle updates and a release process. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. Two constraints remain: a distributed app needs its signing and notarization plan, and shipping a reimplementation of a trademarked product needs its own naming and legal review.
+A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. CI (`.github/workflows/ci.yml`) builds the package, runs the tests, builds the app and runs the screenshot check. Tagged `v*` releases build a universal Developer ID app, notarize and staple it, and publish a zip to GitHub Releases (`RELEASING.md`). Still missing: a signing identity and notarization secrets in this repo, Sparkle updates, DMG packaging and a versioning policy beyond tags. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. Shipping a reimplementation of a trademarked product still needs its own naming and legal review.
 
 `README.md` still describes a Rust launcher and `cargo build` from the project this code came from; that launcher is not in this repo. When you next touch the README, correct the build section to the SwiftPM commands in section 1.

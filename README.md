@@ -41,6 +41,10 @@ swift build -c release
 Both target macOS 13 or newer and build `arm64` on Apple silicon. `swift test` runs the
 geometry, document and undo suites.
 
+CI runs the package build, the tests and the app target on every push and pull request. Tagged
+releases build a universal, signed and notarized app and publish it to GitHub Releases; see
+`RELEASING.md` for the required secrets and the release steps.
+
 ## Screenshot mode
 
 ```sh
@@ -65,9 +69,10 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
   construct a locus from a driver point and the point it drives.
 - **Inspector** — object browser, label, colour, line width, dash, point shape and size,
   visibility, fill, units, angle unit and decimal precision.
-- **Documents** — new, open, save and save as (`.gsp`, JSON document format), a revision stamp
-  in the document, named undo/redo with an undo history menu, and an autosaved draft offered for
-  recovery after a crash.
+- **Documents** — a document-based app: new, open, save and save as (`.gsp`, JSON document format),
+  autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,
+  named undo/redo with an undo history menu, and automatic recovery of readable objects from a
+  damaged file.
 - **Preferences** — default length unit, angle unit, precision, grid, axes, snapping and labels
   for new sketches.
 - **Welcome sketch** — a triangle, its perpendicular bisectors, circumcentre, circumcircle,
