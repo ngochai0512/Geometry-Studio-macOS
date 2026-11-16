@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 final class SketchModel: ObservableObject {
     // MARK: state
@@ -13,6 +14,12 @@ final class SketchModel: ObservableObject {
     @Published var currentURL: URL?
     @Published var isDirty = false
     @Published var showAbout = false
+    /// Failures are surfaced as alerts, not only in the status bar.
+    @Published var errorAlert: SketchAlert?
+    /// A draft or salvage the user can put back.
+    @Published var recoveryOffer: RecoveryOffer?
+    /// Identifies this editing session's autosave draft.
+    let sessionID = UUID()
     /// Animation (the original's Display > Animate).
     @Published var animationPointID: UUID?
     @Published var tracedIDs: Set<UUID> = []
@@ -21,11 +28,27 @@ final class SketchModel: ObservableObject {
 
     private var undoStack: [Snapshot] = []
     private var redoStack: [Snapshot] = []
+    private var openGroup: Snapshot?
+    private var lastCoalescingKey: String?
+    private var lastCheckpointAt = Date.distantPast
+    private let undoLimit = 80
     private var builtInSample = false
+    private var autosaveCancellable: AnyCancellable?
+    private var autosaveEnabled = false
+    /// The objects as of the last save or open. Drafts are only written when
+    /// the construction differs, so panning alone does not offer a recovery.
+    private var cleanObjects: [SketchObject] = []
 
     struct Snapshot {
         var objects: [SketchObject]
         var selection: [UUID]
+        /// The action that produced the state after this snapshot.
+        var action: String
+    }
+
+    struct UndoStep: Identifiable {
+        let id: Int
+        let name: String
     }
 
     var objects: [SketchObject] {
@@ -43,6 +66,14 @@ final class SketchModel: ObservableObject {
 
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
+    /// The action ⌘Z would take back, for menu titles and status text.
+    var undoActionName: String? { undoStack.last?.action }
+    var redoActionName: String? { redoStack.last?.action }
+    /// Oldest first. An entry's `id` is the number of undo steps before it,
+    /// which is the depth to keep to take that step back.
+    var undoHistory: [UndoStep] {
+        undoStack.enumerated().map { UndoStep(id: $0.offset, name: $0.element.action) }
+    }
 
     // MARK: document lifecycle
 
@@ -54,6 +85,7 @@ final class SketchModel: ObservableObject {
         model.undoStack.removeAll()
         model.redoStack.removeAll()
         model.isDirty = false
+        model.cleanObjects = model.objects
         return model
     }
 
@@ -64,16 +96,84 @@ final class SketchModel: ObservableObject {
     }
 
     func newSketch() {
-        checkpoint()
         objects = []
         selection = []
         draft = []
         document.title = "Untitled Sketch"
+        document.settings = AppPreferences.canvasSettings()
         currentURL = nil
         isDirty = false
-        undoStack.removeAll()
-        redoStack.removeAll()
+        resetHistory()
+        cleanObjects = []
+        DocumentDrafts.remove(sessionID: sessionID)
         statusMessage = "New sketch"
+    }
+
+    // MARK: autosave
+
+    /// Starts the debounced draft writer. The screenshot path never calls this,
+    /// so automated renders do not touch Application Support.
+    func enableAutosave() {
+        guard !autosaveEnabled else { return }
+        autosaveEnabled = true
+        autosaveCancellable = objectWillChange
+            .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.writeDraftIfNeeded()
+            }
+    }
+
+    private func writeDraftIfNeeded() {
+        guard autosaveEnabled, isDirty else { return }
+        if objects == cleanObjects {
+            DocumentDrafts.remove(sessionID: sessionID)
+            return
+        }
+        let record = DraftRecord(savedAt: Date(), document: document, sourceURL: currentURL)
+        // Autosave is best-effort; explicit Save reports its own failures.
+        try? DocumentDrafts.write(record, sessionID: sessionID)
+    }
+
+    /// Called once at launch. Loads before the window appears, so the alert
+    /// can ask for a decision on first appearance.
+    func checkForRecoverableDraft() {
+        guard recoveryOffer == nil,
+              let (record, url) = DocumentDrafts.latest(),
+              !record.document.objects.isEmpty else {
+            return
+        }
+        recoveryOffer = .draft(record, url)
+    }
+
+    func acceptRecovery() {
+        guard let offer = recoveryOffer else { return }
+        recoveryOffer = nil
+        switch offer {
+        case .draft(let record, let url):
+            document = record.document
+            currentURL = record.sourceURL
+            selection = []
+            draft = []
+            isDirty = true
+            resetHistory()
+            DocumentDrafts.remove(at: url)
+            statusMessage = "Recovered unsaved changes"
+        case .salvage(let result):
+            document = result.document
+            currentURL = nil
+            selection = []
+            draft = []
+            isDirty = true
+            resetHistory()
+            statusMessage = "Recovered \(result.recovered) of \(result.total) objects"
+        }
+    }
+
+    func discardRecovery() {
+        if case .draft(_, let url) = recoveryOffer {
+            DocumentDrafts.remove(at: url)
+        }
+        recoveryOffer = nil
     }
 
     private func seedSample() {
@@ -133,7 +233,7 @@ final class SketchModel: ObservableObject {
     }
 
     func loadSample() {
-        checkpoint()
+        checkpoint("Load Welcome Sketch")
         objects = []
         selection = []
         draft = []
@@ -146,33 +246,101 @@ final class SketchModel: ObservableObject {
 
     // MARK: undo
 
-    private func snapshot() -> Snapshot {
-        Snapshot(objects: objects, selection: selection)
+    /// Records the state before a change. `action` names the step in menus;
+    /// `coalescing` folds continuous edits (typing, dragging a slider) into
+    /// the step that started them while the same key keeps arriving.
+    func checkpoint(_ action: String = "Change", coalescing key: String? = nil) {
+        guard openGroup == nil else {
+            isDirty = true
+            return
+        }
+        if let key, key == lastCoalescingKey,
+           Date().timeIntervalSince(lastCheckpointAt) < 1.2 {
+            isDirty = true
+            // Keep extending while the edit continues; a pause starts a step.
+            lastCheckpointAt = Date()
+            return
+        }
+        push(Snapshot(objects: objects, selection: selection, action: action))
+        lastCoalescingKey = key
+        isDirty = true
     }
 
-    func checkpoint() {
-        undoStack.append(snapshot())
-        if undoStack.count > 80 { undoStack.removeFirst() }
+    /// Runs a multi-step change as one undoable action. Nested checkpoints are
+    /// folded into the snapshot taken here, so drawing a segment does not leave
+    /// its two new endpoints behind as separate steps.
+    func perform(_ action: String, _ body: () -> Void) {
+        guard openGroup == nil else {
+            body()
+            return
+        }
+        let before = Snapshot(objects: objects, selection: selection, action: action)
+        openGroup = before
+        body()
+        openGroup = nil
+        guard before.objects != objects || before.selection != selection else { return }
+        push(before)
+    }
+
+    private func push(_ snapshot: Snapshot) {
+        undoStack.append(snapshot)
+        if undoStack.count > undoLimit { undoStack.removeFirst() }
         redoStack.removeAll()
-        isDirty = true
+        // A separate action must not merge into the step that preceded it.
+        lastCoalescingKey = nil
+        lastCheckpointAt = Date()
+    }
+
+    /// A document swap or recovery must not continue coalescing into the
+    /// previous document's edit.
+    func resetTransientEditingState() {
+        openGroup = nil
+        lastCoalescingKey = nil
+    }
+
+    /// Loading a different document starts a fresh history: snapshots hold
+    /// objects and selection only, so undoing across a swap would leave the
+    /// window pointing at the wrong file.
+    func resetHistory() {
+        undoStack.removeAll()
+        redoStack.removeAll()
+        resetTransientEditingState()
+    }
+
+    /// Marks the current construction as the state on disk, so autosave only
+    /// offers recovery for real changes.
+    func markDocumentClean() {
+        cleanObjects = objects
     }
 
     func undo() {
         guard let snap = undoStack.popLast() else { return }
-        redoStack.append(snapshot())
+        redoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
         isDirty = true
-        statusMessage = "Undo"
+        lastCoalescingKey = nil
+        statusMessage = "Undo \(snap.action)"
     }
 
     func redo() {
         guard let snap = redoStack.popLast() else { return }
-        undoStack.append(snapshot())
+        undoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
         isDirty = true
-        statusMessage = "Redo"
+        lastCoalescingKey = nil
+        statusMessage = "Redo \(snap.action)"
+    }
+
+    /// Jumps to the state after keeping `depth` undo steps. Zero restores the
+    /// state the document opened in.
+    func revert(toUndoDepth depth: Int) {
+        let target = max(0, min(depth, undoStack.count))
+        guard target < undoStack.count else { return }
+        let name = target == 0 ? "Original State" : undoStack[target - 1].action
+        while undoStack.count > target { undo() }
+        statusMessage = "Went back to \(name)"
     }
 
     // MARK: object helpers
@@ -188,7 +356,14 @@ final class SketchModel: ObservableObject {
              position: Vec2? = nil,
              style: ObjectStyle = ObjectStyle(),
              silent: Bool = false) -> UUID {
-        if !silent { checkpoint() }
+        if !silent {
+            let name = label ?? kindLabel
+            if let name, !name.isEmpty {
+                checkpoint("Add \(name)")
+            } else {
+                checkpoint("Add Object")
+            }
+        }
         var object = SketchObject(kind: kind)
         object.label = label ?? kindLabel ?? autoLabel(for: kind)
         object.position = position

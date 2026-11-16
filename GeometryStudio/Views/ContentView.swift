@@ -95,6 +95,35 @@ struct ContentView: View {
         .sheet(isPresented: $showFunction) { functionSheet }
         .sheet(isPresented: $showCalculation) { calculationSheet }
         .sheet(isPresented: $model.showAbout) { AboutView() }
+        .alert(model.errorAlert?.title ?? "Could Not Complete the Operation",
+               isPresented: errorAlertPresented,
+               presenting: model.errorAlert) { _ in
+            Button("OK", role: .cancel) { model.errorAlert = nil }
+        } message: { alert in
+            Text(alert.message)
+        }
+        .alert(model.recoveryOffer?.title ?? "",
+               isPresented: recoveryOfferPresented,
+               presenting: model.recoveryOffer) { _ in
+            Button("Recover") { model.acceptRecovery() }
+            Button("Discard", role: .destructive) { model.discardRecovery() }
+        } message: { offer in
+            Text(offer.message)
+        }
+    }
+
+    private var errorAlertPresented: Binding<Bool> {
+        Binding(
+            get: { model.errorAlert != nil },
+            set: { if !$0 { model.errorAlert = nil } }
+        )
+    }
+
+    private var recoveryOfferPresented: Binding<Bool> {
+        Binding(
+            get: { model.recoveryOffer != nil },
+            set: { if !$0 { model.recoveryOffer = nil } }
+        )
     }
 
     // MARK: top bar
@@ -138,9 +167,9 @@ struct ContentView: View {
             Divider().frame(height: 22).opacity(0.5)
 
             HStack(spacing: 2) {
-                barButton("arrow.uturn.backward", help: "Undo") { model.undo() }
+                barButton("arrow.uturn.backward", help: model.undoActionName.map { "Undo \($0)" } ?? "Undo") { model.undo() }
                     .disabled(!model.canUndo)
-                barButton("arrow.uturn.forward", help: "Redo") { model.redo() }
+                barButton("arrow.uturn.forward", help: model.redoActionName.map { "Redo \($0)" } ?? "Redo") { model.redo() }
                     .disabled(!model.canRedo)
             }
 
@@ -386,7 +415,7 @@ struct ContentView: View {
                 Button("Add") {
                     let t = textDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !t.isEmpty {
-                        model.checkpoint()
+                        model.checkpoint("Add Text")
                         let id = model.add(kind: .caption(t), position: textAnchor, silent: true)
                         model.selection = [id]
                         model.isDirty = true

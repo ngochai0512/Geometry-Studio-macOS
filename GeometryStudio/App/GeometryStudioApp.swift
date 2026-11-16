@@ -5,7 +5,10 @@ struct GeometryStudioApp: App {
     @StateObject private var model: SketchModel
 
     init() {
-        _model = StateObject(wrappedValue: SketchModel.sample())
+        let model = SketchModel.sample()
+        model.enableAutosave()
+        model.checkForRecoverableDraft()
+        _model = StateObject(wrappedValue: model)
     }
 
     var body: some Scene {
@@ -17,6 +20,10 @@ struct GeometryStudioApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             SketchCommands(model: model)
+        }
+
+        Settings {
+            SettingsView()
         }
     }
 }
