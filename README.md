@@ -1,0 +1,89 @@
+# Geometry Studio
+
+A native macOS dynamic geometry sketchpad, rebuilt in **Swift and SwiftUI** for Apple silicon.
+
+The original is the reference application 5.06 (2013), a a legacy build application. It
+cannot run on Apple silicon; this is a new implementation of the same idea: construct points,
+lines, circles and polygons, then drag a free point and watch every dependent object update.
+
+## Build and run
+
+The window and every control are SwiftUI. Craft Anything's build runner looks for a Rust package
+in `app/`, so a small Rust program (`src/main.rs`) is the entry point: its build script builds the
+Swift package and it starts the SwiftUI program, passing on every argument.
+
+```sh
+cd app
+cargo build
+./target/debug/geometry-studio
+```
+
+The Swift package alone also builds and runs:
+
+```sh
+swift build -c release
+./.build/release/GeometryStudio
+```
+
+The package targets macOS 13 or newer and builds `arm64` on Apple silicon.
+
+## Screenshot mode
+
+```sh
+./target/debug/geometry-studio --screenshot shots/now.png
+```
+
+This opens a borderless window without activating the app, draws for 120 frames, writes the
+window as a PNG and exits. It is used by Craft Anything's after-build check.
+
+## Core features
+
+- **Tools** — select/drag, point, segment, ray, line, circle, polygon, angle marker and text.
+- **Constructions** — midpoint, perpendicular, parallel, angle bisector, intersection, segment,
+  circle by centre + point, polygon interior and point on object.
+- **Measurements** — distance, length, perimeter, circumference, angle, area, radius, ratio,
+  coordinates, equation, slope and calculations.
+- **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
+  0–5 decimal places, as the original's Units preferences offer.
+- **Transforms** — reflect, rotate, dilate and translate. Images keep their source and update.
+- **Graph** — grid, axes, snapping and function plots.
+- **Inspector** — object browser, label, colour, line width, dash, point shape and size,
+  visibility, fill, units, angle unit and decimal precision.
+- **Documents** — new, open, save and save as (`.gsp`, JSON document format), undo/redo.
+- **Welcome sketch** — a triangle, its perpendicular bisectors, circumcentre, circumcircle,
+  length measurement, coordinates and angle. Drag A, B or C to see the construction move.
+
+## Keyboard
+
+| Key | Tool |
+| --- | --- |
+| V | Select |
+| P | Point |
+| S | Segment |
+| R | Ray |
+| L | Line |
+| C | Circle |
+| G | Polygon |
+| A | Angle |
+| T | Text |
+
+`⌘Z` / `⇧⌘Z` undo and redo, `⌘A` select all, Delete removes the selection. Scroll to pan,
+pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a draft.
+
+## What is new versus the original
+
+- The original's geometry engine is C (`the object record` plus C functions such as the constraint
+  checker); this rebuild writes the same model and rules in Swift. See `MECHANICS.md` for the
+  evidence, the addresses and the values.
+- The document format is this app's own JSON-based `.gsp`, not the original binary format.
+- Custom tools/scripts, action buttons, loci, iterations, tables, pictures, animation and
+  multiple pages are not included in this version.
+
+## Evidence
+
+The original was inspected statically (nothing from it was run). Key evidence ids:
+`evidence` (x86 Mach-O),
+`evidence` (C object struct),
+`evidence` (C constraint checker),
+`evidence` (`.c` source path),
+`evidence` (C++ exports).
