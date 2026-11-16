@@ -8,24 +8,26 @@ Anyone adding a new **object family** (arc, mark, vector, table, picture, button
 
 ## Status snapshot
 
-Implemented today: 9 tools, 9 constructions, 11 measurements, 4 transforms, graph with function plots and snapping, inspector (style, units, precision), labels and captions, animation, tracing, locus, calculations, undo/redo (80 deep), JSON `.gsp` save/open, `--screenshot` mode.
+Implemented today: 9 tools, 9 constructions, 11 measurements, 4 transforms, graph with function plots and snapping, inspector (style, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, autosave drafts with recovery, preferences for new sketches, `--screenshot` mode.
 
-Missing outright: printing, export, clipboard, duplicate, multi-document, preferences window, app bundle, arcs, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, marks.
+Missing outright: printing, export, clipboard, duplicate, multi-document, app bundle, arcs, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, marks.
 
 ## Tier 1 — Foundations (unblocks everything else)
 
 | # | Feature | Why it matters | Where it lands | Effort | Done |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Document schema version + migration | `SketchDocument` is unversioned; one new non-optional field breaks every saved sketch, because synthesized `Decodable` requires keys even when the property has a default | `Model/Document.swift` | S | [ ] |
+| 1 | Document schema version + migration | `SketchDocument` is unversioned; one new non-optional field breaks every saved sketch, because synthesized `Decodable` requires keys even when the property has a default | `Model/Document.swift` | S | [x] |
 | 2 | Real document app: `DocumentGroup`, autosave, Versions, Open Recent, multiple windows and tabs | Today a single `WindowGroup` with hand-rolled `NSOpenPanel`; no autosave, no recovery | `App/GeometryStudioApp.swift`, new `Document/` | M | [ ] |
 | 3 | App bundle, Info.plist, exported `gsp` UTType, icon | Without it `UTType(filenameExtension: "gsp")` returns `nil`, so panels filter as JSON; no Dock identity | project + `Package.swift` | S | [ ] |
-| 4 | Preferences window: units, precision, angle unit, appearance, defaults | The original had a Preferences dialog; ours hides these inside the inspector | new `Settings` scene | S | [ ] |
+| 4 | Preferences window: default units, precision, angle unit, canvas defaults | The original had a Preferences dialog; ours hid these inside the inspector, and every new sketch reset to the same defaults | new `Settings` scene | S | [x] |
 | 5 | Printing: `NSPrintOperation`, page setup, print preview | The original shipped full print support; we have none | `Views/`, new `Printing/` | M | [ ] |
 | 6 | Export: PDF (vector), SVG, PNG @2x, copy-as-image, drag to Finder | A geometry tool's output goes into papers and slides; currently there is no way to get a picture out | new `Export/` | M | [ ] |
-| 7 | Undo polish: coalesce drags into one step, name actions, history menu | Every `checkpoint()` is one opaque step today | `Model/SketchModel.swift` | S | [ ] |
-| 8 | Error handling: alerts for failed open/save, corrupt-file recovery, autosave draft | Errors only reach `statusMessage` and are easy to miss | `Model/SketchModel+Document.swift` | S | [ ] |
-| 9 | CI and release: build/test on push, signed and notarized universal `.app`, Sparkle updates | Nothing exists; blocks distributing at all | `.github/workflows/` | M | [ ] |
-| 10 | Docs truth pass: README/MECHANICS claim animation, tracing and loci are absent — they shipped | Misleading for users and for future agents | `README.md`, `MECHANICS.md` | S | [ ] |
+| 7 | Undo polish: coalesce drags into one step, name actions, history menu | Every `checkpoint()` was one opaque step, and a click without movement pushed a no-op | `Model/SketchModel.swift` | S | [x] |
+| 8 | Error handling: alerts for failed open/save, corrupt-file recovery, autosave draft | Errors only reached `statusMessage` and were easy to miss | `Model/SketchModel+Document.swift` | S | [x] |
+| 9 | CI and release: build/test on push, signed and notarized universal `.app` | Nothing exists; blocks distributing at all | `.github/workflows/` | M | [ ] |
+| 10 | Docs truth pass: README/MECHANICS claim animation, tracing and loci are absent — they shipped | Misleading for users and for future agents | `README.md`, `MECHANICS.md` | S | [x] |
+
+Deferred within Tier 1: #2 and #3 need the bundle/UTType decision and touch `Package.swift`; #9 needs signing and release decisions; #5 and #6 want a shared renderer and a separate pass. Window appearance moved to #45, where the canvas theme lives; the Preferences window covers units, precision, angle unit and new-sketch canvas defaults.
 
 ## Tier 2 — Parity with the original
 

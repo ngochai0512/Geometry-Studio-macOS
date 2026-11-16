@@ -11,12 +11,12 @@ Read this before exploring; it saves a full README pass.
 - Entry point: `main.swift` → `GeometryStudioApp.main()` in `App/GeometryStudioApp.swift`. That file must not gain `@main` while `main.swift` exists — two entry points do not compile.
 - Layering, one concern per file:
   - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`).
-  - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms,Document}.swift`.
-  - `Views/` — `ContentView.swift` (chrome, toolbar, sheets), `InspectorView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
+  - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`, revision and salvage), `DocumentRecovery.swift` (autosave drafts, recovery offers), `AppPreferences.swift` (new-sketch defaults), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms,Document}.swift`.
+  - `Views/` — `ContentView.swift` (chrome, toolbar, sheets, alerts), `InspectorView.swift`, `SettingsView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
   - `App/` — `GeometryStudioApp.swift` (scene), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path).
 - `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
-- Persisted shape: `SketchDocument { objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The format is **unversioned** — additive changes only (see section 3).
+- Persisted shape: `SketchDocument { version, objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The document carries a schema revision (`SketchDocument.currentVersion`) and migrates older revisions while decoding; models decode missing keys with their defaults, so a new field does not invalidate old sketches. Refuse a revision from a newer build instead of dropping keys.
 - Observed defaults, taken from the original's preference initialiser and recorded in `MECHANICS.md`: inches, hundredths, degrees. Do not "correct" these to metric or to whole numbers.
 - Third-party dependencies: none. Standard library and system frameworks only.
 
@@ -82,6 +82,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 - Pure moves before behavior edits: relocate code first (build green), then change it (build green again).
 - Never commit secrets, credentials, or local-only config. Respect `.gitignore` (`.build/`, `.swiftpm/`, `DerivedData/`, `opencode.json` are already ignored).
 - Never run destructive or irreversible git commands (e.g. `git reset --hard`, `git clean -fd`, `git checkout -- .`, `git push --force`, `git branch -D`, `git stash drop`, `git rebase` on pushed commits or on main). If one seems necessary, stop and ask first, and describe what would be lost.
+- Never try to disable, bypass, escape or loosen the sandbox such as "-disable-sandbox" or any equivalent parameters like that.
 - Never skip hooks or amend someone else's commit.
 - Never run `sudo`, `rm -rf`, or `defaults write` / `defaults delete`. Don't touch system settings or files outside the repo.
 - Only touch files/folders explicitly named in the task or a path the user gives you. If a task seems to require anything outside that scope, stop and ask rather than assuming it is in bounds.
@@ -153,7 +154,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 - Document I/O reports through `statusMessage` and names the operation ("Could not save: …", "That file could not be opened: …"). Never crash and never fail silently.
 - `try?` and empty `catch` blocks require a one-line comment explaining why ignoring the error is safe.
-- Decoding must tolerate a missing new field. Never add a non-optional `Codable` property without a default value; that turns every previously saved sketch into an error.
+- Decoding must tolerate a missing new field. Never add a non-optional `Codable` property without a default value; that turns every previously saved sketch into an error. When a change cannot be additive, bump `SketchDocument.currentVersion` and add a step to its migration ladder.
 - No force-unwraps or `try!` in model or math code. `!` is acceptable only where the invariant is local and obvious within a few lines.
 - Don't dump raw `localizedDescription` into a panel without review; it is technical text, not product copy.
 
@@ -171,7 +172,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
-- [ ] `swift test` passes (28 tests, 6 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (37 tests, 7 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
