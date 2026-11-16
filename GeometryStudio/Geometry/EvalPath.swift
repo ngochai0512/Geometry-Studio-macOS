@@ -278,13 +278,27 @@ enum EvalPath {
     }
 }
 
-private func polygonLength(_ pts: [Vec2]) -> Double {
+func polygonLength(_ pts: [Vec2]) -> Double {
     guard pts.count > 1 else { return 0 }
     var total = 0.0
     for i in 0..<pts.count {
         total += pts[i].distance(to: pts[(i + 1) % pts.count])
     }
     return total
+}
+
+/// Absolute polygon area. The shoelace sum is accumulated explicitly so both
+/// winding directions work and the compiler never has to solve a long chain of
+/// collection operators.
+func polygonArea(_ pts: [Vec2]) -> Double {
+    guard pts.count >= 3 else { return 0 }
+    var twiceArea = 0.0
+    for i in 0..<pts.count {
+        let a = pts[i]
+        let b = pts[(i + 1) % pts.count]
+        twiceArea += a.x * b.y - b.x * a.y
+    }
+    return abs(twiceArea) / 2
 }
 
 private func dedupe(_ pts: [Vec2]) -> [Vec2] {

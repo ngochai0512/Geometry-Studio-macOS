@@ -177,7 +177,7 @@ Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `xcodegen generate` reflects `project.yml`, and the app target builds with zero new warnings.
-- [ ] `swift test` passes (39 tests, 7 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (40 tests, 7 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.

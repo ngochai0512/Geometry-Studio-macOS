@@ -213,7 +213,7 @@ struct GeometryEval {
             }
         case .perimeter:
             if let first = refs.first, let p = path(first), case .polygon(let pts) = p {
-                let v = zip(pts, pts.dropFirst() + [pts[0]]).map { $0.distance(to: $1) }.reduce(0, +)
+                let v = polygonLength(pts)
                 result.value = v
                 result.text = "Perimeter \(name(of: first)) = \(formatLength(v))"
                 result.anchor = (p.boundingBox?.center ?? .zero) + Vec2(0, 0.3)
@@ -242,7 +242,7 @@ struct GeometryEval {
         case .area:
             if let first = refs.first, let p = path(first) {
                 if case .polygon(let pts) = p, pts.count >= 3 {
-                    let v = abs(zip(pts, pts.dropFirst() + [pts[0]]).map { $0.x * $1.y - $1.x * $0.y }.reduce(0, +)) / 2
+                    let v = polygonArea(pts)
                     result.value = v
                     result.text = "Area \(name(of: first)) = \(formatArea(v))"
                     result.anchor = (p.boundingBox?.center ?? .zero) + Vec2(0, -0.3)

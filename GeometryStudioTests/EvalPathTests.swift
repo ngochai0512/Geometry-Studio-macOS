@@ -108,4 +108,12 @@ struct EvalPathGeometryTests {
         let value = EvalPath.circle(Vec2(0, 0), 1).length(settings: CanvasSettings())
         #expect(abs((value ?? 0) - 2 * .pi) < 1e-12)
     }
+
+    @Test("polygon area is independent of winding direction")
+    func shoelaceArea() {
+        let square = [Vec2(0, 0), Vec2(2, 0), Vec2(2, 2), Vec2(0, 2)]
+        #expect(abs(polygonArea(square) - 4) < 1e-9)
+        #expect(abs(polygonArea(Array(square.reversed())) - 4) < 1e-9)
+        #expect(abs(polygonArea([Vec2(0, 0), Vec2(1, 0)]) - 0) < 1e-12)
+    }
 }
