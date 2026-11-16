@@ -8,13 +8,13 @@ Read this before exploring; it saves a full README pass.
 
 - Native macOS SwiftUI app: a dynamic geometry sketchpad (points, lines, circles, polygons, constructions, measurements, transforms, a graph). Built for Apple silicon; macOS 13 floor.
 - Build system: **Swift Package Manager only.** No `.xcodeproj`, no CocoaPods, no CI workflows. `Package.swift` is the single build description; the target declares `path: "Sources/GeometryStudio"`.
-- Entry point: `main.swift` → `GeometryStudioApp.main()` in `App.swift`. `App.swift` must not gain `@main` while `main.swift` exists — two entry points do not compile.
+- Entry point: `main.swift` → `GeometryStudioApp.main()` in `App/GeometryStudioApp.swift`. That file must not gain `@main` while `main.swift` exists — two entry points do not compile.
 - Layering, one concern per file:
-  - `GeometryCore.swift` — value types and math: `Vec2`, `WorldRect`, `EvalPath`, `Expression`, `RGBA`, `SketchMetrics`, unit enums. No document state.
-  - `Model.swift` — `SketchObject`/`ObjectKind`, `SketchDocument`, `CanvasSettings`, `GeometryEval` (parent→child resolution), `SketchModel` (the `ObservableObject`), document I/O.
-  - `CanvasView.swift` — drawing, hit-testing, screen↔world conversion, gestures.
-  - `ContentView.swift` — window chrome, toolbar, inspector, sheets, about panel.
-  - `App.swift` — scene and menus. `Screenshot.swift` — headless render path.
+  - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`).
+  - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms,Document}.swift`.
+  - `Views/` — `ContentView.swift` (chrome, toolbar, sheets), `InspectorView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
+  - `App/` — `GeometryStudioApp.swift` (scene), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path).
+- `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
 - Persisted shape: `SketchDocument { objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The format is **unversioned** — additive changes only (see section 3).
 - Observed defaults, taken from the original's preference initialiser and recorded in `MECHANICS.md`: inches, hundredths, degrees. Do not "correct" these to metric or to whole numbers.
@@ -68,7 +68,8 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
   ./.build/release/GeometryStudio --screenshot /tmp/geometry-studio.png
   ```
 
-- There is **no test target**; `swift test` fails with "no tests found". Don't invent one silently — see section 8.
+- Tests cover the pure-value core: `swift test` runs the `GeometryStudioTests` suite. They use no windows, timers, files or network — keep them that way.
+- If SwiftPM's own manifest sandbox cannot start because it is already nested inside a sandbox (`sandbox-exec: sandbox_apply: Operation not permitted`), pass `--disable-sandbox` to the SwiftPM command. That disables SwiftPM's redundant nested sandbox only; never weaken the app's App Sandbox or entitlements.
 - Automated visual checks use `--screenshot`. It must keep working without activating the app or stealing focus; a normal `swift run` does activate it, so don't leave one running in a background job.
 - After any change: rebuild and confirm zero new warnings. The warning bar is zero — today's warning is tomorrow's build error.
 - When behavior is in question, `MECHANICS.md` wins over "how other geometry apps do it". Do not quietly substitute a standard convention for a documented observation.
@@ -76,6 +77,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 ## 2. Small, Reversible Steps
 
+- **Do not commit or push until the user says so.** Implement, verify, and stop with the working tree dirty. Committing, amending, rebasing, tagging, stashing and pushing all require an explicit instruction in the turn that asks for them; a request to build, fix or refactor something is not permission to commit. When the work is ready, report it and say what the commit would contain — then wait.
 - One idea per change. Refactors stay behavior-identical; features stay minimal; never mix the two in one diff.
 - Pure moves before behavior edits: relocate code first (build green), then change it (build green again).
 - Never commit secrets, credentials, or local-only config. Respect `.gitignore` (`.build/`, `.swiftpm/`, `DerivedData/`, `opencode.json` are already ignored).
@@ -94,13 +96,13 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 ## 3. Architecture Hygiene
 
-- Geometry math lives in `GeometryCore.swift`. Views never do geometry: `CanvasView` converts screen↔world and draws what `GeometryEval` returns; `ContentView` presents.
-- Adding an object kind touches four places, and all four are part of the change: an `ObjectKind` case, a `GeometryEval` branch (position/path/measurement), drawing plus hit-testing in `CanvasView`, and the inspector/measure UI in `ContentView`. Adding the enum case alone ships a half-object that Codable accepts and the canvas cannot draw.
+- Geometry math lives in `Geometry/`. Views never do geometry: `CanvasDrawing` draws what `GeometryEval` returns and `SketchModel+Geometry` owns screen↔world conversion; `ContentView` presents.
+- Adding an object kind touches four places, and all four are part of the change: an `ObjectKind` case (`Model/ObjectModel.swift`), a `GeometryEval` branch (position/path/measurement), drawing plus hit-testing (`Views/CanvasDrawing.swift`, `Model/SketchModel+Geometry.swift`), and the inspector/measure UI (`Views/InspectorView.swift`, `Views/ContentView.swift`). Adding the enum case alone ships a half-object that Codable accepts and the canvas cannot draw.
 - Units, precision and scale have single sources: `SketchMetrics`, `LengthUnit`, `AngleUnit`, `CanvasSettings`. Never re-derive `72`, `2.54`, or `0.01` at a call site.
 - Undo: mutate through `SketchModel`; call `checkpoint()` before a change that should be undoable. Snapshots capture `objects` and `selection` only — settings and `title` are outside history, so don't promise undo for them. Views must not append to model arrays directly.
 - Persistence: property names in `SketchDocument`, `SketchObject`, `CanvasSettings`, `ObjectStyle` are the on-disk keys. Renaming one silently discards user data. Add a new property **with a default** instead; the decoder runs without a version field to migrate against.
-- Coordinate space: model coordinates are world points where 100% zoom is 72 points per inch. Screen↔world conversion belongs in `CanvasView`; don't bake zoom or pan into stored geometry.
-- `GeometryCore.swift` imports SwiftUI only for the `cg` and `color` bridges on `Vec2`/`RGBA`. Keep new math types free of view types so the core stays testable without a window.
+- Coordinate space: model coordinates are world points where 100% zoom is 72 points per inch. Screen↔world conversion lives in `SketchModel+Geometry`; don't bake zoom or pan into stored geometry.
+- `Geometry/Style.swift` imports SwiftUI and AppKit only for the `color`/`nsColor` bridges on `RGBA`; `Geometry/Vec2.swift` imports CoreGraphics for `cg`. Keep new math types in `Geometry/` free of view types so the core stays testable without a window.
 - `--screenshot` is a contract used by automated checks. Keep the flag, the frame count, and the no-activation behavior working.
 - No dead code, no commented-out code, no "temporary" hacks without a one-line note saying when they go away. Delete rather than comment out.
 
@@ -140,7 +142,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
   Image(nsImage: icon).resizable().frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 20))
   ```
 
-- **Files and types:** `UpperCamelCase` types, one primary type per file where the file is named after it. Grouped view files are fine — `ContentView.swift` legitimately holds several views; a new subsystem gets its own file.
+- **Files and types:** `UpperCamelCase` types, one primary type per file where the file is named after it. A new subsystem gets its own file; `SketchModel` behavior belongs in the extension file matching its area.
 - **Comments:** one line, one idea. Explain *why*, never restate *what*. When a value comes from the original, cite it the way `CanvasSettings` does (`routine`, `an offset`) instead of re-explaining the derivation. No process markers (`NEW`, ownerless `TODO`, conditional-free `FIXME`).
 - **Magic numbers:** name them in `SketchMetrics` or the relevant enum. A literal is acceptable only where the surrounding expression is the definition.
 - **Accessibility:** icon-only controls get labels; selection state is exposed; nothing clips at larger text sizes — prefer minimum sizes over fixed frames.
@@ -157,9 +159,10 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 ## 8. Testing
 
-- There is no test target today. Adding one means editing `Package.swift` — ask first, and add a `.testTarget` that imports the executable module's public types.
-- Once it exists: Swift Testing, one suite per area, pure-value tests — `EvalPath` intersections (line/line, line/circle, circle/circle), `Expression` parsing and evaluation, unit conversion, angle wrapping, `GeometryEval` parent ordering.
-- Determinism: no windows, no timers, no wall-clock, no filesystem. Construct `SketchObject` values directly.
+- The test target is `GeometryStudioTests`, built from `Tests/GeometryStudioTests/` and linked with `@testable import GeometryStudio`. Do not add a second test target without a reason.
+- Keep the suites pure-value: `EvalPath` intersections (line/line, line/circle, circle/circle), `Expression` parsing and evaluation, unit conversion, `GeometryEval` parent ordering, document round-trip. Construct `SketchObject` values directly.
+- A new pure type arrives with a test in the matching suite. UI behavior is verified with `--screenshot`, never by adding test infrastructure that needs a window.
+- Determinism: no windows, no timers, no wall-clock, no filesystem.
 - Compare doubles with a tolerance of `1e-7`, matching the dedupe threshold already used in `EvalPath`.
 - Rendering is verified with `--screenshot` and an eyeball check, never with pixel assertions or performance timing.
 
@@ -168,6 +171,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
+- [ ] `swift test` passes (28 tests, 6 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
@@ -175,7 +179,8 @@ Before reporting a change as finished, confirm all of the following:
 - [ ] No new dependency added without approval (section 4).
 - [ ] No deprecated API introduced (section 6).
 - [ ] `README.md` updated if user-visible behavior or build steps changed.
-- [ ] Commit message follows the Conventional style in section 11.
+- [ ] Nothing committed, amended, tagged or pushed unless the user asked for it in this turn (section 2).
+- [ ] Commit message follows the Conventional style in section 11 — drafted in the report, not applied until asked.
 
 If any box can't be checked, say so explicitly in the report rather than omitting or hiding it.
 
@@ -189,6 +194,7 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 
 ## 11. Commits & PRs
 
+- Nothing here happens until the user asks. Prepare the change, leave it uncommitted, and offer the message (section 2).
 - Conventional style: `type(scope): imperative summary` — e.g. `feat(locus): sample the driver path into a traced target`.
 - Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - Body (when non-trivial): what moved, why, verification line. Pure refactors state "no behavior change" explicitly.
