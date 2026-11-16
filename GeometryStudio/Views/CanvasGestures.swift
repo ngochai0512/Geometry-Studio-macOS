@@ -113,7 +113,6 @@ extension SketchCanvas {
                             object.order = (model.objects.map(\.order).max() ?? 0) + 1
                             model.objects.append(object)
                             model.selection = [object.id]
-                            model.isDirty = true
                             model.statusMessage = "\(tool.title) created"
                         }
                         return
@@ -128,7 +127,6 @@ extension SketchCanvas {
                             object.order = (model.objects.map(\.order).max() ?? 0) + 1
                             model.objects.append(object)
                             model.selection = [object.id]
-                            model.isDirty = true
                             model.statusMessage = "Circle created"
                         }
                         return

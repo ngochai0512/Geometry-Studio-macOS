@@ -95,35 +95,6 @@ struct ContentView: View {
         .sheet(isPresented: $showFunction) { functionSheet }
         .sheet(isPresented: $showCalculation) { calculationSheet }
         .sheet(isPresented: $model.showAbout) { AboutView() }
-        .alert(model.errorAlert?.title ?? "Could Not Complete the Operation",
-               isPresented: errorAlertPresented,
-               presenting: model.errorAlert) { _ in
-            Button("OK", role: .cancel) { model.errorAlert = nil }
-        } message: { alert in
-            Text(alert.message)
-        }
-        .alert(model.recoveryOffer?.title ?? "",
-               isPresented: recoveryOfferPresented,
-               presenting: model.recoveryOffer) { _ in
-            Button("Recover") { model.acceptRecovery() }
-            Button("Discard", role: .destructive) { model.discardRecovery() }
-        } message: { offer in
-            Text(offer.message)
-        }
-    }
-
-    private var errorAlertPresented: Binding<Bool> {
-        Binding(
-            get: { model.errorAlert != nil },
-            set: { if !$0 { model.errorAlert = nil } }
-        )
-    }
-
-    private var recoveryOfferPresented: Binding<Bool> {
-        Binding(
-            get: { model.recoveryOffer != nil },
-            set: { if !$0 { model.recoveryOffer = nil } }
-        )
     }
 
     // MARK: top bar
@@ -418,7 +389,6 @@ struct ContentView: View {
                         model.checkpoint("Add Text")
                         let id = model.add(kind: .caption(t), position: textAnchor, silent: true)
                         model.selection = [id]
-                        model.isDirty = true
                     }
                     showTextSheet = false
                 }

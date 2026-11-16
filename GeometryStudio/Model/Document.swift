@@ -43,7 +43,7 @@ struct CanvasSettings: Codable, Hashable {
     }
 }
 
-struct SketchDocument: Codable {
+struct SketchDocument: Codable, Equatable {
     /// The on-disk schema revision. Older builds wrote no version key at all,
     /// which decodes as revision 0. Bump this when a migration is required.
     static let currentVersion = 1
@@ -86,7 +86,6 @@ struct SalvageResult {
     var document: SketchDocument
     var recovered: Int
     var total: Int
-    var sourceURL: URL?
 }
 
 extension SketchDocument {
@@ -120,6 +119,6 @@ extension SketchDocument {
             document.settings = settings
         }
         return SalvageResult(document: document, recovered: recovered.count,
-                             total: rawObjects.count, sourceURL: nil)
+                             total: rawObjects.count)
     }
 }

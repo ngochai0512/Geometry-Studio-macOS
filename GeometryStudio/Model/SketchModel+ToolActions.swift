@@ -38,7 +38,6 @@ extension SketchModel {
             object.label = nextPointLabel()
             object.order = (objects.map(\.order).max() ?? 0) + 1
             objects.append(object)
-            isDirty = true
             return object.id
         }
         checkpoint("Add Point")
@@ -47,7 +46,6 @@ extension SketchModel {
         object.label = nextPointLabel()
         object.order = (objects.map(\.order).max() ?? 0) + 1
         objects.append(object)
-        isDirty = true
         return object.id
     }
 
@@ -96,7 +94,6 @@ extension SketchModel {
                     objects.append(object)
                     selection = [object.id]
                     draft = []
-                    isDirty = true
                     statusMessage = "\(tool.title) created"
                 }
             }
@@ -115,7 +112,6 @@ extension SketchModel {
                     objects.append(object)
                     selection = [object.id]
                     draft = []
-                    isDirty = true
                     statusMessage = "Circle created"
                 }
             }
@@ -153,7 +149,6 @@ extension SketchModel {
                     objects.append(object)
                     selection = [object.id]
                     draft = []
-                    isDirty = true
                     statusMessage = "Angle marked"
                 }
             }
@@ -174,7 +169,6 @@ extension SketchModel {
         objects.append(object)
         selection = [object.id]
         draft = []
-        isDirty = true
         statusMessage = "Polygon created"
     }
 

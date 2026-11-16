@@ -55,7 +55,6 @@ extension SketchModel {
         checkpoint("Add Calculation")
         let id = commit(kind: .calculation(trimmed), label: "")
         selection = [id]
-        isDirty = true
         statusMessage = "Calculation added"
     }
 

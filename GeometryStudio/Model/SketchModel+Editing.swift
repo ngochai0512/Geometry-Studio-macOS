@@ -36,7 +36,6 @@ extension SketchModel {
         objects.removeAll { doomed.contains($0.id) }
         selection = []
         draft = []
-        isDirty = true
         statusMessage = "Deleted \(doomed.count) object\(doomed.count == 1 ? "" : "s")"
     }
 
@@ -69,14 +68,12 @@ extension SketchModel {
             if let i = index(of: id) { objects[i].visible = false }
         }
         selection = []
-        isDirty = true
         statusMessage = "Objects hidden"
     }
 
     func showAll() {
         checkpoint("Show All Objects")
         for i in objects.indices { objects[i].visible = true }
-        isDirty = true
         statusMessage = "All hidden objects are visible again"
     }
 
@@ -86,7 +83,6 @@ extension SketchModel {
         for id in ids {
             if let i = index(of: id) { objects[i].showLabel.toggle() }
         }
-        isDirty = true
     }
 
 }
@@ -115,7 +111,6 @@ extension SketchModel {
             } else {
                 objects[i].position = p
             }
-            isDirty = true
         case .pointOnPath(let parent, let oldParam):
             var e = evaluator()
             guard let path = e.path(parent) else { return }
@@ -143,7 +138,6 @@ extension SketchModel {
             }
             let param = path.nearestParam(to: target)
             objects[i].kind = .pointOnPath(path: parent, param: param)
-            isDirty = true
         default:
             break
         }
@@ -155,10 +149,8 @@ extension SketchModel {
         switch objects[i].kind {
         case .freePoint, .caption:
             objects[i].position = (objects[i].position ?? .zero) + delta
-            isDirty = true
         case .measurement, .calculation, .angle:
             objects[i].offset = objects[i].offset + delta
-            isDirty = true
         default:
             break
         }
@@ -167,13 +159,11 @@ extension SketchModel {
     func setLabelOffset(_ id: UUID, _ offset: Vec2) {
         guard let i = index(of: id) else { return }
         objects[i].offset = offset
-        isDirty = true
     }
 
     func setCaptionPosition(_ id: UUID, _ position: Vec2) {
         guard let i = index(of: id) else { return }
         objects[i].position = position
-        isDirty = true
     }
 
     func setCaptionText(_ id: UUID, _ text: String) {
@@ -181,7 +171,6 @@ extension SketchModel {
         if case .caption = objects[i].kind {
             checkpoint("Edit Text")
             objects[i].kind = .caption(text)
-            isDirty = true
         }
     }
 
@@ -196,7 +185,6 @@ extension SketchModel {
         } else if case .angle = objects[i].kind {
             objects[i].offset = objects[i].offset + delta
         }
-        isDirty = true
     }
 
 }

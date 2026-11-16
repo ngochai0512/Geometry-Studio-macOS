@@ -41,6 +41,43 @@ struct DocumentTests {
         #expect(decoded.version == SketchDocument.currentVersion)
     }
 
+    @Test("a sketch file document round-trips through its file codec")
+    func fileDocumentRoundTrip() throws {
+        var document = SketchDocument()
+        document.title = "Saved"
+        var object = SketchObject(kind: .freePoint)
+        object.position = Vec2(-1, 3)
+        document.objects = [object]
+        let file = SketchFileDocument(sketch: document)
+
+        let data = try file.encodedData()
+        let read = try SketchFileDocument.decode(from: data)
+
+        #expect(read.sketch == document)
+        #expect(read.recoveryNote == nil)
+    }
+
+    @Test("a damaged file loads what still decodes and leaves a note")
+    func fileDocumentSalvage() throws {
+        var document = SketchDocument()
+        document.title = "Damaged"
+        document.objects = [
+            SketchObject(kind: .freePoint),
+            SketchObject(kind: .freePoint)
+        ]
+        var root = try #require(jsonObject(from: JSONEncoder().encode(document)))
+        var objects = try #require(root["objects"] as? [[String: Any]])
+        objects[1]["kind"] = "not a kind"
+        root["objects"] = objects
+        let data = try JSONSerialization.data(withJSONObject: root)
+
+        let read = try SketchFileDocument.decode(from: data)
+
+        #expect(read.sketch.objects.count == 1)
+        #expect(read.sketch.title == "Damaged")
+        #expect(read.recoveryNote != nil)
+    }
+
     @Test("an unversioned sketch is revision 0 and migrates")
     func unversionedMigrates() throws {
         var document = SketchDocument()

@@ -37,17 +37,14 @@ extension SketchModel {
             // Keep the world point under the canvas centre fixed.
             _ = size
         }
-        isDirty = true
     }
 
     func setZoom(_ value: Double) {
         settings.scale = min(max(value, 12), 420)
-        isDirty = true
     }
 
     func pan(dx: Double, dy: Double) {
         settings.center = settings.center - Vec2(dx / settings.scale, -dy / settings.scale)
-        isDirty = true
     }
 
     func fitCanvas(size: CGSize) {
@@ -75,7 +72,6 @@ extension SketchModel {
         let w = max(box.width, 2), h = max(box.height, 2)
         settings.center = box.center
         settings.scale = min(max(min(size.width / (w * 1.35), size.height / (h * 1.35)), 18), 180)
-        isDirty = true
     }
 
     // MARK: hit testing

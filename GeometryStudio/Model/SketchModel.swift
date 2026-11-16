@@ -1,9 +1,8 @@
 import SwiftUI
-import Combine
 
 final class SketchModel: ObservableObject {
     // MARK: state
-    @Published var document = SketchDocument()
+    @Published var document: SketchDocument
     @Published var selection: [UUID] = []
     @Published var tool: SketchTool = .select
     @Published var draft: [UUID] = []
@@ -11,15 +10,7 @@ final class SketchModel: ObservableObject {
     @Published var isPointerOverCanvas = false
     @Published var inspectorVisible = true
     @Published var statusMessage: String = ""
-    @Published var currentURL: URL?
-    @Published var isDirty = false
     @Published var showAbout = false
-    /// Failures are surfaced as alerts, not only in the status bar.
-    @Published var errorAlert: SketchAlert?
-    /// A draft or salvage the user can put back.
-    @Published var recoveryOffer: RecoveryOffer?
-    /// Identifies this editing session's autosave draft.
-    let sessionID = UUID()
     /// Animation (the original's Display > Animate).
     @Published var animationPointID: UUID?
     @Published var tracedIDs: Set<UUID> = []
@@ -32,12 +23,10 @@ final class SketchModel: ObservableObject {
     private var lastCoalescingKey: String?
     private var lastCheckpointAt = Date.distantPast
     private let undoLimit = 80
-    private var builtInSample = false
-    private var autosaveCancellable: AnyCancellable?
-    private var autosaveEnabled = false
-    /// The objects as of the last save or open. Drafts are only written when
-    /// the construction differs, so panning alone does not offer a recovery.
-    private var cleanObjects: [SketchObject] = []
+
+    init(document: SketchDocument = SketchDocument()) {
+        self.document = document
+    }
 
     struct Snapshot {
         var objects: [SketchObject]
@@ -78,102 +67,32 @@ final class SketchModel: ObservableObject {
     // MARK: document lifecycle
 
     static func sample() -> SketchModel {
+        SketchModel(document: welcomeDocument())
+    }
+
+    /// Content for a new document. Settings are injected so `--screenshot`
+    /// keeps deterministic defaults instead of reading user preferences.
+    static func welcomeDocument(settings: CanvasSettings = CanvasSettings()) -> SketchDocument {
         let model = SketchModel()
-        model.builtInSample = true
+        model.document.settings = settings
         model.document.title = "Untitled Sketch"
         model.seedSample()
-        model.undoStack.removeAll()
-        model.redoStack.removeAll()
-        model.isDirty = false
-        model.cleanObjects = model.objects
-        return model
+        return model.document
     }
 
-    static func blank() -> SketchModel {
-        let model = SketchModel()
-        model.builtInSample = false
-        return model
-    }
-
-    func newSketch() {
-        objects = []
+    /// Swaps in content that changed outside the editor, such as Revert To
+    /// Saved or browsing versions. History belongs to the document, so it resets.
+    func adopt(_ newDocument: SketchDocument) {
+        document = newDocument
         selection = []
         draft = []
-        document.title = "Untitled Sketch"
-        document.settings = AppPreferences.canvasSettings()
-        currentURL = nil
-        isDirty = false
         resetHistory()
-        cleanObjects = []
-        DocumentDrafts.remove(sessionID: sessionID)
-        statusMessage = "New sketch"
     }
 
-    // MARK: autosave
-
-    /// Starts the debounced draft writer. The screenshot path never calls this,
-    /// so automated renders do not touch Application Support.
-    func enableAutosave() {
-        guard !autosaveEnabled else { return }
-        autosaveEnabled = true
-        autosaveCancellable = objectWillChange
-            .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
-            .sink { [weak self] in
-                self?.writeDraftIfNeeded()
-            }
-    }
-
-    private func writeDraftIfNeeded() {
-        guard autosaveEnabled, isDirty else { return }
-        if objects == cleanObjects {
-            DocumentDrafts.remove(sessionID: sessionID)
-            return
-        }
-        let record = DraftRecord(savedAt: Date(), document: document, sourceURL: currentURL)
-        // Autosave is best-effort; explicit Save reports its own failures.
-        try? DocumentDrafts.write(record, sessionID: sessionID)
-    }
-
-    /// Called once at launch. Loads before the window appears, so the alert
-    /// can ask for a decision on first appearance.
-    func checkForRecoverableDraft() {
-        guard recoveryOffer == nil,
-              let (record, url) = DocumentDrafts.latest(),
-              !record.document.objects.isEmpty else {
-            return
-        }
-        recoveryOffer = .draft(record, url)
-    }
-
-    func acceptRecovery() {
-        guard let offer = recoveryOffer else { return }
-        recoveryOffer = nil
-        switch offer {
-        case .draft(let record, let url):
-            document = record.document
-            currentURL = record.sourceURL
-            selection = []
-            draft = []
-            isDirty = true
-            resetHistory()
-            DocumentDrafts.remove(at: url)
-            statusMessage = "Recovered unsaved changes"
-        case .salvage(let result):
-            document = result.document
-            currentURL = nil
-            selection = []
-            draft = []
-            isDirty = true
-            resetHistory()
-            statusMessage = "Recovered \(result.recovered) of \(result.total) objects"
-        }
-    }
-
-    func discardRecovery() {
-        if case .draft(_, let url) = recoveryOffer {
-            DocumentDrafts.remove(at: url)
-        }
-        recoveryOffer = nil
+    /// The top bar follows the file name once the document has one.
+    func setDocumentTitle(_ title: String) {
+        guard !title.isEmpty, document.title != title else { return }
+        document.title = title
     }
 
     private func seedSample() {
@@ -232,18 +151,6 @@ final class SketchModel: ObservableObject {
         }
     }
 
-    func loadSample() {
-        checkpoint("Load Welcome Sketch")
-        objects = []
-        selection = []
-        draft = []
-        seedSample()
-        document.title = "Welcome Sketch"
-        currentURL = nil
-        isDirty = true
-        statusMessage = "Sample sketch loaded"
-    }
-
     // MARK: undo
 
     /// Records the state before a change. `action` names the step in menus;
@@ -251,19 +158,16 @@ final class SketchModel: ObservableObject {
     /// the step that started them while the same key keeps arriving.
     func checkpoint(_ action: String = "Change", coalescing key: String? = nil) {
         guard openGroup == nil else {
-            isDirty = true
             return
         }
         if let key, key == lastCoalescingKey,
            Date().timeIntervalSince(lastCheckpointAt) < 1.2 {
-            isDirty = true
             // Keep extending while the edit continues; a pause starts a step.
             lastCheckpointAt = Date()
             return
         }
         push(Snapshot(objects: objects, selection: selection, action: action))
         lastCoalescingKey = key
-        isDirty = true
     }
 
     /// Runs a multi-step change as one undoable action. Nested checkpoints are
@@ -307,18 +211,11 @@ final class SketchModel: ObservableObject {
         resetTransientEditingState()
     }
 
-    /// Marks the current construction as the state on disk, so autosave only
-    /// offers recovery for real changes.
-    func markDocumentClean() {
-        cleanObjects = objects
-    }
-
     func undo() {
         guard let snap = undoStack.popLast() else { return }
         redoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
-        isDirty = true
         lastCoalescingKey = nil
         statusMessage = "Undo \(snap.action)"
     }
@@ -328,7 +225,6 @@ final class SketchModel: ObservableObject {
         undoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
-        isDirty = true
         lastCoalescingKey = nil
         statusMessage = "Redo \(snap.action)"
     }
@@ -371,7 +267,6 @@ final class SketchModel: ObservableObject {
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.showLabel = isLabelWorthy(kind)
         objects.append(object)
-        if !silent { isDirty = true }
         return object.id
     }
 

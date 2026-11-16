@@ -492,7 +492,6 @@ struct InspectorView: View {
                 guard let i = model.index(of: id) else { return }
                 model.checkpoint("Edit Label", coalescing: "label-\(id)")
                 model.objects[i].label = value
-                model.isDirty = true
             }
         )
     }
@@ -508,7 +507,6 @@ struct InspectorView: View {
                 if case .caption = model.objects[i].kind {
                     model.checkpoint("Edit Text", coalescing: "caption-\(id)")
                     model.objects[i].kind = .caption(value)
-                    model.isDirty = true
                 }
             }
         )
@@ -521,7 +519,6 @@ struct InspectorView: View {
                 guard let i = model.index(of: id) else { return }
                 model.checkpoint(value ? "Show Label" : "Hide Label")
                 model.objects[i].showLabel = value
-                model.isDirty = true
             }
         )
     }
@@ -533,7 +530,6 @@ struct InspectorView: View {
                 guard let i = model.index(of: id) else { return }
                 model.checkpoint(value ? "Show Object" : "Hide Object")
                 model.objects[i].visible = value
-                model.isDirty = true
             }
         )
     }
@@ -612,7 +608,6 @@ struct InspectorView: View {
                 change(&model.objects[i])
             }
         }
-        model.isDirty = true
     }
 }
 

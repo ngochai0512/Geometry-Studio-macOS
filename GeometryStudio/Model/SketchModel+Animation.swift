@@ -54,7 +54,6 @@ extension SketchModel {
             if next < 0 { next = 0; animationDirection = 1 }
         }
         objects[i].kind = .pointOnPath(path: parent, param: next)
-        isDirty = true
         recordTraceSamples()
     }
 
@@ -113,7 +112,6 @@ extension SketchModel {
         object.style.lineWidth = 1.6
         objects.append(object)
         selection = [object.id]
-        isDirty = true
         statusMessage = "Locus constructed"
     }
 

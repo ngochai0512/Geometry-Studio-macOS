@@ -1,147 +1,164 @@
 import SwiftUI
-import AppKit
 
 struct SketchCommands: Commands {
-    @ObservedObject var model: SketchModel
+    @FocusedValue(\.sketchModel) private var model
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("About Geometry Studio") { model.showAbout = true }
-        }
-
-        CommandGroup(replacing: .newItem) {
-            Button("New Sketch") { model.newSketch() }
-                .keyboardShortcut("n", modifiers: .command)
-            Button("Open…") { model.open() }
-                .keyboardShortcut("o", modifiers: .command)
-            Divider()
-            Button("Load Welcome Sketch") { model.loadSample() }
-        }
-
-        CommandGroup(replacing: .saveItem) {
-            Button("Save") { model.save() }
-                .keyboardShortcut("s", modifiers: .command)
-            Button("Save As…") { model.saveAs() }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
+            Button("About Geometry Studio") { model?.showAbout = true }
         }
 
         CommandGroup(replacing: .undoRedo) {
-            Button(model.undoActionName.map { "Undo \($0)" } ?? "Undo") { model.undo() }
+            Button(model?.undoActionName.map { "Undo \($0)" } ?? "Undo") { model?.undo() }
                 .keyboardShortcut("z", modifiers: .command)
-                .disabled(!model.canUndo)
-            Button(model.redoActionName.map { "Redo \($0)" } ?? "Redo") { model.redo() }
+                .disabled(model?.canUndo != true)
+            Button(model?.redoActionName.map { "Redo \($0)" } ?? "Redo") { model?.redo() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
-                .disabled(!model.canRedo)
+                .disabled(model?.canRedo != true)
             Menu("Undo History") {
                 Text("Current State")
                 Divider()
-                ForEach(model.undoHistory.reversed()) { step in
-                    Button(step.name) { model.revert(toUndoDepth: step.id) }
+                ForEach((model?.undoHistory ?? []).reversed()) { step in
+                    Button(step.name) { model?.revert(toUndoDepth: step.id) }
                 }
             }
-            .disabled(!model.canUndo)
+            .disabled(model?.canUndo != true)
         }
 
         CommandGroup(after: .pasteboard) {
             Divider()
-            Button("Delete") { model.deleteSelection() }
+            Button("Delete") { model?.deleteSelection() }
                 .keyboardShortcut(.delete, modifiers: [])
-                .disabled(model.selection.isEmpty)
-            Button("Select All") { model.selectAll() }
+                .disabled(model?.selection.isEmpty != false)
+            Button("Select All") { model?.selectAll() }
                 .keyboardShortcut("a", modifiers: .command)
+                .disabled(model == nil)
         }
 
         CommandMenu("Construct") {
-            Button("Midpoint") { model.constructMidpoint() }
+            Button("Midpoint") { model?.constructMidpoint() }
                 .keyboardShortcut("m", modifiers: [.command, .shift])
-            Button("Perpendicular Line") { model.constructPerpendicular() }
-            Button("Parallel Line") { model.constructParallel() }
-            Button("Angle Bisector") { model.constructBisector() }
-            Button("Intersection") { model.constructIntersection() }
+                .disabled(model == nil)
+            Button("Perpendicular Line") { model?.constructPerpendicular() }
+                .disabled(model == nil)
+            Button("Parallel Line") { model?.constructParallel() }
+                .disabled(model == nil)
+            Button("Angle Bisector") { model?.constructBisector() }
+                .disabled(model == nil)
+            Button("Intersection") { model?.constructIntersection() }
+                .disabled(model == nil)
             Divider()
-            Button("Segment") { model.constructSegment() }
-            Button("Circle by Center + Point") { model.constructCircle() }
-            Button("Polygon Interior") { model.constructPolygon() }
-            Button("Point on Object") { model.constructPointOnPath() }
+            Button("Segment") { model?.constructSegment() }
+                .disabled(model == nil)
+            Button("Circle by Center + Point") { model?.constructCircle() }
+                .disabled(model == nil)
+            Button("Polygon Interior") { model?.constructPolygon() }
+                .disabled(model == nil)
+            Button("Point on Object") { model?.constructPointOnPath() }
+                .disabled(model == nil)
             Divider()
-            Button("Locus from Selection") { model.constructLocus() }
-            Divider()
-            Button("Midpoint of Two Points") { model.constructMidpoint() }
+            Button("Locus from Selection") { model?.constructLocus() }
+                .disabled(model == nil)
         }
 
         CommandMenu("Measure") {
-            Button("Distance") { model.measure(.distance) }
-            Button("Length") { model.measure(.length) }
-            Button("Perimeter") { model.measure(.perimeter) }
-            Button("Circumference") { model.measure(.circumference) }
-            Button("Angle") { model.measure(.angle) }
-            Button("Area") { model.measure(.area) }
-            Button("Radius") { model.measure(.radius) }
-            Button("Ratio") { model.measure(.ratio) }
+            Button("Distance") { model?.measure(.distance) }
+                .disabled(model == nil)
+            Button("Length") { model?.measure(.length) }
+                .disabled(model == nil)
+            Button("Perimeter") { model?.measure(.perimeter) }
+                .disabled(model == nil)
+            Button("Circumference") { model?.measure(.circumference) }
+                .disabled(model == nil)
+            Button("Angle") { model?.measure(.angle) }
+                .disabled(model == nil)
+            Button("Area") { model?.measure(.area) }
+                .disabled(model == nil)
+            Button("Radius") { model?.measure(.radius) }
+                .disabled(model == nil)
+            Button("Ratio") { model?.measure(.ratio) }
+                .disabled(model == nil)
             Divider()
-            Button("Coordinates") { model.measure(.coordinates) }
-            Button("Equation") { model.measure(.equation) }
-            Button("Slope") { model.measure(.slope) }
+            Button("Coordinates") { model?.measure(.coordinates) }
+                .disabled(model == nil)
+            Button("Equation") { model?.measure(.equation) }
+                .disabled(model == nil)
+            Button("Slope") { model?.measure(.slope) }
+                .disabled(model == nil)
             Divider()
             Button("Calculate…") {
                 NotificationCenter.default.post(name: .openCalculation, object: nil)
             }
+            .disabled(model == nil)
             Button("Plot Function…") {
                 NotificationCenter.default.post(name: .openFunction, object: nil)
             }
+            .disabled(model == nil)
         }
 
         CommandMenu("Transform") {
-            Button("Reflect Across Selected Line") { model.reflectSelection() }
+            Button("Reflect Across Selected Line") { model?.reflectSelection() }
+                .disabled(model == nil)
             Divider()
             Button("Rotate…") { NotificationCenter.default.post(name: .openRotate, object: nil) }
+                .disabled(model == nil)
             Button("Dilate…") { NotificationCenter.default.post(name: .openDilate, object: nil) }
+                .disabled(model == nil)
             Button("Translate…") { NotificationCenter.default.post(name: .openTranslate, object: nil) }
+                .disabled(model == nil)
         }
 
         CommandMenu("Graph") {
-            Button(model.settings.grid ? "Hide Grid" : "Show Grid") {
-                model.settings.grid.toggle()
+            Button(model?.settings.grid == true ? "Hide Grid" : "Show Grid") {
+                model?.settings.grid.toggle()
             }
-            Button(model.settings.axes ? "Hide Axes" : "Show Axes") {
-                model.settings.axes.toggle()
+            .disabled(model == nil)
+            Button(model?.settings.axes == true ? "Hide Axes" : "Show Axes") {
+                model?.settings.axes.toggle()
             }
-            Button(model.settings.snap ? "Turn Snapping Off" : "Snap Points to Grid") {
-                model.settings.snap.toggle()
+            .disabled(model == nil)
+            Button(model?.settings.snap == true ? "Turn Snapping Off" : "Snap Points to Grid") {
+                model?.settings.snap.toggle()
             }
+            .disabled(model == nil)
             Divider()
             Button("Plot Function…") {
                 NotificationCenter.default.post(name: .openFunction, object: nil)
             }
+            .disabled(model == nil)
         }
 
         CommandMenu("Display") {
-            Button("Show Labels") {
-                model.settings.showLabels = true
-            }
-            Button("Hide Labels") {
-                model.settings.showLabels = false
-            }
+            Button("Show Labels") { model?.settings.showLabels = true }
+                .disabled(model == nil)
+            Button("Hide Labels") { model?.settings.showLabels = false }
+                .disabled(model == nil)
             Divider()
-            Button("Hide Selected") { model.hideSelection() }
-                .disabled(model.selection.isEmpty)
-            Button("Show All Hidden") { model.showAll() }
+            Button("Hide Selected") { model?.hideSelection() }
+                .disabled(model?.selection.isEmpty != false)
+            Button("Show All Hidden") { model?.showAll() }
+                .disabled(model == nil)
             Divider()
-            Button(model.animationPointID == nil ? "Animate" : "Pause Animation") {
-                model.toggleAnimation()
+            Button(model?.animationPointID == nil ? "Animate" : "Pause Animation") {
+                model?.toggleAnimation()
             }
             .keyboardShortcut("`", modifiers: [])
-            Button("Trace Selection") { model.toggleTrace() }
-            Button("Erase Traces") { model.eraseTraces() }
+            .disabled(model == nil)
+            Button("Trace Selection") { model?.toggleTrace() }
+                .disabled(model == nil)
+            Button("Erase Traces") { model?.eraseTraces() }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
+                .disabled(model == nil)
             Divider()
             Button("Fit Sketch") {
-                model.fitCanvas(size: CGSize(width: 980, height: 740))
+                model?.fitCanvas(size: CGSize(width: 980, height: 740))
             }
-            Button(model.inspectorVisible ? "Hide Inspector" : "Show Inspector") {
-                model.inspectorVisible.toggle()
+            .disabled(model == nil)
+            Button(model?.inspectorVisible == true ? "Hide Inspector" : "Show Inspector") {
+                model?.inspectorVisible.toggle()
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
+            .disabled(model == nil)
         }
     }
 }

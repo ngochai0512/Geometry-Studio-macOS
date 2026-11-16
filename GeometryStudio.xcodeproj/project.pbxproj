@@ -7,12 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09D7D28CF245043920D3663F /* DocumentWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092913E650562116FE738CB /* DocumentWorkspace.swift */; };
 		14EE8E59899A6B4CEE8DAA15 /* SketchModel+Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8DD4BF90DBAC1E2A2E2089 /* SketchModel+Animation.swift */; };
 		1B61E4208705088E2DEDAD6E /* CanvasGestures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC37130557CCCAC5266E3412 /* CanvasGestures.swift */; };
 		1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */; };
 		1DC8DFD35102CC82FD1D865E /* SketchModel+Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */; };
 		201210E8796702D94029395D /* SketchFileType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6871105ED6530E352D506C92 /* SketchFileType.swift */; };
 		264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6FB36DE4B209586B261A8D9 /* FlowChips.swift */; };
+		2A8FB524EAD85239CDEEE860 /* FocusedSketchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A9B014A8086F4250A78466 /* FocusedSketchModel.swift */; };
 		2B927B8FFADA6563BE26A524 /* Vec2.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7CE4D4166BA82AE96C89FC /* Vec2.swift */; };
 		32719F743D3D96E961F8B46D /* SketchModel+Measurement.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA967A89B8DDAC13140B973 /* SketchModel+Measurement.swift */; };
 		33218E02121C46D250A02473 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21056A4CBEA9102B7A633016 /* AppPreferences.swift */; };
@@ -29,14 +31,13 @@
 		9AE5BD39B082AE1C8C59DDA3 /* SketchModel+Construction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEF0D062D574EBCC1500345 /* SketchModel+Construction.swift */; };
 		9EE8CEE82FC0465DA11AD86A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 727F065C238FED4F7D4752EF /* Assets.xcassets */; };
 		A152B0518F680FBA18DF900E /* SketchModel+Editing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */; };
-		A1DD7605A40C2622A702D660 /* DocumentRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9D5F5A216DDEEA43DED7C1 /* DocumentRecovery.swift */; };
 		A67DCB97BAFB82E9E7EC13AE /* SketchModel+Transforms.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76807891B2874426D4693D2 /* SketchModel+Transforms.swift */; };
 		AAF47E7FEE2CDFC480520747 /* Screenshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F29B45506E99E9917D36 /* Screenshot.swift */; };
 		AE145A66C363197F6771192B /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0175EEB4CA34D2001C398FC /* InspectorView.swift */; };
 		B5EB5244755B10A628200F4A /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90511DD8EE80C641A87A0547 /* AboutView.swift */; };
 		BD57E62A90232E51EF78544C /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 351FBEF1D414BA5044D76F8B /* main.swift */; };
 		CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987F7F66DD38C75F1D729436 /* EvalPath.swift */; };
-		D9F459FEE6D63C39CBDF2DCA /* SketchModel+Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = 943AB5074D23FD89B8256FD5 /* SketchModel+Document.swift */; };
+		CDBC2D996978D6D899969106 /* SketchFileDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */; };
 		DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */; };
 		EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB58632CC8F51EBE9099D9C2 /* Expression.swift */; };
 		EE60F31F6E7148993377E610 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A28D11FAD1ACA69B2FD090 /* ContentView.swift */; };
@@ -45,9 +46,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07A9B014A8086F4250A78466 /* FocusedSketchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedSketchModel.swift; sourceTree = "<group>"; };
 		08A28D11FAD1ACA69B2FD090 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0921F29B45506E99E9917D36 /* Screenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screenshot.swift; sourceTree = "<group>"; };
-		0B9D5F5A216DDEEA43DED7C1 /* DocumentRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRecovery.swift; sourceTree = "<group>"; };
+		0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchFileDocument.swift; sourceTree = "<group>"; };
+		1092913E650562116FE738CB /* DocumentWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentWorkspace.swift; sourceTree = "<group>"; };
 		14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectModel.swift; sourceTree = "<group>"; };
 		21056A4CBEA9102B7A633016 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		2CBF4F3CF6F57DFEED22C979 /* SketchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchTool.swift; sourceTree = "<group>"; };
@@ -63,7 +66,6 @@
 		727F065C238FED4F7D4752EF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8CE812B7A2607107B1662098 /* Units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Units.swift; sourceTree = "<group>"; };
 		90511DD8EE80C641A87A0547 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
-		943AB5074D23FD89B8256FD5 /* SketchModel+Document.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Document.swift"; sourceTree = "<group>"; };
 		974C9AAAADD178B2F891A6EF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		987F7F66DD38C75F1D729436 /* EvalPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvalPath.swift; sourceTree = "<group>"; };
 		AB58632CC8F51EBE9099D9C2 /* Expression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expression.swift; sourceTree = "<group>"; };
@@ -87,6 +89,7 @@
 		0B9C81C96556813477C33743 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				07A9B014A8086F4250A78466 /* FocusedSketchModel.swift */,
 				BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */,
 				4594827027731B183A45097B /* Notifications.swift */,
 				0921F29B45506E99E9917D36 /* Screenshot.swift */,
@@ -142,6 +145,7 @@
 				3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */,
 				AC37130557CCCAC5266E3412 /* CanvasGestures.swift */,
 				08A28D11FAD1ACA69B2FD090 /* ContentView.swift */,
+				1092913E650562116FE738CB /* DocumentWorkspace.swift */,
 				E6FB36DE4B209586B261A8D9 /* FlowChips.swift */,
 				E0175EEB4CA34D2001C398FC /* InspectorView.swift */,
 				974C9AAAADD178B2F891A6EF /* SettingsView.swift */,
@@ -155,14 +159,13 @@
 			children = (
 				21056A4CBEA9102B7A633016 /* AppPreferences.swift */,
 				B2C88C96DAAA8F36C4AA4F10 /* Document.swift */,
-				0B9D5F5A216DDEEA43DED7C1 /* DocumentRecovery.swift */,
 				6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */,
 				14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */,
+				0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */,
 				6871105ED6530E352D506C92 /* SketchFileType.swift */,
 				4DD94619FE28C1A84A15F234 /* SketchModel.swift */,
 				DB8DD4BF90DBAC1E2A2E2089 /* SketchModel+Animation.swift */,
 				2FEF0D062D574EBCC1500345 /* SketchModel+Construction.swift */,
-				943AB5074D23FD89B8256FD5 /* SketchModel+Document.swift */,
 				4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */,
 				BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */,
 				BCA967A89B8DDAC13140B973 /* SketchModel+Measurement.swift */,
@@ -258,10 +261,11 @@
 				1B61E4208705088E2DEDAD6E /* CanvasGestures.swift in Sources */,
 				EE60F31F6E7148993377E610 /* ContentView.swift in Sources */,
 				913070FC776E0178999C03EB /* Document.swift in Sources */,
-				A1DD7605A40C2622A702D660 /* DocumentRecovery.swift in Sources */,
+				09D7D28CF245043920D3663F /* DocumentWorkspace.swift in Sources */,
 				CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */,
 				EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */,
 				264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */,
+				2A8FB524EAD85239CDEEE860 /* FocusedSketchModel.swift in Sources */,
 				DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */,
 				1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */,
 				AE145A66C363197F6771192B /* InspectorView.swift in Sources */,
@@ -271,10 +275,10 @@
 				33F4FF25F20332C380C5FCBE /* SettingsView.swift in Sources */,
 				413BBEC323A38A20ADF6591A /* SketchCanvas.swift in Sources */,
 				67D19938E4DAE806E7FB5863 /* SketchCommands.swift in Sources */,
+				CDBC2D996978D6D899969106 /* SketchFileDocument.swift in Sources */,
 				201210E8796702D94029395D /* SketchFileType.swift in Sources */,
 				14EE8E59899A6B4CEE8DAA15 /* SketchModel+Animation.swift in Sources */,
 				9AE5BD39B082AE1C8C59DDA3 /* SketchModel+Construction.swift in Sources */,
-				D9F459FEE6D63C39CBDF2DCA /* SketchModel+Document.swift in Sources */,
 				A152B0518F680FBA18DF900E /* SketchModel+Editing.swift in Sources */,
 				1DC8DFD35102CC82FD1D865E /* SketchModel+Geometry.swift in Sources */,
 				32719F743D3D96E961F8B46D /* SketchModel+Measurement.swift in Sources */,

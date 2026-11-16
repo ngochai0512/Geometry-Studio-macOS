@@ -181,7 +181,6 @@ extension SketchModel {
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.showLabel = isLabelWorthy(kind)
         objects.append(object)
-        isDirty = true
         return object.id
     }
 
@@ -197,7 +196,6 @@ extension SketchModel {
         checkpoint("Plot Function")
         let id = commit(kind: .functionPlot(trimmed), label: "")
         selection = [id]
-        isDirty = true
         statusMessage = "Function plotted"
     }
 }
