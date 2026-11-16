@@ -38,5 +38,97 @@ struct DocumentTests {
         #expect(decoded.objects.first?.position == Vec2(1.5, -2))
         #expect(decoded.settings.precision == 4)
         #expect(decoded.settings.lengthUnit == .cm)
+        #expect(decoded.version == SketchDocument.currentVersion)
+    }
+
+    @Test("an unversioned sketch is revision 0 and migrates")
+    func unversionedMigrates() throws {
+        var document = SketchDocument()
+        document.title = "Legacy"
+        var root = try #require(jsonObject(from: JSONEncoder().encode(document)))
+        root.removeValue(forKey: "version")
+        let legacy = try JSONSerialization.data(withJSONObject: root)
+
+        let decoded = try JSONDecoder().decode(SketchDocument.self, from: legacy)
+
+        #expect(decoded.version == SketchDocument.currentVersion)
+        #expect(decoded.title == "Legacy")
+    }
+
+    @Test("a sketch missing newer keys uses defaults")
+    func missingKeysUseDefaults() throws {
+        let data = try JSONSerialization.data(withJSONObject: [
+            "title": "Old Sketch",
+            "objects": [],
+            "settings": ["precision": 4, "lengthUnit": "cm"]
+        ])
+
+        let decoded = try JSONDecoder().decode(SketchDocument.self, from: data)
+
+        #expect(decoded.title == "Old Sketch")
+        #expect(decoded.settings.precision == 4)
+        #expect(decoded.settings.lengthUnit == .cm)
+        #expect(decoded.settings.grid)
+        #expect(decoded.settings.axes)
+        #expect(decoded.settings.showLabels)
+        #expect(decoded.settings.angleUnit == .degrees)
+        #expect(decoded.settings.scale == SketchMetrics.pixelsPerCentimetre)
+    }
+
+    @Test("an object missing newer keys uses defaults")
+    func objectMissingKeysUsesDefaults() throws {
+        var object = SketchObject(kind: .freePoint)
+        object.label = "A"
+        var raw = try #require(jsonObject(from: JSONEncoder().encode(object)))
+        raw.removeValue(forKey: "style")
+        raw.removeValue(forKey: "showLabel")
+        raw.removeValue(forKey: "isLocked")
+        let data = try JSONSerialization.data(withJSONObject: raw)
+
+        let decoded = try JSONDecoder().decode(SketchObject.self, from: data)
+
+        #expect(decoded.label == "A")
+        #expect(decoded.showLabel)
+        #expect(!decoded.isLocked)
+        #expect(decoded.style.lineWidth == 1.5)
+        #expect(decoded.style.pointShape == .filled)
+    }
+
+    @Test("a newer document revision is refused, not silently truncated")
+    func futureVersionRejected() throws {
+        let data = try JSONSerialization.data(withJSONObject: [
+            "version": 99,
+            "title": "From The Future",
+            "objects": []
+        ])
+
+        #expect(throws: DocumentError.unsupportedVersion(99)) {
+            _ = try JSONDecoder().decode(SketchDocument.self, from: data)
+        }
+    }
+
+    @Test("salvage keeps the objects that still decode")
+    func salvageReadableObjects() throws {
+        var document = SketchDocument()
+        document.title = "Damaged"
+        let a = SketchObject(kind: .freePoint)
+        let b = SketchObject(kind: .midpoint(a: a.id, b: a.id))
+        document.objects = [a, b]
+        var root = try #require(jsonObject(from: JSONEncoder().encode(document)))
+        var objects = try #require(root["objects"] as? [[String: Any]])
+        objects[1]["kind"] = "not a kind"
+        root["objects"] = objects
+        let damaged = try JSONSerialization.data(withJSONObject: root)
+
+        let result = try #require(SketchDocument.salvage(from: damaged))
+
+        #expect(result.recovered == 1)
+        #expect(result.total == 2)
+        #expect(result.document.objects.first?.id == a.id)
+        #expect(result.document.title == "Damaged")
+    }
+
+    private func jsonObject(from data: Data) -> [String: Any]? {
+        try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 }

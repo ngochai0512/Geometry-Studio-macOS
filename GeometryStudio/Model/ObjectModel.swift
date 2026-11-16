@@ -37,6 +37,28 @@ struct TransformSpec: Codable, Hashable {
     var factor: Double = 2
     var dx: Double = 1
     var dy: Double = 0
+
+    init(kind: TransformKind, reference: UUID? = nil, secondReference: UUID? = nil,
+         angle: Double = 90, factor: Double = 2, dx: Double = 1, dy: Double = 0) {
+        self.kind = kind
+        self.reference = reference
+        self.secondReference = secondReference
+        self.angle = angle
+        self.factor = factor
+        self.dx = dx
+        self.dy = dy
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try c.decode(TransformKind.self, forKey: .kind)
+        reference = try c.decodeIfPresent(UUID.self, forKey: .reference)
+        secondReference = try c.decodeIfPresent(UUID.self, forKey: .secondReference)
+        angle = try c.decodeIfPresent(Double.self, forKey: .angle) ?? 90
+        factor = try c.decodeIfPresent(Double.self, forKey: .factor) ?? 2
+        dx = try c.decodeIfPresent(Double.self, forKey: .dx) ?? 1
+        dy = try c.decodeIfPresent(Double.self, forKey: .dy) ?? 0
+    }
 }
 
 enum ObjectKind: Codable, Hashable {
@@ -74,6 +96,24 @@ struct SketchObject: Identifiable, Codable, Hashable {
     var position: Vec2? = nil
     var order: Int = 0
     var isLocked: Bool = false
+
+    init(kind: ObjectKind) {
+        self.kind = kind
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        kind = try c.decode(ObjectKind.self, forKey: .kind)
+        label = try c.decodeIfPresent(String.self, forKey: .label) ?? ""
+        showLabel = try c.decodeIfPresent(Bool.self, forKey: .showLabel) ?? true
+        visible = try c.decodeIfPresent(Bool.self, forKey: .visible) ?? true
+        style = try c.decodeIfPresent(ObjectStyle.self, forKey: .style) ?? ObjectStyle()
+        offset = try c.decodeIfPresent(Vec2.self, forKey: .offset) ?? .zero
+        position = try c.decodeIfPresent(Vec2.self, forKey: .position)
+        order = try c.decodeIfPresent(Int.self, forKey: .order) ?? 0
+        isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+    }
 
     var isPointLike: Bool {
         switch kind {

@@ -55,4 +55,16 @@ struct ObjectStyle: Codable, Hashable {
     var pointSize: Double = 5.5
     var pointShape: PointShape = .filled
     var fillOpacity: Double = 0.12
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .ink
+        lineWidth = try c.decodeIfPresent(Double.self, forKey: .lineWidth) ?? 1.5
+        dash = try c.decodeIfPresent(DashStyle.self, forKey: .dash) ?? .solid
+        pointSize = try c.decodeIfPresent(Double.self, forKey: .pointSize) ?? 5.5
+        pointShape = try c.decodeIfPresent(PointShape.self, forKey: .pointShape) ?? .filled
+        fillOpacity = try c.decodeIfPresent(Double.self, forKey: .fillOpacity) ?? 0.12
+    }
 }
