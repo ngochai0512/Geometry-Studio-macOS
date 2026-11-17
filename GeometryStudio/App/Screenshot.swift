@@ -10,7 +10,7 @@ enum ScreenshotRunner {
         let width: CGFloat = 1280
         let height: CGFloat = 820
         let model = SketchModel.sample()
-        let content = ContentView(model: model, screenshotMode: true)
+        let content = ContentView(model: model)
             .frame(width: width, height: height)
             .environment(\.colorScheme, .light)
 

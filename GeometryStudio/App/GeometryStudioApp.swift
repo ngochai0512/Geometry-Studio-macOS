@@ -10,7 +10,7 @@ struct GeometryStudioApp: App {
             )
         }
         .defaultSize(width: 1320, height: 860)
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
         .commands {
             SketchCommands()
         }
