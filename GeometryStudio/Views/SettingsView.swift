@@ -11,14 +11,12 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            unitsTab
-                .tabItem {
-                    Label("Units", systemImage: "ruler")
-                }
-            newSketchTab
-                .tabItem {
-                    Label("New Sketches", systemImage: "doc.badge.plus")
-                }
+            Tab("Units", systemImage: "ruler") {
+                unitsTab
+            }
+            Tab("New Sketches", systemImage: "doc.badge.plus") {
+                newSketchTab
+            }
         }
         .frame(width: 460, height: 330)
     }

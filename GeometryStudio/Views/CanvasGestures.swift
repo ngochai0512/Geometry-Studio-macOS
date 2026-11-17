@@ -12,7 +12,6 @@ extension SketchCanvas {
                 let current = model.worldPoint(value.location, size: size)
                 if dragStartScreen == nil {
                     dragStartScreen = value.startLocation
-                    dragStartWorld = world
                     dragCheckpointed = false
                     didMove = false
 
@@ -73,7 +72,6 @@ extension SketchCanvas {
             .onEnded { value in
                 defer {
                     dragStartScreen = nil
-                    dragStartWorld = nil
                     dragPointID = nil
                     dragLabelID = nil
                     dragLabelIsCaption = false
@@ -151,10 +149,11 @@ extension SketchCanvas {
     }
 
     func magnification(size: CGSize) -> some Gesture {
-        MagnificationGesture()
+        MagnifyGesture()
             .onChanged { value in
                 if magnifyBase == nil { magnifyBase = model.settings.scale }
-                model.settings.scale = min(max((magnifyBase ?? SketchMetrics.pixelsPerCentimetre) * value, 12), 420)
+                let scale = (magnifyBase ?? SketchMetrics.pixelsPerCentimetre) * value.magnification
+                model.settings.scale = min(max(scale, 12), 420)
             }
             .onEnded { _ in
                 magnifyBase = nil

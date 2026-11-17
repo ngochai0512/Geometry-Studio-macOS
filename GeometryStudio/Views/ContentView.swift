@@ -160,7 +160,8 @@ struct ContentView: View {
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .frame(width: 42)
                 }
-                .menuStyle(.borderlessButton)
+                .menuStyle(.button)
+                .buttonStyle(.borderless)
                 .menuIndicator(.hidden)
                 .fixedSize()
                 barButton("plus.magnifyingglass", help: "Zoom in") { model.zoom(by: 1.19) }
@@ -198,10 +199,10 @@ struct ContentView: View {
                         .font(.system(size: 13.5, weight: .medium))
                         .frame(width: 29, height: 27)
                         .foregroundStyle(model.tool == tool ? Color.white : Color.primary.opacity(0.78))
-                        .background(
+                        .background {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
                                 .fill(model.tool == tool ? Color.accentColor : Color.clear)
-                        )
+                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -210,10 +211,10 @@ struct ContentView: View {
         }
         .padding(3)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .overlay(
+        .overlay {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.8)
-        )
+        }
     }
 
     private var constructMenu: some View {
@@ -235,7 +236,8 @@ struct ContentView: View {
             Label("Construct", systemImage: "plus.square.on.square")
                 .font(.system(size: 11.5, weight: .medium))
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
         .fixedSize()
         .help("Construct objects from the selection")
     }
@@ -266,7 +268,8 @@ struct ContentView: View {
             Label("Measure", systemImage: "ruler")
                 .font(.system(size: 11.5, weight: .medium))
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
         .fixedSize()
         .help("Measure the selection")
     }
@@ -378,7 +381,10 @@ struct ContentView: View {
                 .frame(height: 88)
                 .padding(6)
                 .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.1)))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.primary.opacity(0.1))
+                }
             HStack {
                 Spacer()
                 Button("Cancel") { showTextSheet = false }
@@ -513,7 +519,8 @@ struct ContentView: View {
             Text("Type an expression in x. Examples: sin(x), x^2 - 2, 3cos(2x) + 1.")
                 .font(.subheadline).foregroundStyle(.secondary)
             TextField("f(x) =", text: $functionText)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.bordered)
+                .textInputBorderShape(.roundedRectangle)
                 .font(.system(size: 14, design: .monospaced))
             HStack {
                 Spacer()
@@ -538,7 +545,8 @@ struct ContentView: View {
                 .font(.subheadline).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             TextField("expression", text: $calculationText)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.bordered)
+                .textInputBorderShape(.roundedRectangle)
                 .font(.system(size: 14, design: .monospaced))
             let names = measurementNames()
             if !names.isEmpty {

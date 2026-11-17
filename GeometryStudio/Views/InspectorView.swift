@@ -81,7 +81,8 @@ struct InspectorView: View {
                         Text("Label").font(.system(size: 11.5))
                         Spacer()
                         TextField("Label", text: labelBinding(id))
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.bordered)
+                            .textInputBorderShape(.roundedRectangle)
                             .frame(width: 130)
                             .font(.system(size: 11.5))
                     }
@@ -91,7 +92,8 @@ struct InspectorView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Text").font(.system(size: 11.5)).foregroundStyle(.secondary)
                         TextField("Text", text: captionBinding(id), axis: .vertical)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.bordered)
+                            .textInputBorderShape(.roundedRectangle)
                             .lineLimit(2...5)
                             .font(.system(size: 11.5))
                     }
@@ -155,7 +157,8 @@ struct InspectorView: View {
                         .font(.system(size: 11.5, weight: .medium))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .menuStyle(.borderlessButton)
+                .menuStyle(.button)
+                .buttonStyle(.borderless)
 
                 HStack(spacing: 7) {
                     actionButton(model.animationPointID == nil ? "play" : "pause",
@@ -244,12 +247,15 @@ struct InspectorView: View {
                     Circle()
                         .fill(color.color)
                         .frame(width: 18, height: 18)
-                        .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1))
-                        .overlay(
+                        .overlay {
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.8), lineWidth: 1)
+                        }
+                        .overlay {
                             Circle()
                                 .strokeBorder(Color.primary.opacity(0.25), lineWidth: 1)
                                 .padding(-1)
-                        )
+                        }
                 }
                 .buttonStyle(.plain)
                 .help(name)
