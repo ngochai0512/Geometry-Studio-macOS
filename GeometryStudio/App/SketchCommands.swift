@@ -35,6 +35,20 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
         }
 
+        CommandGroup(replacing: .printItem) {
+            Button("Print…") {
+                if let model {
+                    SketchPrinter.printSketch(model)
+                }
+            }
+            .keyboardShortcut("p", modifiers: .command)
+            .disabled(model == nil)
+
+            Button("Page Setup…") {
+                SketchPrinter.runPageSetup()
+            }
+        }
+
         CommandMenu("Construct") {
             Button("Midpoint") { model?.constructMidpoint() }
                 .keyboardShortcut("m", modifiers: [.command, .shift])

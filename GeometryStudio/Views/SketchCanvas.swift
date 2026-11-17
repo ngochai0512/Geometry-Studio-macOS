@@ -4,6 +4,8 @@ import AppKit
 struct SketchCanvas: View {
     @ObservedObject var model: SketchModel
     var onTextAt: (Vec2) -> Void
+    /// Printing renders a clean white page instead of the screen tint.
+    var printing: Bool = false
 
     @State var canvasSize: CGSize = .zero
     @State var dragStartWorld: Vec2?
@@ -29,11 +31,15 @@ struct SketchCanvas: View {
             Canvas { context, size in
                 draw(context: &context, size: size)
             }
-            .background(
-                LinearGradient(colors: [Color(red: 0.995, green: 0.995, blue: 0.998),
-                                        Color(red: 0.975, green: 0.977, blue: 0.985)],
-                               startPoint: .top, endPoint: .bottom)
-            )
+            .background {
+                if printing {
+                    Color.white
+                } else {
+                    LinearGradient(colors: [Color(red: 0.995, green: 0.995, blue: 0.998),
+                                            Color(red: 0.975, green: 0.977, blue: 0.985)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+            }
             .contentShape(Rectangle())
             .gesture(dragGesture(size: geo.size))
             .simultaneousGesture(magnification(size: geo.size))

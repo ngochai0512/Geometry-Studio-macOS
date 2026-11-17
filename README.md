@@ -73,6 +73,8 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
   autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,
   named undo/redo with an undo history menu, and automatic recovery of readable objects from a
   damaged file.
+- **Printing** — File > Print (⌘P) fits the sketch to one page and uses the standard macOS print
+  panel and preview; Page Setup controls paper size, orientation and margins.
 - **Preferences** — default length unit, angle unit, precision, grid, axes, snapping and labels
   for new sketches.
 - **Welcome sketch** — a triangle, its perpendicular bisectors, circumcentre, circumcircle,
@@ -92,8 +94,9 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 | A | Angle |
 | T | Text |
 
-`⌘Z` / `⇧⌘Z` undo and redo, `⌘A` select all, Delete removes the selection. Scroll to pan,
-pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a draft.
+`⌘Z` / `⇧⌘Z` undo and redo, `⌘A` select all, `⌘P` prints the sketch, Delete removes the
+selection. Scroll to pan, pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a
+draft.
 
 ## What is new versus the original
 
@@ -101,7 +104,7 @@ pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a draft.
   checker); this rebuild writes the same model and rules in Swift. See `MECHANICS.md` for the
   evidence, the addresses and the values.
 - The document format is this app's own JSON-based `.gsp`, not the original binary format.
-- Custom tools/scripts, action buttons, iterations, tables, pictures, printing, export and
+- Custom tools/scripts, action buttons, iterations, tables, pictures, export and
   multiple pages are not included in this version.
 
 ## Evidence

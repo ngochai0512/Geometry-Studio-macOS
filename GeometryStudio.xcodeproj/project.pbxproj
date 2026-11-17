@@ -13,6 +13,7 @@
 		1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */; };
 		1DC8DFD35102CC82FD1D865E /* SketchModel+Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */; };
 		201210E8796702D94029395D /* SketchFileType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6871105ED6530E352D506C92 /* SketchFileType.swift */; };
+		24C5F73EF3916474D9A1648D /* SketchPrintView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 493DE353CA6462761FEECB3C /* SketchPrintView.swift */; };
 		264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6FB36DE4B209586B261A8D9 /* FlowChips.swift */; };
 		2A8FB524EAD85239CDEEE860 /* FocusedSketchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A9B014A8086F4250A78466 /* FocusedSketchModel.swift */; };
 		2B927B8FFADA6563BE26A524 /* Vec2.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7CE4D4166BA82AE96C89FC /* Vec2.swift */; };
@@ -21,6 +22,7 @@
 		33F4FF25F20332C380C5FCBE /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 974C9AAAADD178B2F891A6EF /* SettingsView.swift */; };
 		413BBEC323A38A20ADF6591A /* SketchCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD2AFA7548106CEEBBB5CC8 /* SketchCanvas.swift */; };
 		52C2520C9243975422883406 /* ObjectModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */; };
+		5B71C52F1F952B21F3509849 /* SketchPrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF58355B4B595E8930F9665 /* SketchPrinter.swift */; };
 		67D19938E4DAE806E7FB5863 /* SketchCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA0B98068B8910DB665EC1A /* SketchCommands.swift */; };
 		730327073EEB52FCEFCB09CC /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3565491E3C34157DFB2DA5D /* Style.swift */; };
 		76008DD6BEB15A98EB96EF30 /* CanvasDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */; };
@@ -50,6 +52,7 @@
 		08A28D11FAD1ACA69B2FD090 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0921F29B45506E99E9917D36 /* Screenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screenshot.swift; sourceTree = "<group>"; };
 		0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchFileDocument.swift; sourceTree = "<group>"; };
+		0EF58355B4B595E8930F9665 /* SketchPrinter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchPrinter.swift; sourceTree = "<group>"; };
 		1092913E650562116FE738CB /* DocumentWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentWorkspace.swift; sourceTree = "<group>"; };
 		14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectModel.swift; sourceTree = "<group>"; };
 		21056A4CBEA9102B7A633016 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
@@ -58,6 +61,7 @@
 		351FBEF1D414BA5044D76F8B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasDrawing.swift; sourceTree = "<group>"; };
 		4594827027731B183A45097B /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
+		493DE353CA6462761FEECB3C /* SketchPrintView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchPrintView.swift; sourceTree = "<group>"; };
 		4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Editing.swift"; sourceTree = "<group>"; };
 		4DD94619FE28C1A84A15F234 /* SketchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchModel.swift; sourceTree = "<group>"; };
 		6871105ED6530E352D506C92 /* SketchFileType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchFileType.swift; sourceTree = "<group>"; };
@@ -98,6 +102,15 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		188B0A14CC9099570799C57B /* Printing */ = {
+			isa = PBXGroup;
+			children = (
+				0EF58355B4B595E8930F9665 /* SketchPrinter.swift */,
+				493DE353CA6462761FEECB3C /* SketchPrintView.swift */,
+			);
+			path = Printing;
+			sourceTree = "<group>";
+		};
 		499E0CAC2D88C6BF7E6107F8 /* Geometry */ = {
 			isa = PBXGroup;
 			children = (
@@ -133,6 +146,7 @@
 				0B9C81C96556813477C33743 /* App */,
 				499E0CAC2D88C6BF7E6107F8 /* Geometry */,
 				BBBC9468D48FBBBFEF38A4B7 /* Model */,
+				188B0A14CC9099570799C57B /* Printing */,
 				ACFD166EE2E67A3122422D36 /* Views */,
 			);
 			path = GeometryStudio;
@@ -213,7 +227,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					5739AD860436FE0D192B040F = {
 						ProvisioningStyle = Automatic;
@@ -285,6 +299,8 @@
 				7D110007C69433E9D00CF00C /* SketchModel+ToolActions.swift in Sources */,
 				A67DCB97BAFB82E9E7EC13AE /* SketchModel+Transforms.swift in Sources */,
 				7A9751786EE46AF3910FCD27 /* SketchModel.swift in Sources */,
+				24C5F73EF3916474D9A1648D /* SketchPrintView.swift in Sources */,
+				5B71C52F1F952B21F3509849 /* SketchPrinter.swift in Sources */,
 				F41B301D645636947C4E408F /* SketchTool.swift in Sources */,
 				730327073EEB52FCEFCB09CC /* Style.swift in Sources */,
 				78653049FF99B1AEB423C4F0 /* Units.swift in Sources */,
@@ -303,11 +319,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MARKETING_VERSION = 0.1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -Xfrontend -solver-expression-time-threshold=110";
 				PRODUCT_BUNDLE_IDENTIFIER = com.geometrystudio.GeometryStudio;
@@ -350,9 +370,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -366,6 +388,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -379,11 +402,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MARKETING_VERSION = 0.1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -Xfrontend -solver-expression-time-threshold=110";
 				PRODUCT_BUNDLE_IDENTIFIER = com.geometrystudio.GeometryStudio;
@@ -426,9 +453,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -449,6 +478,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;

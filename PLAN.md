@@ -8,9 +8,9 @@ Anyone adding a new **object family** (arc, mark, vector, table, picture, button
 
 ## Status snapshot
 
-Implemented today: 9 tools, 9 constructions, 11 measurements, 4 transforms, graph with function plots and snapping, inspector (style, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode.
+Implemented today: 9 tools, 9 constructions, 11 measurements, 4 transforms, graph with function plots and snapping, inspector (style, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode.
 
-Missing outright: printing, export, clipboard, duplicate, arcs, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, marks.
+Missing outright: export, clipboard, duplicate, arcs, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, marks.
 
 ## Tier 1 — Foundations (unblocks everything else)
 
@@ -20,14 +20,14 @@ Missing outright: printing, export, clipboard, duplicate, arcs, tables, iteratio
 | 2 | Real document app: `DocumentGroup`, autosave, Versions, Open Recent, multiple windows and tabs | A single `WindowGroup` with hand-rolled `NSOpenPanel` gave no autosave, Versions, recents or window tabs | `App/GeometryStudioApp.swift`, `Views/DocumentWorkspace.swift` | M | [x] |
 | 3 | App bundle, Info.plist, exported `gsp` UTType, icon | Without it `UTType(filenameExtension: "gsp")` returns `nil`, so panels filter as JSON; no Dock identity | `project.yml`, `App/` | S | [x] |
 | 4 | Preferences window: default units, precision, angle unit, canvas defaults | The original had a Preferences dialog; ours hid these inside the inspector, and every new sketch reset to the same defaults | new `Settings` scene | S | [x] |
-| 5 | Printing: `NSPrintOperation`, page setup, print preview | The original shipped full print support; we have none | `Views/`, new `Printing/` | M | [ ] |
+| 5 | Printing: `NSPrintOperation`, page setup, print preview | The original shipped full print support; we have none | `Printing/` | M | [x] |
 | 6 | Export: PDF (vector), SVG, PNG @2x, copy-as-image, drag to Finder | A geometry tool's output goes into papers and slides; currently there is no way to get a picture out | new `Export/` | M | [ ] |
 | 7 | Undo polish: coalesce drags into one step, name actions, history menu | Every `checkpoint()` was one opaque step, and a click without movement pushed a no-op | `Model/SketchModel.swift` | S | [x] |
 | 8 | Error handling: alerts for failed open/save, corrupt-file recovery | Errors only reached `statusMessage` and were easy to miss | `Model/SketchFileDocument.swift` | S | [x] |
 | 9 | CI and release: build/test on push, universal signed and notarized `.app` to GitHub Releases | Nothing existed; blocks distributing at all. Sparkle updates need an EdDSA keypair and appcast, deferred | `.github/workflows/` | M | [x] |
 | 10 | Docs truth pass: README/MECHANICS claim animation, tracing and loci are absent — they shipped | Misleading for users and for future agents | `README.md`, `MECHANICS.md` | S | [x] |
 
-Deferred within Tier 1: #5 and #6 want a shared renderer and a separate pass. Window appearance moved to #45, where the canvas theme lives; the Preferences window covers units, precision, angle unit and new-sketch canvas defaults. Sparkle updates remain a follow-up to #9 until an EdDSA keypair and appcast URL exist.
+Deferred within Tier 1: #6 wants a shared vector renderer and a separate pass. Window appearance moved to #45, where the canvas theme lives; the Preferences window covers units, precision, angle unit and new-sketch canvas defaults. Sparkle updates remain a follow-up to #9 until an EdDSA keypair and appcast URL exist.
 
 ## Tier 2 — Parity with the original
 
