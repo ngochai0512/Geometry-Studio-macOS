@@ -7,8 +7,6 @@ struct SketchCanvas: View {
     /// Printing renders a clean white page instead of the screen tint.
     var printing: Bool = false
 
-    @State var canvasSize: CGSize = .zero
-    @State var dragStartWorld: Vec2?
     @State var dragStartScreen: CGPoint?
     @State var dragPointID: UUID?
     @State var dragLabelID: UUID?
@@ -54,13 +52,9 @@ struct SketchCanvas: View {
                 }
             }
             .onAppear {
-                canvasSize = geo.size
                 if model.objects.isEmpty && model.settings.scale == SketchMetrics.pixelsPerCentimetre {
                     model.setZoom(SketchMetrics.pixelsPerCentimetre)
                 }
-            }
-            .onChange(of: geo.size) { newValue in
-                canvasSize = newValue
             }
             .accessibilityLabel("Geometry canvas")
         }

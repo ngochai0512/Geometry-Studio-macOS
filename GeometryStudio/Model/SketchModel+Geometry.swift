@@ -30,13 +30,8 @@ extension SketchModel {
                          maxX: max(tl.x, br.x), maxY: max(tl.y, br.y))
     }
 
-    func zoom(by factor: Double, size: CGSize? = nil) {
-        let old = settings.scale
-        settings.scale = min(max(old * factor, 12), 420)
-        if let size, size.width > 0, size.height > 0 {
-            // Keep the world point under the canvas centre fixed.
-            _ = size
-        }
+    func zoom(by factor: Double) {
+        settings.scale = min(max(settings.scale * factor, 12), 420)
     }
 
     func setZoom(_ value: Double) {
