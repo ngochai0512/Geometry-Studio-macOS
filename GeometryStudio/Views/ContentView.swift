@@ -4,7 +4,6 @@ import Combine
 
 struct ContentView: View {
     @ObservedObject var model: SketchModel
-    var screenshotMode: Bool = false
 
     @State private var textAnchor: Vec2 = .zero
     @State private var showTextSheet = false
@@ -29,38 +28,37 @@ struct ContentView: View {
         var id: String { rawValue }
     }
 
-    init(model: SketchModel, screenshotMode: Bool = false) {
+    init(model: SketchModel) {
         self.model = model
-        self.screenshotMode = screenshotMode
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            Divider().opacity(0.5)
-            HStack(spacing: 0) {
-                SketchCanvas(model: model) { point in
-                    textAnchor = point
-                    textDraft = ""
-                    showTextSheet = true
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                if model.inspectorVisible {
-                    Divider().opacity(0.5)
-                    InspectorView(model: model,
-                                  tab: $selectedTab,
-                                  onTextAnnotation: { point in
-                                      textAnchor = point
-                                      textDraft = ""
-                                      showTextSheet = true
-                                  })
-                        .frame(width: 306)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
-            }
-            .animation(.snappy(duration: 0.22), value: model.inspectorVisible)
+        SketchCanvas(model: model) { point in
+            textAnchor = point
+            textDraft = ""
+            showTextSheet = true
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .inspector(isPresented: $model.inspectorVisible) {
+            InspectorView(model: model,
+                          tab: $selectedTab,
+                          onTextAnnotation: { point in
+                              textAnchor = point
+                              textDraft = ""
+                              showTextSheet = true
+                          })
+                .inspectorColumnWidth(min: 280, ideal: 306, max: 380)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             statusBar
+        }
+        .navigationSubtitle("Dynamic Geometry")
+        .toolbar {
+            toolbarContent
+        }
+        .onChange(of: model.tool) { _, newValue in
+            model.draft = []
+            model.statusMessage = newValue.hint
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear(perform: installScrollMonitor)
@@ -97,125 +95,92 @@ struct ContentView: View {
         .sheet(isPresented: $model.showAbout) { AboutView() }
     }
 
-    // MARK: top bar
+    // MARK: toolbar
 
-    private var topBar: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 9) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(red: 0.18, green: 0.51, blue: 0.96),
-                                                      Color(red: 0.44, green: 0.31, blue: 0.90)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                    Image(systemName: "compass.drawing")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 30, height: 30)
-                .shadow(color: .black.opacity(0.12), radius: 4, y: 1)
-
-                VStack(alignment: .leading, spacing: -1) {
-                    Text(model.document.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .lineLimit(1)
-                    Text("Dynamic Geometry")
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: 170, alignment: .leading)
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            Button {
+                model.undo()
+            } label: {
+                Label("Undo", systemImage: "arrow.uturn.backward")
             }
-            .padding(.leading, screenshotMode ? 14 : 82)
+            .help(model.undoActionName.map { "Undo \($0)" } ?? "Undo")
+            .disabled(!model.canUndo)
 
-            Spacer(minLength: 4)
+            Button {
+                model.redo()
+            } label: {
+                Label("Redo", systemImage: "arrow.uturn.forward")
+            }
+            .help(model.redoActionName.map { "Redo \($0)" } ?? "Redo")
+            .disabled(!model.canRedo)
+        }
 
-            toolCapsule
+        ToolbarItem(placement: .principal) {
+            Picker("Drawing Tool", selection: $model.tool) {
+                ForEach(SketchTool.allCases) { tool in
+                    Label(tool.title, systemImage: tool.symbol)
+                        .tag(tool)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelStyle(.iconOnly)
+            .labelsHidden()
+            .help("Drawing tool")
+        }
 
-            Spacer(minLength: 4)
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+                model.zoom(by: 0.84)
+            } label: {
+                Label("Zoom Out", systemImage: "minus.magnifyingglass")
+            }
+            .help("Zoom out")
+
+            Menu {
+                Button("50%") { model.setZoom(31) }
+                Button("75%") { model.setZoom(46.5) }
+                Button("100%") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
+                Button("150%") { model.setZoom(93) }
+                Button("200%") { model.setZoom(124) }
+                Divider()
+                Button("Fit Sketch") { model.fitCanvas(size: lastCanvasSize) }
+                Button("Actual Size") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
+            } label: {
+                Text("\(Int(model.settings.scale / SketchMetrics.pixelsPerCentimetre * 100))%")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .frame(minWidth: 40)
+            }
+            .menuIndicator(.hidden)
+            .help("Zoom")
+
+            Button {
+                model.zoom(by: 1.19)
+            } label: {
+                Label("Zoom In", systemImage: "plus.magnifyingglass")
+            }
+            .help("Zoom in")
 
             constructMenu
             measureMenu
 
-            Divider().frame(height: 22).opacity(0.5)
+            Toggle(isOn: $model.settings.grid) {
+                Label("Grid", systemImage: "grid")
+            }
+            .toggleStyle(.button)
+            .help("Show or hide the grid")
 
-            HStack(spacing: 2) {
-                barButton("arrow.uturn.backward", help: model.undoActionName.map { "Undo \($0)" } ?? "Undo") { model.undo() }
-                    .disabled(!model.canUndo)
-                barButton("arrow.uturn.forward", help: model.redoActionName.map { "Redo \($0)" } ?? "Redo") { model.redo() }
-                    .disabled(!model.canRedo)
+            Toggle(isOn: $model.inspectorVisible) {
+                Label("Inspector", systemImage: "sidebar.right")
             }
-
-            HStack(spacing: 2) {
-                barButton("minus.magnifyingglass", help: "Zoom out") { model.zoom(by: 0.84) }
-                Menu {
-                    Button("50%") { model.setZoom(31) }
-                    Button("75%") { model.setZoom(46.5) }
-                    Button("100%") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
-                    Button("150%") { model.setZoom(93) }
-                    Button("200%") { model.setZoom(124) }
-                    Divider()
-                    Button("Fit Sketch") { model.fitCanvas(size: lastCanvasSize) }
-                    Button("Actual Size") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
-                } label: {
-                    Text("\(Int(model.settings.scale / SketchMetrics.pixelsPerCentimetre * 100))%")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .frame(width: 42)
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                barButton("plus.magnifyingglass", help: "Zoom in") { model.zoom(by: 1.19) }
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 7))
-
-            barButton(model.settings.grid ? "grid" : "grid.circle", help: "Show or hide the grid") {
-                model.settings.grid.toggle()
-            }
-            barButton("sidebar.right", help: "Inspector") {
-                model.inspectorVisible.toggle()
-            }
-            .background(model.inspectorVisible ? Color.accentColor.opacity(0.12) : Color.clear,
-                        in: RoundedRectangle(cornerRadius: 7))
+            .toggleStyle(.button)
+            .help("Show or hide the inspector")
         }
-        .padding(.horizontal, 12)
-        .frame(height: 54)
-        .background(.regularMaterial)
     }
 
     @State private var lastCanvasSize = CGSize(width: 900, height: 720)
     private let animationClock = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
-
-    private var toolCapsule: some View {
-        HStack(spacing: 1) {
-            ForEach(SketchTool.allCases) { tool in
-                Button {
-                    model.tool = tool
-                    model.draft = []
-                    model.statusMessage = tool.hint
-                } label: {
-                    Image(systemName: tool.symbol)
-                        .font(.system(size: 13.5, weight: .medium))
-                        .frame(width: 29, height: 27)
-                        .foregroundStyle(model.tool == tool ? Color.white : Color.primary.opacity(0.78))
-                        .background {
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(model.tool == tool ? Color.accentColor : Color.clear)
-                        }
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("\(tool.title) (\(String(tool.shortcut.character)))")
-            }
-        }
-        .padding(3)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.8)
-        }
-    }
 
     private var constructMenu: some View {
         Menu {
@@ -234,11 +199,7 @@ struct ContentView: View {
             Button("Locus") { model.constructLocus() }
         } label: {
             Label("Construct", systemImage: "plus.square.on.square")
-                .font(.system(size: 11.5, weight: .medium))
         }
-        .menuStyle(.button)
-        .buttonStyle(.borderless)
-        .fixedSize()
         .help("Construct objects from the selection")
     }
 
@@ -266,24 +227,8 @@ struct ContentView: View {
             }
         } label: {
             Label("Measure", systemImage: "ruler")
-                .font(.system(size: 11.5, weight: .medium))
         }
-        .menuStyle(.button)
-        .buttonStyle(.borderless)
-        .fixedSize()
         .help("Measure the selection")
-    }
-
-    private func barButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 12.5, weight: .medium))
-                .frame(width: 27, height: 25)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.primary.opacity(0.8))
-        .help(help)
     }
 
     // MARK: status bar
@@ -414,9 +359,7 @@ struct ContentView: View {
             Text("Rotate the selected objects around a point.")
                 .font(.subheadline).foregroundStyle(.secondary)
             if let center, let object = model.objectByID(center) {
-                HStack {
-                    Text("Center")
-                    Spacer()
+                LabeledContent("Center") {
                     Text(object.label.isEmpty ? "Point" : object.label)
                         .foregroundStyle(.secondary)
                 }
@@ -424,12 +367,14 @@ struct ContentView: View {
                 Text("Select a center point as well as the objects to rotate.")
                     .font(.caption).foregroundStyle(.orange)
             }
-            HStack {
-                Text("Angle")
-                TextField("Angle", value: $rotateAngle, format: .number)
-                    .frame(width: 80)
-                    .multilineTextAlignment(.trailing)
-                Text("degrees").foregroundStyle(.secondary)
+            LabeledContent("Angle") {
+                HStack(spacing: 6) {
+                    TextField("Angle", value: $rotateAngle, format: .number)
+                        .labelsHidden()
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                    Text("degrees").foregroundStyle(.secondary)
+                }
             }
             HStack {
                 Spacer()
@@ -454,14 +399,16 @@ struct ContentView: View {
             Text("Scale the selected objects about a center point.")
                 .font(.subheadline).foregroundStyle(.secondary)
             if let center, let object = model.objectByID(center) {
-                HStack { Text("Center"); Spacer(); Text(object.label).foregroundStyle(.secondary) }
+                LabeledContent("Center") {
+                    Text(object.label).foregroundStyle(.secondary)
+                }
             } else {
                 Text("Select a center point as well as the objects to dilate.")
                     .font(.caption).foregroundStyle(.orange)
             }
-            HStack {
-                Text("Scale factor")
+            LabeledContent("Scale factor") {
                 TextField("Factor", value: $dilateFactor, format: .number)
+                    .labelsHidden()
                     .frame(width: 80)
                     .multilineTextAlignment(.trailing)
             }
@@ -486,17 +433,23 @@ struct ContentView: View {
                 .font(.headline)
             Text("Move a copy of the selected objects by a fixed amount.")
                 .font(.subheadline).foregroundStyle(.secondary)
-            HStack {
-                Text("Horizontal")
-                TextField("dx", value: $translateX, format: .number)
-                    .frame(width: 80).multilineTextAlignment(.trailing)
-                Text(model.settings.lengthUnit.short).foregroundStyle(.secondary)
+            LabeledContent("Horizontal") {
+                HStack(spacing: 6) {
+                    TextField("dx", value: $translateX, format: .number)
+                        .labelsHidden()
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                    Text(model.settings.lengthUnit.short).foregroundStyle(.secondary)
+                }
             }
-            HStack {
-                Text("Vertical")
-                TextField("dy", value: $translateY, format: .number)
-                    .frame(width: 80).multilineTextAlignment(.trailing)
-                Text(model.settings.lengthUnit.short).foregroundStyle(.secondary)
+            LabeledContent("Vertical") {
+                HStack(spacing: 6) {
+                    TextField("dy", value: $translateY, format: .number)
+                        .labelsHidden()
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                    Text(model.settings.lengthUnit.short).foregroundStyle(.secondary)
+                }
             }
             HStack {
                 Spacer()

@@ -90,12 +90,6 @@ final class SketchModel: ObservableObject {
         resetHistory()
     }
 
-    /// The top bar follows the file name once the document has one.
-    func setDocumentTitle(_ title: String) {
-        guard !title.isEmpty, document.title != title else { return }
-        document.title = title
-    }
-
     private func seedSample() {
         let a = add(kind: .freePoint, label: "A", position: Vec2(-7.0, -3.3), silent: true)
         let b = add(kind: .freePoint, label: "B", position: Vec2(5.0, -3.3), silent: true)

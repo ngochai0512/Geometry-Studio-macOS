@@ -30,29 +30,17 @@ struct InspectorView: View {
             }
             .padding(16)
         }
-        .background(.thinMaterial)
     }
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Inspector")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("\(model.objects.filter(\.visible).count) visible objects")
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                model.inspectorVisible = false
-            } label: {
-                Image(systemName: "sidebar.right")
-                    .font(.system(size: 12, weight: .medium))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help("Hide the inspector")
+        VStack(alignment: .leading, spacing: 1) {
+            Text("Inspector")
+                .font(.system(size: 15, weight: .semibold))
+            Text("\(model.objects.filter(\.visible).count) visible objects")
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -77,9 +65,7 @@ struct InspectorView: View {
                 }
 
                 if needsLabel(object) {
-                    HStack {
-                        Text("Label").font(.system(size: 11.5))
-                        Spacer()
+                    LabeledContent("Label") {
                         TextField("Label", text: labelBinding(id))
                             .textFieldStyle(.bordered)
                             .textInputBorderShape(.roundedRectangle)
@@ -183,9 +169,8 @@ struct InspectorView: View {
             VStack(alignment: .leading, spacing: 12) {
                 sectionTitle("Style")
                 colorRow
-                HStack {
-                    Text("Line").font(.system(size: 11.5)).frame(width: 40, alignment: .leading)
-                    Picker("", selection: lineWidthBinding) {
+                LabeledContent("Line") {
+                    Picker("Line", selection: lineWidthBinding) {
                         Text("Hairline").tag(0.8)
                         Text("Thin").tag(1.2)
                         Text("Regular").tag(1.5)
@@ -195,9 +180,8 @@ struct InspectorView: View {
                     .labelsHidden()
                     .pickerStyle(.menu)
                 }
-                HStack {
-                    Text("Dash").font(.system(size: 11.5)).frame(width: 40, alignment: .leading)
-                    Picker("", selection: dashBinding) {
+                LabeledContent("Dash") {
+                    Picker("Dash", selection: dashBinding) {
                         ForEach(DashStyle.allCases) { style in
                             Text(style.name).tag(style)
                         }
@@ -205,9 +189,8 @@ struct InspectorView: View {
                     .labelsHidden()
                     .pickerStyle(.segmented)
                 }
-                HStack {
-                    Text("Point").font(.system(size: 11.5)).frame(width: 40, alignment: .leading)
-                    Picker("", selection: pointShapeBinding) {
+                LabeledContent("Point") {
+                    Picker("Point", selection: pointShapeBinding) {
                         ForEach(PointShape.allCases) { shape in
                             Text(shape.name).tag(shape)
                         }
@@ -215,9 +198,9 @@ struct InspectorView: View {
                     .labelsHidden()
                     .pickerStyle(.menu)
                 }
-                HStack {
-                    Text("Size").font(.system(size: 11.5)).frame(width: 40, alignment: .leading)
-                    Picker("", selection: pointSizeBinding) {
+                LabeledContent("Size") {
+                    Picker("Size", selection: pointSizeBinding) {
+                        Text("Default").tag(5.5)
                         Text("Dot").tag(3.0)
                         Text("Small").tag(4.5)
                         Text("Medium").tag(6.0)
@@ -227,12 +210,13 @@ struct InspectorView: View {
                     .pickerStyle(.menu)
                 }
                 if anySelectedIsRegion {
-                    HStack {
-                        Text("Fill").font(.system(size: 11.5))
+                    LabeledContent("Fill") {
                         Slider(value: fillBinding, in: 0...0.4)
+                            .labelsHidden()
                     }
                 }
             }
+            .font(.system(size: 11.5))
         }
     }
 
@@ -332,32 +316,32 @@ struct InspectorView: View {
                 .font(.system(size: 11.5))
             Toggle("Show labels", isOn: $model.settings.showLabels)
                 .font(.system(size: 11.5))
-            HStack {
-                Text("Length").font(.system(size: 11.5)).frame(width: 54, alignment: .leading)
-                Picker("", selection: $model.settings.lengthUnit) {
+            LabeledContent("Length") {
+                Picker("Length", selection: $model.settings.lengthUnit) {
                     ForEach(LengthUnit.allCases) { unit in
                         Text(unit.name).tag(unit)
                     }
                 }
-                .labelsHidden().pickerStyle(.menu)
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
-            HStack {
-                Text("Angle").font(.system(size: 11.5)).frame(width: 54, alignment: .leading)
-                Picker("", selection: $model.settings.angleUnit) {
+            LabeledContent("Angle") {
+                Picker("Angle", selection: $model.settings.angleUnit) {
                     ForEach(AngleUnit.allCases) { unit in
                         Text(unit.name).tag(unit)
                     }
                 }
-                .labelsHidden().pickerStyle(.menu)
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
-            HStack {
-                Text("Decimals").font(.system(size: 11.5)).frame(width: 54, alignment: .leading)
-                Picker("", selection: $model.settings.precision) {
+            LabeledContent("Decimals") {
+                Picker("Decimals", selection: $model.settings.precision) {
                     ForEach(0...5, id: \.self) { p in
                         Text("\(p)").tag(p)
                     }
                 }
-                .labelsHidden().pickerStyle(.segmented)
+                .labelsHidden()
+                .pickerStyle(.segmented)
             }
             HStack(spacing: 7) {
                 Button("Fit") { model.fitCanvas(size: CGSize(width: 900, height: 700)) }
@@ -370,6 +354,7 @@ struct InspectorView: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
         }
+        .font(.system(size: 11.5))
     }
 
     private var constructSection: some View {
