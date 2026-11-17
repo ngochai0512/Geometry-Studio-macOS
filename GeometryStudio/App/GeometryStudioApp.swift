@@ -6,7 +6,7 @@ struct GeometryStudioApp: App {
             DocumentWorkspace(document: document)
         } makeDocument: { _, _ in
             SketchFileDocument(
-                sketch: SketchModel.welcomeDocument(settings: AppPreferences.canvasSettings())
+                sketch: SketchModel.blankDocument(settings: AppPreferences.canvasSettings())
             )
         }
         .defaultSize(width: 1320, height: 860)

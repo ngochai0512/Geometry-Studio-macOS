@@ -57,6 +57,14 @@ struct DocumentTests {
         #expect(read.recoveryNote == nil)
     }
 
+    @Test("a new document starts blank")
+    func newDocumentIsBlank() {
+        let document = SketchModel.blankDocument()
+
+        #expect(document.objects.isEmpty)
+        #expect(document.title == "Untitled Sketch")
+    }
+
     @Test("a damaged file loads what still decodes and leaves a note")
     func fileDocumentSalvage() throws {
         var document = SketchDocument()

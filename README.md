@@ -77,8 +77,8 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
   panel and preview; Page Setup controls paper size, orientation and margins.
 - **Preferences** — default length unit, angle unit, precision, grid, axes, snapping and labels
   for new sketches.
-- **Welcome sketch** — a triangle, its perpendicular bisectors, circumcentre, circumcircle,
-  length measurement, coordinates and angle. Drag A, B or C to see the construction move.
+- **New documents** — a new sketch starts blank, with only the grid and axes from your
+  preferences.
 
 ## Keyboard
 

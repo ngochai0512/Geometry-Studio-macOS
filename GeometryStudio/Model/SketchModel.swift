@@ -67,17 +67,18 @@ final class SketchModel: ObservableObject {
     // MARK: document lifecycle
 
     static func sample() -> SketchModel {
-        SketchModel(document: welcomeDocument())
+        let model = SketchModel()
+        model.seedSample()
+        return model
     }
 
-    /// Content for a new document. Settings are injected so `--screenshot`
-    /// keeps deterministic defaults instead of reading user preferences.
-    static func welcomeDocument(settings: CanvasSettings = CanvasSettings()) -> SketchDocument {
-        let model = SketchModel()
-        model.document.settings = settings
-        model.document.title = "Untitled Sketch"
-        model.seedSample()
-        return model.document
+    /// Content for a new document. Settings are injected so a new sketch starts
+    /// empty with the user's grid, unit and precision choices instead of
+    /// reading them lazily.
+    static func blankDocument(settings: CanvasSettings = CanvasSettings()) -> SketchDocument {
+        var document = SketchDocument()
+        document.settings = settings
+        return document
     }
 
     /// Swaps in content that changed outside the editor, such as Revert To
