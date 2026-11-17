@@ -2,12 +2,12 @@ import SwiftUI
 
 struct GeometryStudioApp: App {
     var body: some Scene {
-        DocumentGroup(
-            newDocument: SketchFileDocument(
+        DocumentGroup { document in
+            DocumentWorkspace(document: document)
+        } makeDocument: { _, _ in
+            SketchFileDocument(
                 sketch: SketchModel.welcomeDocument(settings: AppPreferences.canvasSettings())
             )
-        ) { configuration in
-            DocumentWorkspace(configuration: configuration)
         }
         .defaultSize(width: 1320, height: 860)
         .windowStyle(.hiddenTitleBar)

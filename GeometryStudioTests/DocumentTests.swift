@@ -41,17 +41,17 @@ struct DocumentTests {
         #expect(decoded.version == SketchDocument.currentVersion)
     }
 
-    @Test("a sketch file document round-trips through its file codec")
+    @Test("a sketch snapshot round-trips through its file codec")
     func fileDocumentRoundTrip() throws {
         var document = SketchDocument()
         document.title = "Saved"
         var object = SketchObject(kind: .freePoint)
         object.position = Vec2(-1, 3)
         document.objects = [object]
-        let file = SketchFileDocument(sketch: document)
+        let file = SketchSnapshot(sketch: document)
 
         let data = try file.encodedData()
-        let read = try SketchFileDocument.decode(from: data)
+        let read = try SketchSnapshot.decode(from: data)
 
         #expect(read.sketch == document)
         #expect(read.recoveryNote == nil)
@@ -71,7 +71,7 @@ struct DocumentTests {
         root["objects"] = objects
         let data = try JSONSerialization.data(withJSONObject: root)
 
-        let read = try SketchFileDocument.decode(from: data)
+        let read = try SketchSnapshot.decode(from: data)
 
         #expect(read.sketch.objects.count == 1)
         #expect(read.sketch.title == "Damaged")

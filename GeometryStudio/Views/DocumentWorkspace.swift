@@ -1,46 +1,32 @@
 import SwiftUI
 
 struct DocumentWorkspace: View {
-    @Binding var document: SketchFileDocument
-    let fileURL: URL?
+    var document: SketchFileDocument
     @StateObject private var model: SketchModel
-    @State private var recoveryNote: String?
 
-    init(configuration: FileDocumentConfiguration<SketchFileDocument>) {
-        _document = configuration.$document
-        fileURL = configuration.fileURL
-        _model = StateObject(wrappedValue: SketchModel(document: configuration.document.sketch))
-        _recoveryNote = State(initialValue: configuration.document.recoveryNote)
+    init(document: SketchFileDocument) {
+        self.document = document
+        _model = StateObject(wrappedValue: SketchModel(document: document.sketch))
     }
 
     var body: some View {
         ContentView(model: model)
             .frame(minWidth: 900, minHeight: 620)
             .focusedSceneValue(\.sketchModel, model)
-            .onAppear {
-                if document.sketch != model.document {
-                    document.sketch = model.document
-                }
-            }
-            .onChange(of: model.document) { newValue in
+            .onChange(of: model.document) { _, newValue in
                 if document.sketch != newValue {
                     document.sketch = newValue
                 }
             }
-            .onChange(of: document.sketch) { newValue in
+            .onChange(of: document.sketch) { _, newValue in
                 if model.document != newValue {
                     model.adopt(newValue)
                 }
             }
-            .onChange(of: fileURL) { newValue in
-                if let newValue {
-                    model.setDocumentTitle(newValue.deletingPathExtension().lastPathComponent)
-                }
-            }
             .alert("Recovered Damaged Sketch",
                    isPresented: recoveryNotePresented,
-                   presenting: recoveryNote) { _ in
-                Button("OK", role: .cancel) { recoveryNote = nil }
+                   presenting: document.recoveryNote) { _ in
+                Button("OK", role: .cancel) { document.recoveryNote = nil }
             } message: { note in
                 Text(note)
             }
@@ -48,8 +34,8 @@ struct DocumentWorkspace: View {
 
     private var recoveryNotePresented: Binding<Bool> {
         Binding(
-            get: { recoveryNote != nil },
-            set: { if !$0 { recoveryNote = nil } }
+            get: { document.recoveryNote != nil },
+            set: { if !$0 { document.recoveryNote = nil } }
         )
     }
 }

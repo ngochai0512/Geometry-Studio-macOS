@@ -1,16 +1,13 @@
+import Observation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The value SwiftUI's document architecture reads and writes. `SketchModel`
+/// The observable document SwiftUI opens, saves and autosaves. `SketchModel`
 /// owns the live editing state; this type is the on-disk shape it syncs to.
-struct SketchFileDocument: FileDocument {
-    static var readableContentTypes: [UTType] {
-        [.geometryStudioSketch, .json]
-    }
-
-    static var writableContentTypes: [UTType] {
-        [.geometryStudioSketch]
-    }
+@Observable
+final class SketchFileDocument: Document {
+    static let readableContentTypes: [UTType] = [.geometryStudioSketch, .json]
+    static let writableContentTypes: [UTType] = [.geometryStudioSketch]
 
     var sketch: SketchDocument
     /// Not persisted. Set when a damaged file was partly recovered on load so
@@ -22,23 +19,44 @@ struct SketchFileDocument: FileDocument {
         self.recoveryNote = recoveryNote
     }
 
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else {
-            throw CocoaError(.fileReadCorruptFile)
+    func reader(configuration: sending ReadConfiguration) -> sending FileWrapperDocumentReader<SketchSnapshot> {
+        FileWrapperDocumentReader(configuration) { fileWrapper in
+            guard let data = fileWrapper.regularFileContents else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            return try SketchSnapshot.decode(from: data)
         }
-        self = try SketchFileDocument.decode(from: data)
     }
 
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: try encodedData())
+    func writer(configuration: sending WriteConfiguration) -> sending FileWrapperDocumentWriter<SketchSnapshot> {
+        FileWrapperDocumentWriter(configuration) { snapshot, _ in
+            FileWrapper(regularFileWithContents: try snapshot.encodedData())
+        }
     }
 
-    /// Split from `init(configuration:)` so the codec is testable without a
-    /// SwiftUI read configuration, which has no public initializer.
-    static func decode(from data: Data) throws -> SketchFileDocument {
+    @MainActor
+    func snapshot(contentType: UTType) async throws -> sending SketchSnapshot {
+        SketchSnapshot(sketch: sketch, recoveryNote: recoveryNote)
+    }
+
+    @MainActor
+    func apply(snapshot: sending SketchSnapshot, previous: sending SketchSnapshot?) async throws {
+        sketch = snapshot.sketch
+        recoveryNote = snapshot.recoveryNote
+    }
+}
+
+/// The value the reader decodes and the writer encodes. Split from the
+/// document so the codec is testable without a SwiftUI read configuration,
+/// which has no public initializer.
+struct SketchSnapshot {
+    var sketch: SketchDocument
+    var recoveryNote: String?
+
+    static func decode(from data: Data) throws -> SketchSnapshot {
         do {
             let sketch = try JSONDecoder().decode(SketchDocument.self, from: data)
-            return SketchFileDocument(sketch: sketch)
+            return SketchSnapshot(sketch: sketch)
         } catch let error as DocumentError {
             throw error
         } catch {
@@ -47,7 +65,7 @@ struct SketchFileDocument: FileDocument {
             }
             let note = "Geometry Studio recovered \(result.recovered) of \(result.total) objects "
                 + "from a damaged file. Save a copy before making changes."
-            return SketchFileDocument(sketch: result.document, recoveryNote: note)
+            return SketchSnapshot(sketch: result.document, recoveryNote: note)
         }
     }
 
