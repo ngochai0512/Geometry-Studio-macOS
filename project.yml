@@ -28,6 +28,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         INFOPLIST_FILE: App/Info.plist
         GENERATE_INFOPLIST_FILE: NO
+        OTHER_SWIFT_FLAGS: "$(inherited) -Xfrontend -solver-expression-time-threshold=110"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic

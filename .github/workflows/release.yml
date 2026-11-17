@@ -21,11 +21,42 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate Xcode project
-        run: xcodegen generate
+      - name: Normalize Xcode project format
+        run: |
+          set -euo pipefail
+          PBXPROJ=GeometryStudio.xcodeproj/project.pbxproj
+          BASELINE=77
+
+          version() {
+            sed -n 's/.*objectVersion = \([0-9][0-9]*\);.*/\1/p' "$PBXPROJ" | head -n 1
+          }
+
+          CHECKED_IN=$(version)
+          echo "checked-in objectVersion: ${CHECKED_IN:-missing}"
+
+          if [ -n "${CHECKED_IN:-}" ] && [ "$CHECKED_IN" -gt "$BASELINE" ]; then
+            echo "Xcode rewrote the project to $CHECKED_IN; regenerating to the $BASELINE baseline."
+          else
+            echo "Regenerating from project.yml (checked-in format ${CHECKED_IN:-missing})."
+          fi
+
+          xcodegen generate
+          xcodegen --version
+
+          GENERATED=$(version)
+          echo "generated objectVersion: ${GENERATED:-missing}"
+
+          if [ -z "${GENERATED:-}" ]; then
+            echo "error: XcodeGen did not write an objectVersion" >&2
+            exit 1
+          fi
+          if [ "$GENERATED" -gt "$BASELINE" ]; then
+            echo "error: XcodeGen emitted $GENERATED, newer than the $BASELINE baseline" >&2
+            exit 1
+          fi
 
       - name: Test package
-        run: swift test
+        run: swift test -Xswiftc -Xfrontend -Xswiftc -solver-expression-time-threshold=110
 
       - name: Import Developer ID certificate
         env:

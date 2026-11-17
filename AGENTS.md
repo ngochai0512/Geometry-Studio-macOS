@@ -118,8 +118,9 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 ## 5. Toolchain
 
 - `swift-tools-version: 5.9`; Swift 5 language mode; minimum deployment target macOS 13.0; builds `arm64` on Apple silicon.
-- XcodeGen 2.46 generates `GeometryStudio.xcodeproj` from `project.yml`; run `xcodegen generate` after changing the spec. The generated project is not the source of truth.
-- Xcode 15 or later builds the app target. Xcode is still optional for the package targets: `swift build` and `swift test` must keep working without opening the project, and both paths compile the same sources.
+- XcodeGen 2.46 generates `GeometryStudio.xcodeproj` from `project.yml`; run `xcodegen generate` after changing the spec. The generated project is not the source of truth. Xcode 26/27 may upgrade it to `objectVersion = 110`, while XcodeGen emits 77; regenerate rather than committing an upgraded project. CI reads the checked-in value, regenerates to the 77 baseline, and fails if the installed XcodeGen emits a newer format.
+- Xcode 16 or later builds the app target (`objectVersion = 77`). Xcode is still optional for the package targets: `swift build` and `swift test` must keep working without opening the project, and both paths compile the same sources.
+- The compiler expression-time threshold is pinned to 110 seconds: `Other Swift Flags` in `project.yml` for the app target, and `-Xswiftc -Xfrontend -Xswiftc -solver-expression-time-threshold=110` on the CI and release `swift build` / `swift test` steps. Keep those in sync. If an expression still times out, split the expression; do not raise the threshold to hide it.
 - If local Xcode and the command line differ, say which one you built with rather than silently reporting a result from the other.
 - The app bundle declares `com.geometrystudio.gsp` (conforms to `public.json`) and owns `.gsp` files. `UTType.geometryStudioSketch` mirrors that declaration so the open and save panels filter correctly under `swift run` too. Bundle identifier `com.geometrystudio.GeometryStudio` and marketing version `0.1.0` are provisional.
 - There are no entitlements and no App Sandbox yet; signing is automatic/ad-hoc, and notarization is not set up (item #9). Do not claim the app is sandboxed or notarized.

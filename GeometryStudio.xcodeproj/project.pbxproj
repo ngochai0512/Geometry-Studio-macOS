@@ -309,6 +309,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -Xfrontend -solver-expression-time-threshold=110";
 				PRODUCT_BUNDLE_IDENTIFIER = com.geometrystudio.GeometryStudio;
 				PRODUCT_NAME = GeometryStudio;
 				SDKROOT = macosx;
@@ -384,6 +385,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -Xfrontend -solver-expression-time-threshold=110";
 				PRODUCT_BUNDLE_IDENTIFIER = com.geometrystudio.GeometryStudio;
 				PRODUCT_NAME = GeometryStudio;
 				SDKROOT = macosx;
