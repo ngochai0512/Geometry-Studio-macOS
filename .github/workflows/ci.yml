@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -54,6 +54,15 @@ jobs:
           fi
           if [ "$GENERATED" -gt "$BASELINE" ]; then
             echo "error: XcodeGen emitted $GENERATED, newer than the $BASELINE baseline" >&2
+            exit 1
+          fi
+
+          if grep -q "RECOMMENDED_MACOSX_DEPLOYMENT_TARGET" "$PBXPROJ"; then
+            echo 'error: deployment target was rewritten to $(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)' >&2
+            exit 1
+          fi
+          if ! grep -q "MACOSX_DEPLOYMENT_TARGET = 27.0;" "$PBXPROJ"; then
+            echo "error: expected MACOSX_DEPLOYMENT_TARGET = 27.0" >&2
             exit 1
           fi
 

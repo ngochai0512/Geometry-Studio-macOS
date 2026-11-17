@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "GeometryStudio",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS("27.0")],
     products: [
         .executable(name: "GeometryStudio", targets: ["GeometryStudio"])
     ],

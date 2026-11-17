@@ -24,7 +24,7 @@ Missing outright: export, clipboard, duplicate, arcs, tables, iterations, custom
 | 6 | Export: PDF (vector), SVG, PNG @2x, copy-as-image, drag to Finder | A geometry tool's output goes into papers and slides; currently there is no way to get a picture out | new `Export/` | M | [ ] |
 | 7 | Undo polish: coalesce drags into one step, name actions, history menu | Every `checkpoint()` was one opaque step, and a click without movement pushed a no-op | `Model/SketchModel.swift` | S | [x] |
 | 8 | Error handling: alerts for failed open/save, corrupt-file recovery | Errors only reached `statusMessage` and were easy to miss | `Model/SketchFileDocument.swift` | S | [x] |
-| 9 | CI and release: build/test on push, universal signed and notarized `.app` to GitHub Releases | Nothing existed; blocks distributing at all. Sparkle updates need an EdDSA keypair and appcast, deferred | `.github/workflows/` | M | [x] |
+| 9 | CI and release: build/test on push, signed and notarized `arm64` `.app` to GitHub Releases | Nothing existed; blocks distributing at all. Sparkle updates need an EdDSA keypair and appcast, deferred | `.github/workflows/` | M | [x] |
 | 10 | Docs truth pass: README/MECHANICS claim animation, tracing and loci are absent — they shipped | Misleading for users and for future agents | `README.md`, `MECHANICS.md` | S | [x] |
 
 Deferred within Tier 1: #6 wants a shared vector renderer and a separate pass. Window appearance moved to #45, where the canvas theme lives; the Preferences window covers units, precision, angle unit and new-sketch canvas defaults. Sparkle updates remain a follow-up to #9 until an EdDSA keypair and appcast URL exist.

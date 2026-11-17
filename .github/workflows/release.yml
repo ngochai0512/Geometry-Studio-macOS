@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: xcode-27
     env:
       SCHEME: GeometryStudio
       PROJECT: GeometryStudio.xcodeproj
@@ -55,6 +55,15 @@ jobs:
             exit 1
           fi
 
+          if grep -q "RECOMMENDED_MACOSX_DEPLOYMENT_TARGET" "$PBXPROJ"; then
+            echo 'error: deployment target was rewritten to $(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)' >&2
+            exit 1
+          fi
+          if ! grep -q "MACOSX_DEPLOYMENT_TARGET = 27.0;" "$PBXPROJ"; then
+            echo "error: expected MACOSX_DEPLOYMENT_TARGET = 27.0" >&2
+            exit 1
+          fi
+
       - name: Test package
         run: swift test -Xswiftc -Xfrontend -Xswiftc -solver-expression-time-threshold=110
 
@@ -80,7 +89,7 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" \
             $(security list-keychains -d user | tr -d '"')
 
-      - name: Archive universal app
+      - name: Archive app
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
@@ -90,7 +99,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -archivePath build/GeometryStudio.xcarchive \
-            ARCHS="arm64 x86_64" \
+            ARCHS="arm64" \
             ONLY_ACTIVE_ARCH=NO \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \

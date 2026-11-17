@@ -38,11 +38,11 @@ swift build -c release
 ./.build/release/GeometryStudio
 ```
 
-Both target macOS 13 or newer and build `arm64` on Apple silicon. `swift test` runs the
+Both target macOS 27 or newer and build `arm64` on Apple silicon. `swift test` runs the
 geometry, document and undo suites.
 
 CI runs the package build, the tests and the app target on every push and pull request. Tagged
-releases build a universal, signed and notarized app and publish it to GitHub Releases; see
+releases build a signed and notarized arm64 app and publish it to GitHub Releases; see
 `RELEASING.md` for the required secrets and the release steps.
 
 ## Screenshot mode

@@ -3,7 +3,7 @@ name: GeometryStudio
 options:
   bundleIdPrefix: com.geometrystudio
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "27.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
   xcodeVersion: "15.0"
@@ -16,7 +16,7 @@ targets:
   GeometryStudio:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "27.0"
     sources:
       - path: GeometryStudio
       - path: App/Assets.xcassets
@@ -30,6 +30,9 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         OTHER_SWIFT_FLAGS: "$(inherited) -Xfrontend -solver-expression-time-threshold=110"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # No App Intents in this target; filter the metadata processor's
+        # "no AppIntents.framework dependency" warning.
+        LM_FILTER_WARNINGS: YES
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic
         COMBINE_HIDPI_IMAGES: YES

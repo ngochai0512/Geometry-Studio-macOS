@@ -25,7 +25,7 @@ hardened runtime in `project.yml`, which notarization requires.
 ## What the workflow does
 
 1. Generates `GeometryStudio.xcodeproj` from `project.yml`.
-2. Archives a universal (`arm64` + `x86_64`) Release build signed with the Developer ID
+2. Archives an `arm64` Release build signed with the Developer ID
    certificate and a secure timestamp.
 3. Zips the app, submits it with `notarytool --wait`, staples the ticket to the `.app`,
    re-zips and writes a SHA-256 checksum.
@@ -40,13 +40,13 @@ xcodebuild \
   -scheme GeometryStudio \
   -configuration Release \
   -destination 'generic/platform=macOS' \
-  ARCHS="arm64 x86_64" \
+  ARCHS="arm64" \
   ONLY_ACTIVE_ARCH=NO \
   CODE_SIGNING_ALLOWED=NO \
   build
 ```
 
-That produces a universal, unsigned app for inspection; it is not distributable.
+That produces an unsigned app for inspection; it is not distributable.
 
 ## Not done yet
 
