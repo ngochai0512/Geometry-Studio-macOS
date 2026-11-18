@@ -50,6 +50,10 @@
 		EE60F31F6E7148993377E610 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A28D11FAD1ACA69B2FD090 /* ContentView.swift */; };
 		F41B301D645636947C4E408F /* SketchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CBF4F3CF6F57DFEED22C979 /* SketchTool.swift */; };
 		FA3DF62EF19D9A0ACF5375B6 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4594827027731B183A45097B /* Notifications.swift */; };
+		614A8642E564DE7EFF84AB23 /* InspectorBindings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E12311310277A8F3183D1E1 /* InspectorBindings.swift */; };
+		8ECBE54CD2929F1554967AAE /* InspectorSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9CAC9E6EB6A23FE4B4CB5CF /* InspectorSections.swift */; };
+		378A278770212A1409890791 /* SketchSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6404BCCCDAFF6A0545A8AE81 /* SketchSheets.swift */; };
+		44C5A500AAD17ADF87AF5038 /* SketchStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A10AB36045A88B83CE2129 /* SketchStatusBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,6 +101,10 @@
 		EF1D2AEAE312574E314909C5 /* SketchRenderOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchRenderOutput.swift; sourceTree = "<group>"; };
 		F3565491E3C34157DFB2DA5D /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
 		FA7CE4D4166BA82AE96C89FC /* Vec2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vec2.swift; sourceTree = "<group>"; };
+		4E12311310277A8F3183D1E1 /* InspectorBindings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorBindings.swift; sourceTree = "<group>"; };
+		E9CAC9E6EB6A23FE4B4CB5CF /* InspectorSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorSections.swift; sourceTree = "<group>"; };
+		6404BCCCDAFF6A0545A8AE81 /* SketchSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchSheets.swift; sourceTree = "<group>"; };
+		44A10AB36045A88B83CE2129 /* SketchStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchStatusBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -184,9 +192,13 @@
 				08A28D11FAD1ACA69B2FD090 /* ContentView.swift */,
 				1092913E650562116FE738CB /* DocumentWorkspace.swift */,
 				E6FB36DE4B209586B261A8D9 /* FlowChips.swift */,
+				4E12311310277A8F3183D1E1 /* InspectorBindings.swift */,
+				E9CAC9E6EB6A23FE4B4CB5CF /* InspectorSections.swift */,
 				E0175EEB4CA34D2001C398FC /* InspectorView.swift */,
 				974C9AAAADD178B2F891A6EF /* SettingsView.swift */,
 				6AD2AFA7548106CEEBBB5CC8 /* SketchCanvas.swift */,
+				6404BCCCDAFF6A0545A8AE81 /* SketchSheets.swift */,
+				44A10AB36045A88B83CE2129 /* SketchStatusBar.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -306,6 +318,8 @@
 				DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */,
 				1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */,
 				6270DDCAE806A1A24D837112 /* GridMetrics.swift in Sources */,
+				614A8642E564DE7EFF84AB23 /* InspectorBindings.swift in Sources */,
+				8ECBE54CD2929F1554967AAE /* InspectorSections.swift in Sources */,
 				AE145A66C363197F6771192B /* InspectorView.swift in Sources */,
 				FA3DF62EF19D9A0ACF5375B6 /* Notifications.swift in Sources */,
 				52C2520C9243975422883406 /* ObjectModel.swift in Sources */,
@@ -329,6 +343,8 @@
 				24C5F73EF3916474D9A1648D /* SketchPrintView.swift in Sources */,
 				5B71C52F1F952B21F3509849 /* SketchPrinter.swift in Sources */,
 				373FB7AD2169A0010B725CDC /* SketchRenderOutput.swift in Sources */,
+				378A278770212A1409890791 /* SketchSheets.swift in Sources */,
+				44C5A500AAD17ADF87AF5038 /* SketchStatusBar.swift in Sources */,
 				F41B301D645636947C4E408F /* SketchTool.swift in Sources */,
 				730327073EEB52FCEFCB09CC /* Style.swift in Sources */,
 				78653049FF99B1AEB423C4F0 /* Units.swift in Sources */,

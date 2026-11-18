@@ -50,7 +50,7 @@ struct ContentView: View {
                 .inspectorColumnWidth(min: 280, ideal: 306, max: 380)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            statusBar
+            SketchStatusBar(model: model)
         }
         .navigationSubtitle("Dynamic Geometry")
         .toolbar {
@@ -86,12 +86,43 @@ struct ContentView: View {
             calculationText = ""
             showCalculation = true
         }
-        .sheet(isPresented: $showTextSheet) { textSheet }
-        .sheet(isPresented: $showRotate) { rotateSheet }
-        .sheet(isPresented: $showDilate) { dilateSheet }
-        .sheet(isPresented: $showTranslate) { translateSheet }
-        .sheet(isPresented: $showFunction) { functionSheet }
-        .sheet(isPresented: $showCalculation) { calculationSheet }
+        .sheet(isPresented: $showTextSheet) {
+            AddTextSheet(text: $textDraft) { text in
+                model.checkpoint("Add Text")
+                let id = model.add(kind: .caption(text), position: textAnchor, silent: true)
+                model.selection = [id]
+            }
+        }
+        .sheet(isPresented: $showRotate) {
+            RotateSheet(angle: $rotateAngle, centerName: rotateCenterName()) { degrees in
+                if let center = selectedPoint() ?? firstPoint() {
+                    model.rotateSelection(center: center, degrees: degrees)
+                }
+            }
+        }
+        .sheet(isPresented: $showDilate) {
+            DilateSheet(factor: $dilateFactor, centerName: dilateCenterName()) { factor in
+                if let center = selectedPoint() ?? firstPoint() {
+                    model.dilateSelection(center: center, factor: factor)
+                }
+            }
+        }
+        .sheet(isPresented: $showTranslate) {
+            TranslateSheet(dx: $translateX, dy: $translateY,
+                           unit: model.settings.lengthUnit.short) { dx, dy in
+                model.translateSelection(dx: dx, dy: dy)
+            }
+        }
+        .sheet(isPresented: $showFunction) {
+            FunctionSheet(text: $functionText) { expression in
+                model.addFunctionPlot(expression: expression)
+            }
+        }
+        .sheet(isPresented: $showCalculation) {
+            CalculationSheet(text: $calculationText, names: measurementNames()) { expression in
+                model.addCalculation(expression: expression)
+            }
+        }
         .sheet(isPresented: $model.showAbout) { AboutView() }
     }
 
@@ -242,67 +273,6 @@ struct ContentView: View {
         .help("Measure the selection")
     }
 
-    // MARK: status bar
-
-    private var statusBar: some View {
-        HStack(spacing: 10) {
-            if let hover = model.hoverWorld {
-                Text("x \(fmt(hover.x / model.settings.lengthUnit.perUnit))   y \(fmt(hover.y / model.settings.lengthUnit.perUnit)) \(model.settings.lengthUnit.short)")
-                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(model.tool.hint)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            if !model.draft.isEmpty {
-                Divider().frame(height: 14)
-                Text("\(model.draft.count) picked")
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(.secondary)
-                if model.tool == .polygon && model.draft.count >= 3 {
-                    Button("Close Polygon") { model.finishPolygon() }
-                        .buttonStyle(.borderless)
-                        .font(.system(size: 10.5, weight: .semibold))
-                }
-                Button("Cancel") { model.cancelDraft() }
-                    .buttonStyle(.borderless)
-                    .font(.system(size: 10.5))
-            }
-
-            Spacer(minLength: 6)
-
-            if !model.statusMessage.isEmpty {
-                Text(model.statusMessage)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Divider().frame(height: 14)
-
-            Text("\(model.objects.filter(\.visible).count) objects")
-                .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-
-            if !model.selection.isEmpty {
-                Text("\(model.selection.count) selected")
-                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
-            }
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 26)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider().opacity(0.5) }
-    }
-
-    private func fmt(_ v: Double) -> String {
-        String(format: "%.2f", v)
-    }
-
     // MARK: scroll monitor
 
     private func installScrollMonitor() {
@@ -322,220 +292,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: sheets
-
-    private var textSheet: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Add Text", systemImage: "textformat")
-                .font(.headline)
-            Text("Captions are objects on the canvas. They can be selected, moved and styled just like geometry.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            TextEditor(text: $textDraft)
-                .font(.system(size: 13))
-                .frame(height: 88)
-                .padding(6)
-                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.primary.opacity(0.1))
-                }
-            HStack {
-                Spacer()
-                Button("Cancel") { showTextSheet = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") {
-                    let t = textDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !t.isEmpty {
-                        model.checkpoint("Add Text")
-                        let id = model.add(kind: .caption(t), position: textAnchor, silent: true)
-                        model.selection = [id]
-                    }
-                    showTextSheet = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(textDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-        .padding(22)
-        .frame(width: 420)
-    }
-
-    private var rotateSheet: some View {
-        let center = selectedPoint() ?? firstPoint()
-        return VStack(alignment: .leading, spacing: 14) {
-            Label("Rotate", systemImage: "rotate.right")
-                .font(.headline)
-            Text("Rotate the selected objects around a point.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            if let center, let object = model.objectByID(center) {
-                LabeledContent("Center") {
-                    Text(object.label.isEmpty ? "Point" : object.label)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                Text("Select a center point as well as the objects to rotate.")
-                    .font(.caption).foregroundStyle(.orange)
-            }
-            LabeledContent("Angle") {
-                HStack(spacing: 6) {
-                    TextField("Angle", value: $rotateAngle, format: .number)
-                        .labelsHidden()
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                    Text("degrees").foregroundStyle(.secondary)
-                }
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { showRotate = false }.keyboardShortcut(.cancelAction)
-                Button("Rotate") {
-                    if let center { model.rotateSelection(center: center, degrees: rotateAngle) }
-                    showRotate = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(center == nil)
-            }
-        }
-        .padding(22)
-        .frame(width: 400)
-    }
-
-    private var dilateSheet: some View {
-        let center = selectedPoint() ?? firstPoint()
-        return VStack(alignment: .leading, spacing: 14) {
-            Label("Dilate", systemImage: "arrow.up.left.and.arrow.down.right")
-                .font(.headline)
-            Text("Scale the selected objects about a center point.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            if let center, let object = model.objectByID(center) {
-                LabeledContent("Center") {
-                    Text(object.label).foregroundStyle(.secondary)
-                }
-            } else {
-                Text("Select a center point as well as the objects to dilate.")
-                    .font(.caption).foregroundStyle(.orange)
-            }
-            LabeledContent("Scale factor") {
-                TextField("Factor", value: $dilateFactor, format: .number)
-                    .labelsHidden()
-                    .frame(width: 80)
-                    .multilineTextAlignment(.trailing)
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { showDilate = false }.keyboardShortcut(.cancelAction)
-                Button("Dilate") {
-                    if let center { model.dilateSelection(center: center, factor: dilateFactor) }
-                    showDilate = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(center == nil)
-            }
-        }
-        .padding(22)
-        .frame(width: 400)
-    }
-
-    private var translateSheet: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Translate", systemImage: "arrow.right")
-                .font(.headline)
-            Text("Move a copy of the selected objects by a fixed amount.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            LabeledContent("Horizontal") {
-                HStack(spacing: 6) {
-                    TextField("dx", value: $translateX, format: .number)
-                        .labelsHidden()
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                    Text(model.settings.lengthUnit.short).foregroundStyle(.secondary)
-                }
-            }
-            LabeledContent("Vertical") {
-                HStack(spacing: 6) {
-                    TextField("dy", value: $translateY, format: .number)
-                        .labelsHidden()
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                    Text(model.settings.lengthUnit.short).foregroundStyle(.secondary)
-                }
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { showTranslate = false }.keyboardShortcut(.cancelAction)
-                Button("Translate") {
-                    model.translateSelection(dx: translateX, dy: translateY)
-                    showTranslate = false
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(22)
-        .frame(width: 400)
-    }
-
-    private var functionSheet: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Plot a Function", systemImage: "function")
-                .font(.headline)
-            Text("Type an expression in x. Examples: sin(x), x^2 - 2, 3cos(2x) + 1.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            TextField("f(x) =", text: $functionText)
-                .textFieldStyle(.bordered)
-                .textInputBorderShape(.roundedRectangle)
-                .font(.system(size: 14, design: .monospaced))
-            HStack {
-                Spacer()
-                Button("Cancel") { showFunction = false }.keyboardShortcut(.cancelAction)
-                Button("Plot") {
-                    model.addFunctionPlot(expression: functionText)
-                    showFunction = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(Expression(functionText) == nil)
-            }
-        }
-        .padding(22)
-        .frame(width: 460)
-    }
-
-    private var calculationSheet: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Calculate", systemImage: "function")
-                .font(.headline)
-            Text("Use measurement names (spaces become underscores), numbers, + − × ÷, ^ and functions such as sqrt, sin and cos.")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            TextField("expression", text: $calculationText)
-                .textFieldStyle(.bordered)
-                .textInputBorderShape(.roundedRectangle)
-                .font(.system(size: 14, design: .monospaced))
-            let names = measurementNames()
-            if !names.isEmpty {
-                Text("Measurements").font(.caption).foregroundStyle(.secondary)
-                FlowChips(items: names) { name in
-                    if !calculationText.isEmpty && !calculationText.hasSuffix(" ") && !calculationText.hasSuffix("(") {
-                        calculationText += " "
-                    }
-                    calculationText += name
-                }
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { showCalculation = false }.keyboardShortcut(.cancelAction)
-                Button("Add") {
-                    model.addCalculation(expression: calculationText)
-                    showCalculation = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(calculationText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
-        .padding(22)
-        .frame(width: 480)
-    }
+    // MARK: selection helpers
 
     private func measurementNames() -> [String] {
         var out: [String] = []
@@ -559,6 +316,20 @@ struct ContentView: View {
             guard object.visible else { return false }
             return model.evaluated(object.id).point != nil
         }?.id
+    }
+
+    /// The rotate sheet names an unlabelled centre "Point"; dilate shows the
+    /// label verbatim, as the inline forms did.
+    private func rotateCenterName() -> String? {
+        guard let id = selectedPoint() ?? firstPoint(),
+              let object = model.objectByID(id) else { return nil }
+        return object.label.isEmpty ? "Point" : object.label
+    }
+
+    private func dilateCenterName() -> String? {
+        guard let id = selectedPoint() ?? firstPoint(),
+              let object = model.objectByID(id) else { return nil }
+        return object.label
     }
 }
 
