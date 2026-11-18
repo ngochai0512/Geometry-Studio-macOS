@@ -74,17 +74,10 @@ extension SketchCanvas {
     private func drawGrid(context: inout GraphicsContext, size: CGSize, rect: WorldRect) {
         guard model.settings.grid || model.settings.axes else { return }
         let scale = model.settings.scale
-        // The original's grid and axes are labelled in the chosen distance
-        // unit, so a one-inch grid is one inch wide even though the sketch
-        // stores centimetres. Convert the display-unit step to world units.
+        // Labels are in the chosen distance unit; the sketch stores world
+        // centimetres, so the step converts through the display unit.
         let unit = max(model.settings.lengthUnit.perUnit, 1e-6)
-        let steps: [Double] = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]
-        var displayStep = steps.last ?? 1
-        for candidate in steps where candidate * unit * scale >= 50 {
-            displayStep = candidate
-            break
-        }
-        let step = displayStep * unit
+        let step = GridMetrics.step(scale: scale, perUnit: model.settings.lengthUnit.perUnit)
 
         if model.settings.grid {
             let startX = floor(rect.minX / step) * step
@@ -140,14 +133,14 @@ extension SketchCanvas {
             context.stroke(axes, with: .color(ink.opacity(0.3)), lineWidth: 1)
 
             let tickStep = step
-            let labelEvery = tickStep * scale < 55 ? 5 : 1
+            let labelEvery = GridMetrics.labelEvery(step: tickStep, scale: scale)
             var x = floor(rect.minX / tickStep) * tickStep
             while x <= rect.maxX + tickStep {
                 let index = Int((x / tickStep).rounded())
                 if index % labelEvery == 0 {
                     let p = model.screenPoint(Vec2(x, 0), size: size)
                     if abs(x) > 1e-9 && p.y >= 0 && p.y <= size.height {
-                        let label = Text(cleanNumber(x / unit))
+                        let label = Text(GridMetrics.cleanNumber(x / unit))
                             .font(.system(size: 10, weight: .regular, design: .rounded))
                             .foregroundStyle(secondaryInk.opacity(0.8))
                         context.draw(label, at: CGPoint(x: p.x, y: min(max(p.y + 13, 12), size.height - 10)),
@@ -162,7 +155,7 @@ extension SketchCanvas {
                 if index % labelEvery == 0 {
                     let p = model.screenPoint(Vec2(0, yy), size: size)
                     if abs(yy) > 1e-9 && p.x >= 0 && p.x <= size.width {
-                        let label = Text(cleanNumber(yy / unit))
+                        let label = Text(GridMetrics.cleanNumber(yy / unit))
                             .font(.system(size: 10, weight: .regular, design: .rounded))
                             .foregroundStyle(secondaryInk.opacity(0.8))
                         context.draw(label, at: CGPoint(x: min(max(p.x - 8, 10), size.width - 10), y: p.y),
@@ -444,14 +437,9 @@ extension SketchCanvas {
         p.addLine(to: CGPoint(x: x + length, y: y + 3))
         context.stroke(p, with: .color(secondaryInk.opacity(0.5)), lineWidth: 1)
         let value = length / scale / unit.perUnit
-        let label = Text("\(cleanNumber(value)) \(unit.short)")
+        let label = Text("\(GridMetrics.cleanNumber(value)) \(unit.short)")
             .font(.system(size: 9.5, weight: .medium, design: .rounded))
             .foregroundStyle(secondaryInk.opacity(0.65))
         context.draw(label, at: CGPoint(x: x, y: y - 6), anchor: .bottomLeading)
-    }
-
-    private func cleanNumber(_ v: Double) -> String {
-        if abs(v - v.rounded()) < 1e-9 { return String(Int(v.rounded())) }
-        return String(format: "%.1f", v)
     }
 }

@@ -35,6 +35,20 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
         }
 
+        CommandGroup(after: .saveItem) {
+            Divider()
+            Menu("Export") {
+                ForEach(SketchExportFormat.allCases) { format in
+                    Button("\(format.title)…") {
+                        if let model {
+                            SketchExporter.export(format, model: model)
+                        }
+                    }
+                }
+            }
+            .disabled(model == nil)
+        }
+
         CommandGroup(replacing: .printItem) {
             Button("Print…") {
                 if let model {

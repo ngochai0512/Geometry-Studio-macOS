@@ -75,6 +75,8 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
   damaged file.
 - **Printing** — File > Print (⌘P) fits the sketch to one page and uses the standard macOS print
   panel and preview; Page Setup controls paper size, orientation and margins.
+- **Export** — File > Export writes a vector PDF, an SVG or a 2× PNG, fitted to a 3:2 canvas
+  and drawn on a white page.
 - **Preferences** — default length unit, angle unit, precision, grid, axes, snapping and labels
   for new sketches.
 - **New documents** — a new sketch starts blank, with only the grid and axes from your

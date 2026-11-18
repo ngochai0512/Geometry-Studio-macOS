@@ -10,10 +10,11 @@ Read this before exploring; it saves a full README pass.
 - Build system: two descriptions, one source of truth per job. `Package.swift` defines the executable and test targets and drives `swift build`, `swift test` and `swift run`. `project.yml` (XcodeGen 2.46) generates `GeometryStudio.xcodeproj`, the app target that carries `Info.plist`, the exported `gsp` document type and the icon. Never hand-edit the generated project: change `project.yml` and run `xcodegen generate`.
 - Entry point: `main.swift` → `GeometryStudioApp.main()` in `App/GeometryStudioApp.swift`. That file must not gain `@main` while `main.swift` exists — two entry points do not compile.
 - Layering, one concern per file:
-  - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`).
+  - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`), `GridMetrics.swift` (grid step, label density, number text).
   - `Model/` — `ObjectModel.swift` (`SketchObject`, `ObjectKind`), `Document.swift` (`CanvasSettings`, `SketchDocument`, revision and salvage), `SketchFileDocument.swift` (the observable `Document` SwiftUI reads and writes, plus the `SketchSnapshot` file codec), `AppPreferences.swift` (new-sketch defaults), `GeometryEval.swift` (parent→child resolution), `SketchTool.swift`, and `SketchModel` split across `SketchModel.swift` (state, lifecycle, undo, object helpers) plus `SketchModel+{Geometry,Editing,ToolActions,Animation,Construction,Measurement,Transforms}.swift`.
   - `Views/` — `ContentView.swift` (chrome, toolbar, sheets), `DocumentWorkspace.swift` (document/model sync and focused values), `InspectorView.swift`, `SettingsView.swift`, `SketchCanvas.swift` (state and body), `CanvasDrawing.swift`, `CanvasGestures.swift`, `FlowChips.swift`, `AboutView.swift`.
-  - `Printing/` — `SketchPrinter.swift` (page fit, image render, `NSPrintOperation`, page setup) and `SketchPrintView.swift` (one-page print view).
+  - `Printing/` — `SketchPrinter.swift` (page fit, `NSPrintOperation`, page setup) and `SketchPrintView.swift` (one-page print view).
+  - `Export/` — `SketchExportFormat.swift` (format list and export canvas size), `SketchRenderOutput.swift` (fitted snapshot; PNG, vector PDF and print images), `SVGExporter.swift` (vector SVG writer), `SketchExporter.swift` (save panel and file write).
   - `App/` — `GeometryStudioApp.swift` (document scene), `FocusedSketchModel.swift` (active window for menus), `SketchCommands.swift` (menus), `Notifications.swift`, `Screenshot.swift` (headless render path); bundle resources in `App/Info.plist` and `App/Assets.xcassets`.
 - `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
@@ -179,7 +180,7 @@ Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `xcodegen generate` reflects `project.yml`, and the app target builds with zero new warnings.
-- [ ] `swift test` passes (41 tests, 7 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (43 tests, 8 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
