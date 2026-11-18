@@ -19,10 +19,10 @@ enum SketchTool: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .select: return "cursorarrow"
-        case .point: return "smallcircle.filled.circle"
+        case .point: return "dot.square"
         case .segment: return "line.diagonal"
         case .ray: return "arrow.up.right"
-        case .line: return "line.diagonal.arrow"
+        case .line: return "arrow.down.left.and.arrow.up.right"
         case .circle: return "circle"
         case .polygon: return "pentagon"
         case .angle: return "angle"
