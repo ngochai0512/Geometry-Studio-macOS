@@ -160,6 +160,48 @@ jobs:
           ditto -c -k --keepParent "$APP" "build/$NAME"
           (cd build && shasum -a 256 "$NAME" > checksums.txt)
 
+      - name: Create DMG
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          APP=$(find build/GeometryStudio.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$APP"
+          STAGE="$RUNNER_TEMP/dmg"
+          mkdir -p "$STAGE"
+          ditto "$APP" "$STAGE/$(basename "$APP")"
+          ln -s /Applications "$STAGE/Applications"
+
+          SUFFIX=""
+          if [ "$SIGNED" != "true" ]; then
+            SUFFIX="-unsigned"
+          fi
+          DMG="build/GeometryStudio-$VERSION$SUFFIX.dmg"
+          # Folder-based images still need hdiutil on macOS 27: diskutil image
+          # create from only accepts disks and existing images.
+          hdiutil create -volname "Geometry Studio" -fs HFS+ -srcfolder "$STAGE" \
+            -ov -format UDZO "$DMG"
+          hdiutil verify "$DMG"
+          (cd build && shasum -a 256 "$(basename "$DMG")" >> checksums.txt)
+
+      - name: Notarize DMG
+        if: steps.signing.outputs.signed == 'true'
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG="build/GeometryStudio-$VERSION.dmg"
+          test -f "$DMG"
+          codesign --force --timestamp --sign "Developer ID Application" "$DMG"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -175,6 +217,7 @@ jobs:
           fi
           gh release create "$GITHUB_REF_NAME" \
             build/GeometryStudio-*.zip \
+            build/GeometryStudio-*.dmg \
             build/checksums.txt \
             --title "Geometry Studio ${GITHUB_REF_NAME#v}" \
             "${NOTES[@]}"

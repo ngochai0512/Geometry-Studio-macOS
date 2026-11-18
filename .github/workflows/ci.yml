@@ -74,6 +74,22 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Package DMG
+        run: |
+          set -euo pipefail
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Debug" -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$APP"
+          STAGE="$RUNNER_TEMP/dmg"
+          mkdir -p "$STAGE"
+          ditto "$APP" "$STAGE/$(basename "$APP")"
+          ln -s /Applications "$STAGE/Applications"
+          # Folder-based images still need hdiutil on macOS 27: diskutil image
+          # create from only accepts disks and existing images.
+          hdiutil create -volname "Geometry Studio" -fs HFS+ -srcfolder "$STAGE" \
+            -ov -format UDZO "$RUNNER_TEMP/GeometryStudio.dmg"
+          hdiutil verify "$RUNNER_TEMP/GeometryStudio.dmg"
+          ls -lh "$RUNNER_TEMP/GeometryStudio.dmg"
+
       - name: Screenshot smoke test
         run: |
           ./.build/debug/GeometryStudio --screenshot "$RUNNER_TEMP/geometry-studio.png"

@@ -43,9 +43,9 @@ Both target macOS 27 or newer and build `arm64` on Apple silicon. `swift test` r
 geometry, document and undo suites.
 
 CI runs the package build, the tests and the app target on every push and pull request. Tagged
-releases archive the checked-in project and publish an arm64 app to GitHub Releases: signed and
-notarized when the five secrets are configured, otherwise clearly marked unsigned; see
-`RELEASING.md` for the secrets and the release steps.
+releases archive the checked-in project and publish an arm64 zip and `.dmg` to GitHub Releases:
+signed and notarized when the five secrets are configured, otherwise clearly marked unsigned;
+see `RELEASING.md` for the secrets and the release steps.
 
 ## Screenshot mode
 

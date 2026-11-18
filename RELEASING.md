@@ -37,8 +37,10 @@ hardened runtime in `project.yml`, which notarization requires.
 3. Signs and notarizes when the certificate is present: zip, `notarytool --wait`, staple the
    ticket, re-zip. Without it, zips the unsigned app with an `-unsigned` suffix. Either way it
    writes a SHA-256 checksum.
-4. Creates the GitHub release and attaches the zip and checksums; an unsigned release body says
-   so instead of generating notes.
+4. Builds a DMG containing the app and an `/Applications` symlink. When signed, the DMG is
+   signed, notarized and stapled too.
+5. Creates the GitHub release and attaches the zip, the DMG and the checksums; an unsigned
+   release body says so instead of generating notes.
 
 ## Local check without secrets
 
@@ -61,6 +63,8 @@ The project is checked in, so no XcodeGen step is needed; regenerate only after 
 
 - Sparkle updates: no dependency, appcast URL or EdDSA keypair yet. The workflow publishes
   zips only.
-- DMG packaging, Homebrew cask and Mac App Store distribution.
+- DMG layout styling (background image, icon positions); the workflow produces a plain
+  drag-to-Applications disk image.
+- Homebrew cask and Mac App Store distribution.
 - A versioning policy beyond tags; `CFBundleShortVersionString` comes from the tag and
   `CFBundleVersion` from the workflow run number.
