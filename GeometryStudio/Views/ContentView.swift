@@ -117,17 +117,14 @@ struct ContentView: View {
             .disabled(!model.canRedo)
         }
 
-        ToolbarItem(placement: .principal) {
-            Picker("Drawing Tool", selection: $model.tool) {
-                ForEach(SketchTool.allCases) { tool in
+        ForEach(SketchTool.allCases) { tool in
+            ToolbarItem(placement: .principal) {
+                Toggle(isOn: toolBinding(tool)) {
                     Label(tool.title, systemImage: tool.symbol)
-                        .tag(tool)
                 }
+                .toggleStyle(.button)
+                .help("\(tool.title) (\(String(tool.shortcut.character)))")
             }
-            .pickerStyle(.segmented)
-            .labelStyle(.iconOnly)
-            .labelsHidden()
-            .help("Drawing tool")
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
@@ -166,7 +163,7 @@ struct ContentView: View {
             measureMenu
 
             Toggle(isOn: $model.settings.grid) {
-                Label("Grid", systemImage: "grid")
+                Label("Grid", systemImage: "squareshape.split.2x2")
             }
             .toggleStyle(.button)
             .help("Show or hide the grid")
@@ -177,6 +174,20 @@ struct ContentView: View {
             .toggleStyle(.button)
             .help("Show or hide the inspector")
         }
+    }
+
+    /// One real toolbar item per tool, centered, so Icon and Text mode shows
+    /// each title like the other items; a segmented Picker or a single
+    /// principal group fuses into one custom item and ignores display mode.
+    private func toolBinding(_ tool: SketchTool) -> Binding<Bool> {
+        Binding(
+            get: { model.tool == tool },
+            set: { isOn in
+                if isOn, model.tool != tool {
+                    model.tool = tool
+                }
+            }
+        )
     }
 
     @State private var lastCanvasSize = CGSize(width: 900, height: 720)
@@ -198,7 +209,7 @@ struct ContentView: View {
             Divider()
             Button("Locus") { model.constructLocus() }
         } label: {
-            Label("Construct", systemImage: "plus.square.on.square")
+            Label("Construct", systemImage: "hammer")
         }
         .help("Construct objects from the selection")
     }
