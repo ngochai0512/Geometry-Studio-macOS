@@ -13,6 +13,11 @@ Pushing a tag such as `v0.1.0` starts the workflow; the version is the tag witho
 | `APPLE_ID` | Apple ID used for notarization. |
 | `APPLE_APP_PASSWORD` | App-specific password for that Apple ID. |
 
+These secrets are optional. When none of them is configured the workflow logs a warning, skips
+certificate import and notarization, and publishes `GeometryStudio-<version>-unsigned.zip`. An
+unsigned build is useful for smoke-testing a tag, but Gatekeeper blocks it on other Macs. When
+only some are configured the workflow fails instead of quietly shipping an unsigned build.
+
 Create the base64 value with:
 
 ```sh
@@ -24,17 +29,20 @@ hardened runtime in `project.yml`, which notarization requires.
 
 ## What the workflow does
 
-1. Generates `GeometryStudio.xcodeproj` from `project.yml`.
-2. Archives an `arm64` Release build signed with the Developer ID
-   certificate and a secure timestamp.
-3. Zips the app, submits it with `notarytool --wait`, staples the ticket to the `.app`,
-   re-zips and writes a SHA-256 checksum.
-4. Creates the GitHub release and attaches the zip and checksums.
+1. Validates the checked-in `GeometryStudio.xcodeproj`, including the settings Xcode wrote when
+   it upgraded the project. The workflow does not regenerate it.
+2. Checks the signing secrets. With all five present, imports the Developer ID certificate and
+   archives an `arm64` Release build signed with a secure timestamp; otherwise archives it
+   unsigned.
+3. Signs and notarizes when the certificate is present: zip, `notarytool --wait`, staple the
+   ticket, re-zip. Without it, zips the unsigned app with an `-unsigned` suffix. Either way it
+   writes a SHA-256 checksum.
+4. Creates the GitHub release and attaches the zip and checksums; an unsigned release body says
+   so instead of generating notes.
 
 ## Local check without secrets
 
 ```sh
-xcodegen generate
 xcodebuild \
   -project GeometryStudio.xcodeproj \
   -scheme GeometryStudio \
@@ -46,7 +54,8 @@ xcodebuild \
   build
 ```
 
-That produces an unsigned app for inspection; it is not distributable.
+The project is checked in, so no XcodeGen step is needed; regenerate only after a deliberate
+`project.yml` change. This produces an unsigned app for inspection; it is not distributable.
 
 ## Not done yet
 

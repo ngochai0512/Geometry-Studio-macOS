@@ -7,7 +7,7 @@ This file instructs AI coding agents working in this repo. Humans: `README.md` i
 Read this before exploring; it saves a full README pass.
 
 - Native macOS SwiftUI app: a dynamic geometry sketchpad (points, lines, circles, polygons, constructions, measurements, transforms, a graph). Built for Apple silicon; macOS 27 floor.
-- Build system: two descriptions, one source of truth per job. `Package.swift` defines the executable and test targets and drives `swift build`, `swift test` and `swift run`. `project.yml` (XcodeGen 2.46) generates `GeometryStudio.xcodeproj`, the app target that carries `Info.plist`, the exported `gsp` document type and the icon. Never hand-edit the generated project: change `project.yml` and run `xcodegen generate`.
+- Build system: two descriptions, one source of truth per job. `Package.swift` defines the executable and test targets and drives `swift build`, `swift test` and `swift run`. `project.yml` (XcodeGen 2.46) generates `GeometryStudio.xcodeproj`, the app target that carries `Info.plist`, the exported `gsp` document type and the icon. The checked-in project also carries the settings Xcode writes when it upgrades the file (upgrade check, dead-code stripping, string-catalog symbols, script sandboxing, scheme version). Never hand-edit either; CI validates and builds the project as checked in, so do not regenerate over an Xcode upgrade.
 - Entry point: `main.swift` → `GeometryStudioApp.main()` in `App/GeometryStudioApp.swift`. That file must not gain `@main` while `main.swift` exists — two entry points do not compile.
 - Layering, one concern per file:
   - `Geometry/` — value types and math, no document state: `Vec2.swift` (`Vec2`, `WorldRect`), `EvalPath.swift` (+ intersection helpers, `clipLine`), `Expression.swift`, `Style.swift` (`RGBA`, `ObjectStyle`, dash/shape), `Units.swift` (`LengthUnit`, `AngleUnit`, `SketchMetrics`), `GridMetrics.swift` (grid step, label density, number text).
@@ -64,13 +64,15 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
   swift run GeometryStudio
   ./.build/release/GeometryStudio --screenshot /tmp/geometry-studio.png
 
-  # App bundle: Info.plist, exported gsp type, icon
+  # App bundle: Info.plist, exported gsp type, icon. Regenerate only after a
+  # deliberate project.yml change: this command overwrites Xcode's in-place
+  # upgrade settings in the checked-in project.
   xcodegen generate
   open GeometryStudio.xcodeproj
   xcodebuild -project GeometryStudio.xcodeproj -scheme GeometryStudio -configuration Debug build
   ```
 
-  Both paths compile the same `GeometryStudio/` sources; keep both green. The generated project is disposable — regenerate it from `project.yml` rather than editing it.
+  Both paths compile the same `GeometryStudio/` sources; keep both green. The checked-in project is not disposable any more: it holds the settings Xcode wrote when it upgraded it, so build it as checked in and treat regeneration as a deliberate spec change.
 
 - Tests cover the pure-value core: `swift test` runs the `GeometryStudioTests` suite. They use no windows, timers, files or network — keep them that way.
 - If a build fails because a nested sandbox blocks SwiftPM's manifest or the compiler's macro plugin server, stop and report it. Do not add sandbox-bypass flags such as `--disable-sandbox` (section 2).
@@ -120,8 +122,8 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 ## 5. Toolchain
 
 - `swift-tools-version: 5.9`; Swift 5 language mode; minimum deployment target macOS 27.0; builds `arm64` on Apple silicon. Keep `MACOSX_DEPLOYMENT_TARGET` at 27.0: Xcode's "recommended" upgrade rewrites it to `$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)`, which is the SDK's floor (14.0 under Xcode 27), not the app's. CI fails if that happens.
-- XcodeGen 2.46 generates `GeometryStudio.xcodeproj` from `project.yml`; run `xcodegen generate` after changing the spec. The generated project is not the source of truth. Xcode 27 may upgrade it to `objectVersion = 110`, while XcodeGen emits 77; regenerate rather than committing an upgraded project. CI reads the checked-in value, regenerates to the 77 baseline, and fails if the installed XcodeGen emits a newer format.
-- Xcode 27 or later builds the app target (`objectVersion = 77`), because only it ships the macOS 27 SDK. Xcode is still optional for the package targets: `swift build` and `swift test` must keep working without opening the project, and both paths compile the same sources.
+- XcodeGen 2.46 generates `GeometryStudio.xcodeproj` from `project.yml`; `project.yml` is the scaffold, but the checked-in project is authoritative for the settings Xcode writes during an in-place upgrade. Build and commit the project as Xcode leaves it; do not regenerate over an upgrade. CI validates the checked-in `objectVersion` (77 floor, no upper bound) and deployment target, and generates only the spec, into a scratch directory. Run `xcodegen generate` only after a deliberate `project.yml` change, then re-apply Xcode's upgrade prompts.
+- Xcode 27 or later builds the app target (`objectVersion` 77 or newer), because only it ships the macOS 27 SDK. Xcode is still optional for the package targets: `swift build` and `swift test` must keep working without opening the project, and both paths compile the same sources.
 - The compiler expression-time threshold is pinned to 110 seconds: `Other Swift Flags` in `project.yml` for the app target, and `-Xswiftc -Xfrontend -Xswiftc -solver-expression-time-threshold=110` on the CI and release `swift build` / `swift test` steps. Keep those in sync. If an expression still times out, split the expression; do not raise the threshold to hide it.
 - If local Xcode and the command line differ, say which one you built with rather than silently reporting a result from the other.
 - The app bundle declares `com.geometrystudio.gsp` (conforms to `public.json`) and owns `.gsp` files. `UTType.geometryStudioSketch` mirrors that declaration so the open and save panels filter correctly under `swift run` too. Bundle identifier `com.geometrystudio.GeometryStudio` and marketing version `0.1.0` are provisional.
@@ -156,6 +158,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 - **Accessibility:** icon-only controls get labels; selection state is exposed; nothing clips at larger text sizes — prefer minimum sizes over fixed frames.
 - **UI text:** user-facing copy is product copy — don't "improve" wording unprompted; flag inaccuracies instead.
 - **API currency:** do not use deprecated or soon-to-be-deprecated APIs. Prefer current alternatives; check the symbol against macOS 27 availability.
+- **#Preview macros:** every SwiftUI files should have them. 
 
 ## 7. Error Handling
 
@@ -179,7 +182,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
-- [ ] `xcodegen generate` reflects `project.yml`, and the app target builds with zero new warnings.
+- [ ] `project.yml` still generates into a scratch directory, and the checked-in app target builds with zero new warnings.
 - [ ] `swift test` passes (43 tests, 8 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
@@ -212,6 +215,6 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 
 ## 12. Shipping Status
 
-A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. CI (`.github/workflows/ci.yml`) builds the package, runs the tests, builds the app and runs the screenshot check. Tagged `v*` releases build an arm64 Developer ID app, notarize and staple it, and publish a zip to GitHub Releases (`RELEASING.md`). Still missing: a signing identity and notarization secrets in this repo, Sparkle updates, DMG packaging and a versioning policy beyond tags. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. Shipping a reimplementation of a trademarked product still needs its own naming and legal review.
+A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. CI (`.github/workflows/ci.yml`) builds the package, runs the tests, builds the app and runs the screenshot check. Tagged `v*` releases archive the checked-in project, sign and notarize when the secrets exist, and otherwise publish a clearly marked unsigned zip; see `RELEASING.md`. Still missing: a signing identity and notarization secrets in this repo, Sparkle updates, DMG packaging and a versioning policy beyond tags. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. Shipping a reimplementation of a trademarked product still needs its own naming and legal review.
 
 `README.md` still describes a Rust launcher and `cargo build` from the project this code came from; that launcher is not in this repo. When you next touch the README, correct the build section to the SwiftPM commands in section 1.

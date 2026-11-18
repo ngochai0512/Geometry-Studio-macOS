@@ -19,9 +19,10 @@ xcodegen generate
 open GeometryStudio.xcodeproj
 ```
 
-Choose the `GeometryStudio` scheme and Run. Generate the project again after changing
-`project.yml`; the project file itself is disposable. XcodeGen is the only extra tool
-(`brew install xcodegen`).
+Choose the `GeometryStudio` scheme and Run. The checked-in project is built as it is: Xcode
+writes its upgrade settings into that file, so regenerate from `project.yml` only after a
+deliberate spec change, and expect to re-apply Xcode's upgrade prompts. XcodeGen is the only
+extra tool (`brew install xcodegen`).
 
 Package targets, for a fast edit/run loop and for tests:
 
@@ -42,8 +43,9 @@ Both target macOS 27 or newer and build `arm64` on Apple silicon. `swift test` r
 geometry, document and undo suites.
 
 CI runs the package build, the tests and the app target on every push and pull request. Tagged
-releases build a signed and notarized arm64 app and publish it to GitHub Releases; see
-`RELEASING.md` for the required secrets and the release steps.
+releases archive the checked-in project and publish an arm64 app to GitHub Releases: signed and
+notarized when the five secrets are configured, otherwise clearly marked unsigned; see
+`RELEASING.md` for the secrets and the release steps.
 
 ## Screenshot mode
 

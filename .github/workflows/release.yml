@@ -14,44 +14,52 @@ jobs:
       SCHEME: GeometryStudio
       PROJECT: GeometryStudio.xcodeproj
       TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+      CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Check signing secrets
+        id: signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          MISSING=()
+          [ -n "${CERTIFICATE_P12:-}" ] || MISSING+=("DEVELOPER_ID_P12")
+          [ -n "${CERTIFICATE_PASSWORD:-}" ] || MISSING+=("DEVELOPER_ID_P12_PASSWORD")
+          [ -n "${TEAM_ID:-}" ] || MISSING+=("APPLE_TEAM_ID")
+          [ -n "${APPLE_ID:-}" ] || MISSING+=("APPLE_ID")
+          [ -n "${APPLE_APP_PASSWORD:-}" ] || MISSING+=("APPLE_APP_PASSWORD")
 
-      - name: Normalize Xcode project format
+          if [ "${#MISSING[@]}" -eq 0 ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "Signing and notarization secrets are configured."
+          elif [ "${#MISSING[@]}" -eq 5 ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Unsigned release::No signing secrets configured. Publishing an unsigned app."
+          else
+            # Half-configured signing is a mistake worth failing on: silently
+            # shipping unsigned would look like a regression.
+            echo "error: incomplete signing configuration; missing: ${MISSING[*]}" >&2
+            exit 1
+          fi
+
+      - name: Validate checked-in project
         run: |
           set -euo pipefail
           PBXPROJ=GeometryStudio.xcodeproj/project.pbxproj
-          BASELINE=77
 
-          version() {
-            sed -n 's/.*objectVersion = \([0-9][0-9]*\);.*/\1/p' "$PBXPROJ" | head -n 1
-          }
-
-          CHECKED_IN=$(version)
-          echo "checked-in objectVersion: ${CHECKED_IN:-missing}"
-
-          if [ -n "${CHECKED_IN:-}" ] && [ "$CHECKED_IN" -gt "$BASELINE" ]; then
-            echo "Xcode rewrote the project to $CHECKED_IN; regenerating to the $BASELINE baseline."
-          else
-            echo "Regenerating from project.yml (checked-in format ${CHECKED_IN:-missing})."
-          fi
-
-          xcodegen generate
-          xcodegen --version
-
-          GENERATED=$(version)
-          echo "generated objectVersion: ${GENERATED:-missing}"
-
-          if [ -z "${GENERATED:-}" ]; then
-            echo "error: XcodeGen did not write an objectVersion" >&2
+          VERSION=$(sed -n 's/.*objectVersion = \([0-9][0-9]*\);.*/\1/p' "$PBXPROJ" | head -n 1)
+          echo "checked-in objectVersion: ${VERSION:-missing}"
+          if [ -z "${VERSION:-}" ]; then
+            echo "error: $PBXPROJ has no objectVersion" >&2
             exit 1
           fi
-          if [ "$GENERATED" -gt "$BASELINE" ]; then
-            echo "error: XcodeGen emitted $GENERATED, newer than the $BASELINE baseline" >&2
+          if [ "$VERSION" -lt 77 ]; then
+            echo "error: objectVersion $VERSION is older than the 77 floor" >&2
             exit 1
           fi
 
@@ -64,13 +72,14 @@ jobs:
             exit 1
           fi
 
+          # Xcode upgrades the project in place; the release archives it as
+          # checked in rather than regenerating over that upgrade.
+
       - name: Test package
         run: swift test -Xswiftc -Xfrontend -Xswiftc -solver-expression-time-threshold=110
 
       - name: Import Developer ID certificate
-        env:
-          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_P12 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        if: steps.signing.outputs.signed == 'true'
         run: |
           set -euo pipefail
           KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
@@ -90,9 +99,24 @@ jobs:
             $(security list-keychains -d user | tr -d '"')
 
       - name: Archive app
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        shell: bash
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
+          SIGNS=()
+          if [ "$SIGNED" = "true" ]; then
+            SIGNS+=("DEVELOPMENT_TEAM=$TEAM_ID")
+            SIGNS+=("CODE_SIGN_STYLE=Manual")
+            SIGNS+=("CODE_SIGN_IDENTITY=Developer ID Application")
+            SIGNS+=("PROVISIONING_PROFILE_SPECIFIER=")
+            SIGNS+=("OTHER_CODE_SIGN_FLAGS=--timestamp")
+          else
+            SIGNS+=("CODE_SIGNING_ALLOWED=NO")
+            SIGNS+=("CODE_SIGNING_REQUIRED=NO")
+            SIGNS+=("CODE_SIGN_IDENTITY=")
+          fi
           xcodebuild archive \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
@@ -103,16 +127,10 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Developer ID Application" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp"
+            "${SIGNS[@]}"
 
       - name: Notarize and staple
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        if: steps.signing.outputs.signed == 'true'
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
@@ -131,14 +149,32 @@ jobs:
           ditto -c -k --keepParent "$APP" "build/GeometryStudio-$VERSION.zip"
           (cd build && shasum -a 256 "GeometryStudio-$VERSION.zip" > checksums.txt)
 
-      - name: Publish GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package unsigned app
+        if: steps.signing.outputs.signed != 'true'
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
+          APP="build/GeometryStudio.xcarchive/Products/Applications/GeometryStudio.app"
+          test -d "$APP"
+          NAME="GeometryStudio-$VERSION-unsigned.zip"
+          ditto -c -k --keepParent "$APP" "build/$NAME"
+          (cd build && shasum -a 256 "$NAME" > checksums.txt)
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOTES=()
+          if [ "$SIGNED" = "true" ]; then
+            NOTES+=(--generate-notes)
+          else
+            NOTES+=(--notes "Unsigned development build: no Developer ID certificate is configured, so macOS Gatekeeper warns on first launch. See RELEASING.md.")
+          fi
           gh release create "$GITHUB_REF_NAME" \
-            "build/GeometryStudio-$VERSION.zip" \
-            "build/checksums.txt" \
-            --title "Geometry Studio $VERSION" \
-            --generate-notes
+            build/GeometryStudio-*.zip \
+            build/checksums.txt \
+            --title "Geometry Studio ${GITHUB_REF_NAME#v}" \
+            "${NOTES[@]}"
