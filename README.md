@@ -73,8 +73,8 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
   visibility, fill, units, angle unit and decimal precision.
 - **Documents** — a document-based app: new, open, save and save as (`.gsp`, JSON document format),
   autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,
-  named undo/redo with an undo history menu, and automatic recovery of readable objects from a
-  damaged file.
+  named undo/redo with an undo history menu, automatic recovery of readable objects from a
+  damaged file, and a save prompt when a window with unsaved changes closes or the app quits.
 - **Printing** — File > Print (⌘P) fits the sketch to one page and uses the standard macOS print
   panel and preview; Page Setup controls paper size, orientation and margins.
 - **Export** — File > Export writes a vector PDF, an SVG or a 2× PNG, fitted to a 3:2 canvas
