@@ -132,9 +132,8 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 ## 6. Conventions
 
 - **Indentation:** 4 spaces, one level per nesting. No tabs, no trailing whitespace. (This codebase uses spaces; do not convert it to tabs.)
-- **No one-line code** where it hurts readability. Chains of modifiers, multiple statements, and closures with a real body go multi-line, one modifier per line.
+- **No one-line code** where it hurts readability. Chains of modifiers, multiple statements, and closures with a real body go multi-line, one modifier per line. 
 - **Exceptions — one-line is allowed only for these:**
-  - A short computed property, e.g. `var id: String { rawValue }`.
   - A single trailing closure with a short body, e.g. `.filter { !$0.isLocked }`.
   - Subscript or optional-chaining access, e.g. `item?.position ?? .zero`.
 - **Style for SwiftUI properties:**
@@ -151,6 +150,18 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
   ```swift
   Image(nsImage: icon).resizable().frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 20))
   ```
+
+- **Style for conditional statement if there are more than 3 conditions**:
+```
+if condition1,
+   condition2,
+   condition3,
+   condition4 {
+    // ...
+} else {
+    // ...
+}
+```
 
 - **Files and types:** `UpperCamelCase` types, one primary type per file where the file is named after it. A new subsystem gets its own file; `SketchModel` behavior belongs in the extension file matching its area.
 - **Comments:** one line, one idea. Explain *why*, never restate *what*. When a value comes from the original, cite it the way `CanvasSettings` does (`routine`, `an offset`) instead of re-explaining the derivation. No process markers (`NEW`, ownerless `TODO`, conditional-free `FIXME`).
