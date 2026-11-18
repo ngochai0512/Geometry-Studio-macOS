@@ -39,3 +39,8 @@ struct DocumentWorkspace: View {
         )
     }
 }
+
+#Preview("Document") {
+    DocumentWorkspace(document: SketchFileDocument(sketch: SketchModel.sample().document))
+        .frame(width: 1100, height: 760)
+}

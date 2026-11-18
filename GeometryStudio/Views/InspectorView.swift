@@ -602,4 +602,9 @@ struct InspectorView: View {
     }
 }
 
-// MARK: - Small helpers
+#Preview("Inspector") {
+    InspectorView(model: SketchModel.sample(),
+                  tab: .constant(.object),
+                  onTextAnnotation: { _ in })
+        .frame(width: 320, height: 720)
+}

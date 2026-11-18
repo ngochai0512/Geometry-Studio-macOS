@@ -550,3 +550,8 @@ struct ContentView: View {
         }?.id
     }
 }
+
+#Preview("Workspace") {
+    ContentView(model: SketchModel.sample())
+        .frame(width: 1100, height: 760)
+}

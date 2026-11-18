@@ -15,3 +15,9 @@ struct FlowChips: View {
         }
     }
 }
+
+#Preview("Flow chips") {
+    FlowChips(items: ["Distance", "Length", "Radius"]) { _ in }
+        .padding()
+        .frame(width: 260)
+}

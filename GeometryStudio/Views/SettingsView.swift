@@ -78,3 +78,7 @@ struct SettingsView: View {
         showLabels = true
     }
 }
+
+#Preview("Settings") {
+    SettingsView()
+}

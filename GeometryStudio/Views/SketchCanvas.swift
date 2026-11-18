@@ -60,3 +60,8 @@ struct SketchCanvas: View {
         }
     }
 }
+
+#Preview("Canvas") {
+    SketchCanvas(model: SketchModel.sample(), onTextAt: { _ in })
+        .frame(width: 860, height: 620)
+}
