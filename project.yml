@@ -22,7 +22,7 @@ targets:
       - path: App/Assets.xcassets
     settings:
       base:
-        PRODUCT_NAME: GeometryStudio
+        PRODUCT_NAME: Geometry Studio
         PRODUCT_BUNDLE_IDENTIFIER: com.geometrystudio.GeometryStudio
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
