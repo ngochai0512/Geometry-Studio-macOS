@@ -8,42 +8,28 @@ struct AddTextSheet: View {
     @Binding var text: String
     var onAdd: (String) -> Void
 
-    @Environment(\.dismiss) private var dismiss
+    private var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Add Text", systemImage: "textformat")
-                .font(.headline)
-            Text("Captions are objects on the canvas. They can be selected, moved and styled just like geometry.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            TextEditor(text: $text)
-                .font(.system(size: 13))
-                .frame(height: 88)
-                .padding(6)
-                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.primary.opacity(0.1))
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    TextField("Caption", text: $text, axis: .vertical)
+                        .lineLimit(4...8)
+                        .accessibilityLabel("Caption")
+                } header: {
+                    Label("Add Text", systemImage: "textformat")
+                } footer: {
+                    Text("Captions are objects on the canvas. They can be selected, moved and styled just like geometry.")
                 }
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") {
-                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        onAdd(trimmed)
-                    }
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+            .formStyle(.grouped)
+
+            SheetFooter("Add", isEnabled: !trimmedText.isEmpty) { onAdd(trimmedText) }
         }
-        .padding(22)
-        .frame(width: 420)
+        .frame(minWidth: 420, minHeight: 240)
     }
 }
 
@@ -53,45 +39,42 @@ struct RotateSheet: View {
     var centerName: String?
     var onRotate: (Double) -> Void
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Rotate", systemImage: "rotate.right")
-                .font(.headline)
-            Text("Rotate the selected objects around a point.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            if let centerName {
-                LabeledContent("Center") {
-                    Text(centerName).foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    if let centerName {
+                        LabeledContent("Center") {
+                            Text(centerName)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    LabeledContent("Angle") {
+                        HStack(spacing: 6) {
+                            TextField("Angle", value: $angle, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 80)
+                            Text("degrees")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Label("Rotate", systemImage: "rotate.right")
+                } footer: {
+                    if centerName == nil {
+                        Text("Select a center point as well as the objects to rotate.")
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("Rotate the selected objects around a point.")
+                    }
                 }
-            } else {
-                Text("Select a center point as well as the objects to rotate.")
-                    .font(.caption).foregroundStyle(.orange)
             }
-            LabeledContent("Angle") {
-                HStack(spacing: 6) {
-                    TextField("Angle", value: $angle, format: .number)
-                        .labelsHidden()
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                    Text("degrees").foregroundStyle(.secondary)
-                }
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Rotate") {
-                    onRotate(angle)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(centerName == nil)
-            }
+            .formStyle(.grouped)
+
+            SheetFooter("Rotate", isEnabled: centerName != nil) { onRotate(angle) }
         }
-        .padding(22)
-        .frame(width: 400)
+        .frame(minWidth: 420, minHeight: 240)
     }
 }
 
@@ -100,42 +83,38 @@ struct DilateSheet: View {
     var centerName: String?
     var onDilate: (Double) -> Void
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Dilate", systemImage: "arrow.up.left.and.arrow.down.right")
-                .font(.headline)
-            Text("Scale the selected objects about a center point.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            if let centerName {
-                LabeledContent("Center") {
-                    Text(centerName).foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    if let centerName {
+                        LabeledContent("Center") {
+                            Text(centerName)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    LabeledContent("Scale factor") {
+                        TextField("Factor", value: $factor, format: .number)
+                            .labelsHidden()
+                            .multilineTextAlignment(.trailing)
+                            .frame(minWidth: 80)
+                    }
+                } header: {
+                    Label("Dilate", systemImage: "arrow.up.left.and.arrow.down.right")
+                } footer: {
+                    if centerName == nil {
+                        Text("Select a center point as well as the objects to dilate.")
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("Scale the selected objects about a center point.")
+                    }
                 }
-            } else {
-                Text("Select a center point as well as the objects to dilate.")
-                    .font(.caption).foregroundStyle(.orange)
             }
-            LabeledContent("Scale factor") {
-                TextField("Factor", value: $factor, format: .number)
-                    .labelsHidden()
-                    .frame(width: 80)
-                    .multilineTextAlignment(.trailing)
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Dilate") {
-                    onDilate(factor)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(centerName == nil)
-            }
+            .formStyle(.grouped)
+
+            SheetFooter("Dilate", isEnabled: centerName != nil) { onDilate(factor) }
         }
-        .padding(22)
-        .frame(width: 400)
+        .frame(minWidth: 420, minHeight: 240)
     }
 }
 
@@ -145,45 +124,41 @@ struct TranslateSheet: View {
     var unit: String
     var onTranslate: (Double, Double) -> Void
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Translate", systemImage: "arrow.right")
-                .font(.headline)
-            Text("Move a copy of the selected objects by a fixed amount.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            LabeledContent("Horizontal") {
-                HStack(spacing: 6) {
-                    TextField("dx", value: $dx, format: .number)
-                        .labelsHidden()
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                    Text(unit).foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    LabeledContent("Horizontal") {
+                        HStack(spacing: 6) {
+                            TextField("dx", value: $dx, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 80)
+                            Text(unit)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    LabeledContent("Vertical") {
+                        HStack(spacing: 6) {
+                            TextField("dy", value: $dy, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 80)
+                            Text(unit)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Label("Translate", systemImage: "arrow.right")
+                } footer: {
+                    Text("Move a copy of the selected objects by a fixed amount.")
                 }
             }
-            LabeledContent("Vertical") {
-                HStack(spacing: 6) {
-                    TextField("dy", value: $dy, format: .number)
-                        .labelsHidden()
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                    Text(unit).foregroundStyle(.secondary)
-                }
-            }
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Translate") {
-                    onTranslate(dx, dy)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
+            .formStyle(.grouped)
+
+            SheetFooter("Translate") { onTranslate(dx, dy) }
         }
-        .padding(22)
-        .frame(width: 400)
+        .frame(minWidth: 420, minHeight: 240)
     }
 }
 
@@ -191,32 +166,25 @@ struct FunctionSheet: View {
     @Binding var text: String
     var onPlot: (String) -> Void
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Plot a Function", systemImage: "function")
-                .font(.headline)
-            Text("Type an expression in x. Examples: sin(x), x^2 - 2, 3cos(2x) + 1.")
-                .font(.subheadline).foregroundStyle(.secondary)
-            TextField("f(x) =", text: $text)
-                .textFieldStyle(.bordered)
-                .textInputBorderShape(.roundedRectangle)
-                .font(.system(size: 14, design: .monospaced))
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Plot") {
-                    onPlot(text)
-                    dismiss()
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    TextField("f(x) =", text: $text)
+                        .textFieldStyle(.bordered)
+                        .textInputBorderShape(.roundedRectangle)
+                        .font(.system(.body, design: .monospaced))
+                } header: {
+                    Label("Plot a Function", systemImage: "function")
+                } footer: {
+                    Text("Type an expression in x. Examples: sin(x), x^2 - 2, 3cos(2x) + 1.")
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(Expression(text) == nil)
             }
+            .formStyle(.grouped)
+
+            SheetFooter("Plot", isEnabled: Expression(text) != nil) { onPlot(text) }
         }
-        .padding(22)
-        .frame(width: 460)
+        .frame(minWidth: 420, minHeight: 240)
     }
 }
 
@@ -226,41 +194,100 @@ struct CalculationSheet: View {
     var names: [String]
     var onAdd: (String) -> Void
 
-    @Environment(\.dismiss) private var dismiss
+    private var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Calculate", systemImage: "function")
-                .font(.headline)
-            Text("Use measurement names (spaces become underscores), numbers, + − × ÷, ^ and functions such as sqrt, sin and cos.")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            TextField("expression", text: $text)
-                .textFieldStyle(.bordered)
-                .textInputBorderShape(.roundedRectangle)
-                .font(.system(size: 14, design: .monospaced))
-            if !names.isEmpty {
-                Text("Measurements").font(.caption).foregroundStyle(.secondary)
-                FlowChips(items: names) { name in
-                    if !text.isEmpty && !text.hasSuffix(" ") && !text.hasSuffix("(") {
-                        text += " "
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    TextField("expression", text: $text)
+                        .textFieldStyle(.bordered)
+                        .textInputBorderShape(.roundedRectangle)
+                        .font(.system(.body, design: .monospaced))
+                } header: {
+                    Label("Calculate", systemImage: "function")
+                } footer: {
+                    Text("Use measurement names (spaces become underscores), numbers, + − × ÷, ^ and functions such as sqrt, sin and cos.")
+                }
+
+                if !names.isEmpty {
+                    Section("Measurements") {
+                        FlowChips(items: names) { name in
+                            if !text.isEmpty && !text.hasSuffix(" ") && !text.hasSuffix("(") {
+                                text += " "
+                            }
+                            text += name
+                        }
                     }
-                    text += name
                 }
             }
-            HStack {
+            .formStyle(.grouped)
+
+            SheetFooter("Add", isEnabled: !trimmedText.isEmpty) { onAdd(text) }
+        }
+        .frame(minWidth: 420, minHeight: 240)
+    }
+}
+
+/// The Cancel/confirm pair every sheet closes with.
+private struct SheetFooter: View {
+    var title: String
+    var isEnabled: Bool
+    var action: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    init(_ title: String, isEnabled: Bool = true, action: @escaping () -> Void) {
+        self.title = title
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 10) {
                 Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") {
-                    onAdd(text)
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                Button(title) {
+                    action()
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(!isEnabled)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
         }
-        .padding(22)
-        .frame(width: 480)
     }
+}
+
+#Preview("Add Text") {
+    AddTextSheet(text: .constant("Let ABC be a triangle.")) { _ in }
+}
+
+#Preview("Rotate") {
+    RotateSheet(angle: .constant(90), centerName: "A") { _ in }
+}
+
+#Preview("Dilate") {
+    DilateSheet(factor: .constant(2), centerName: "A") { _ in }
+}
+
+#Preview("Translate") {
+    TranslateSheet(dx: .constant(1), dy: .constant(0), unit: "in") { _, _ in }
+}
+
+#Preview("Plot Function") {
+    FunctionSheet(text: .constant("sin(x)")) { _ in }
+}
+
+#Preview("Calculate") {
+    CalculationSheet(text: .constant("d1 + d2"),
+                    names: ["d1", "d2", "angle_A"]) { _ in }
 }

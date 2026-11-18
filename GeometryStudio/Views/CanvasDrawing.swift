@@ -141,7 +141,7 @@ extension SketchCanvas {
                     let p = model.screenPoint(Vec2(x, 0), size: size)
                     if abs(x) > 1e-9 && p.y >= 0 && p.y <= size.height {
                         let label = Text(GridMetrics.cleanNumber(x / unit))
-                            .font(.system(size: 10, weight: .regular, design: .rounded))
+                            .font(.system(.caption2, design: .rounded))
                             .foregroundStyle(secondaryInk.opacity(0.8))
                         context.draw(label, at: CGPoint(x: p.x, y: min(max(p.y + 13, 12), size.height - 10)),
                                      anchor: .top)
@@ -156,7 +156,7 @@ extension SketchCanvas {
                     let p = model.screenPoint(Vec2(0, yy), size: size)
                     if abs(yy) > 1e-9 && p.x >= 0 && p.x <= size.width {
                         let label = Text(GridMetrics.cleanNumber(yy / unit))
-                            .font(.system(size: 10, weight: .regular, design: .rounded))
+                            .font(.system(.caption2, design: .rounded))
                             .foregroundStyle(secondaryInk.opacity(0.8))
                         context.draw(label, at: CGPoint(x: min(max(p.x - 8, 10), size.width - 10), y: p.y),
                                      anchor: .trailing)
@@ -166,7 +166,7 @@ extension SketchCanvas {
             }
             if origin.x > 8 && origin.x < size.width - 8 && origin.y > 8 && origin.y < size.height - 8 {
                 context.draw(Text("0")
-                    .font(.system(size: 10, weight: .regular, design: .rounded))
+                    .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(secondaryInk.opacity(0.75)),
                              at: CGPoint(x: origin.x - 7, y: origin.y + 7), anchor: .topTrailing)
             }
@@ -340,7 +340,7 @@ extension SketchCanvas {
 
             if object.showLabel && model.settings.showLabels && !object.label.isEmpty {
                 let text = Text(object.label)
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .font(.system(.callout, design: .rounded, weight: .semibold))
                     .foregroundStyle(object.style.color.color.opacity(0.95))
                 context.draw(text, at: CGPoint(x: s.x + 7, y: s.y - 7), anchor: .bottomLeading)
             }
@@ -358,7 +358,8 @@ extension SketchCanvas {
                 return false
             }()
 
-            var font = Font.system(size: isCaption ? 13 : 12, weight: isCaption ? .medium : .medium, design: .rounded)
+            let style: Font.TextStyle = isCaption ? .body : .callout
+            var font = Font.system(style, design: .rounded, weight: .medium)
             if case .caption = object.kind { font = font.italic() }
             let fg = selected ? accent : (isCaption ? secondaryInk : object.style.color.color)
             let resolved = context.resolve(Text(text).font(font).foregroundStyle(fg))
@@ -438,7 +439,7 @@ extension SketchCanvas {
         context.stroke(p, with: .color(secondaryInk.opacity(0.5)), lineWidth: 1)
         let value = length / scale / unit.perUnit
         let label = Text("\(GridMetrics.cleanNumber(value)) \(unit.short)")
-            .font(.system(size: 9.5, weight: .medium, design: .rounded))
+            .font(.system(.caption2, design: .rounded, weight: .medium))
             .foregroundStyle(secondaryInk.opacity(0.65))
         context.draw(label, at: CGPoint(x: x, y: y - 6), anchor: .bottomLeading)
     }

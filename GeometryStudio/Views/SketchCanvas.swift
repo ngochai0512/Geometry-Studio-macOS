@@ -33,9 +33,9 @@ struct SketchCanvas: View {
                 if printing {
                     Color.white
                 } else {
-                    LinearGradient(colors: [Color(red: 0.995, green: 0.995, blue: 0.998),
-                                            Color(red: 0.975, green: 0.977, blue: 0.985)],
-                                   startPoint: .top, endPoint: .bottom)
+                    // Ink colours are fixed, so the paper stays light in every appearance.
+                    Color(nsColor: .textBackgroundColor)
+                        .environment(\.colorScheme, .light)
                 }
             }
             .contentShape(Rectangle())

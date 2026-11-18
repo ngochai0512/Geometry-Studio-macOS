@@ -177,7 +177,8 @@ struct ContentView: View {
                 Button("Actual Size") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
             } label: {
                 Text("\(Int(model.settings.scale / SketchMetrics.pixelsPerCentimetre * 100))%")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .monospacedDigit()
                     .frame(minWidth: 40)
             }
             .menuIndicator(.hidden)

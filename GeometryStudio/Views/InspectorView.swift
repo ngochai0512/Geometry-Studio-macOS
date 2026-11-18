@@ -10,37 +10,48 @@ struct InspectorView: View {
     var onTextAnnotation: (Vec2) -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
                 header
-                Picker("", selection: $tab) {
+                Picker("Inspector Section", selection: $tab) {
                     ForEach(ContentView.InspectorTab.allCases) { t in
                         Text(t.rawValue).tag(t)
                     }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+            }
+            .padding(16)
 
-                if tab == .object {
+            Divider()
+
+            switch tab {
+            case .object:
+                List {
                     objectSection
                     actionsSection
                     stylingSection
-                } else {
+                }
+                .listStyle(.inset)
+                .scrollContentBackground(.hidden)
+            case .sketch:
+                List(selection: objectSelection) {
                     sketchSection
                     canvasSection
                     constructSection
                 }
+                .listStyle(.inset)
+                .scrollContentBackground(.hidden)
             }
-            .padding(16)
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text("Inspector")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.title3.weight(.semibold))
             Text("\(model.objects.filter(\.visible).count) visible objects")
-                .font(.system(size: 10.5))
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

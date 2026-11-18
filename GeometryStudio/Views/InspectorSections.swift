@@ -8,23 +8,18 @@ extension InspectorView {
 
     @ViewBuilder
     var objectSection: some View {
-        if model.selection.count == 1, let id = model.selection.first, let object = model.objectByID(id) {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle("Selection")
-                HStack(spacing: 9) {
+        Section("Selection") {
+            if model.selection.count == 1, let id = model.selection.first, let object = model.objectByID(id) {
+                HStack(spacing: 8) {
                     Image(systemName: model.symbol(for: object))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .frame(width: 30, height: 30)
-                        .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 7))
+                        .foregroundStyle(.tint)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(model.displayName(for: object))
-                            .font(.system(size: 12.5, weight: .semibold))
+                            .font(.callout.weight(.semibold))
                         Text(typeDescription(object))
-                            .font(.system(size: 10.5))
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
                 }
 
                 if needsLabel(object) {
@@ -32,56 +27,40 @@ extension InspectorView {
                         TextField("Label", text: labelBinding(id))
                             .textFieldStyle(.bordered)
                             .textInputBorderShape(.roundedRectangle)
-                            .frame(width: 130)
-                            .font(.system(size: 11.5))
+                            .frame(minWidth: 120)
+                            .font(.subheadline)
                     }
                 }
 
                 if case .caption = object.kind {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Text").font(.system(size: 11.5)).foregroundStyle(.secondary)
-                        TextField("Text", text: captionBinding(id), axis: .vertical)
-                            .textFieldStyle(.bordered)
-                            .textInputBorderShape(.roundedRectangle)
-                            .lineLimit(2...5)
-                            .font(.system(size: 11.5))
-                    }
+                    TextField("Text", text: captionBinding(id), axis: .vertical)
+                        .lineLimit(2...5)
+                        .font(.subheadline)
                 }
 
                 let measurement = model.evaluated(id).text
                 if let measurement, !measurement.isEmpty, isMeasurement(object) {
                     Text(measurement)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 7))
+                        .font(.system(.callout, design: .rounded, weight: .medium))
                         .textSelection(.enabled)
                 }
 
                 Toggle("Show label", isOn: showLabelBinding(id))
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                 Toggle("Visible", isOn: visibleBinding(id))
-                    .font(.system(size: 11.5))
-            }
-        } else if model.selection.count > 1 {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionTitle("Selection")
+                    .font(.subheadline)
+            } else if model.selection.count > 1 {
                 Text("\(model.selection.count) objects selected")
-                    .font(.system(size: 12.5, weight: .medium))
+                    .font(.callout.weight(.medium))
                 Text("Change their colour, line style or visibility together, or use Construct to build from them.")
-                    .font(.system(size: 11))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionTitle("Selection")
+            } else {
                 Text("Nothing selected")
-                    .font(.system(size: 12.5, weight: .medium))
+                    .font(.callout.weight(.medium))
                 Text("Pick an object on the canvas, or choose Sketch to browse every object.")
-                    .font(.system(size: 11))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -89,34 +68,57 @@ extension InspectorView {
     @ViewBuilder
     var actionsSection: some View {
         if !model.selection.isEmpty {
-            VStack(alignment: .leading, spacing: 9) {
-                sectionTitle("Actions")
-                HStack(spacing: 7) {
-                    actionButton("eye.slash", "Hide") { model.hideSelection() }
-                    actionButton("textformat.abc", "Labels") { model.toggleLabels(for: model.selection) }
-                    actionButton("trash", "Delete", role: .destructive) { model.deleteSelection() }
+            Section("Actions") {
+                HStack(spacing: 8) {
+                    Button {
+                        model.hideSelection()
+                    } label: {
+                        Label("Hide", systemImage: "eye.slash")
+                    }
+                    Button {
+                        model.toggleLabels(for: model.selection)
+                    } label: {
+                        Label("Labels", systemImage: "textformat.abc")
+                    }
+                    Button(role: .destructive) {
+                        model.deleteSelection()
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .selectionDisabled()
+
                 Menu {
                     Button("Reflect Across Selected Line") { model.reflectSelection() }
-                    Button("Rotate…") { model.showAbout = false; NotificationCenter.default.post(name: .openRotate, object: nil) }
+                    Button("Rotate…") { NotificationCenter.default.post(name: .openRotate, object: nil) }
                     Button("Dilate…") { NotificationCenter.default.post(name: .openDilate, object: nil) }
                     Button("Translate…") { NotificationCenter.default.post(name: .openTranslate, object: nil) }
                 } label: {
                     Label("Transform Selection", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 11.5, weight: .medium))
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .menuStyle(.button)
                 .buttonStyle(.borderless)
+                .selectionDisabled()
 
-                HStack(spacing: 7) {
-                    actionButton(model.animationPointID == nil ? "play" : "pause",
-                                 model.animationPointID == nil ? "Animate" : "Pause") {
+                HStack(spacing: 8) {
+                    Button {
                         model.toggleAnimation()
+                    } label: {
+                        Label(model.animationPointID == nil ? "Animate" : "Pause",
+                              systemImage: model.animationPointID == nil ? "play" : "pause")
                     }
-                    actionButton("point.topleft.down.to.point.bottomright.curvepath",
-                                 traceLabel) { model.toggleTrace() }
+                    Button {
+                        model.toggleTrace()
+                    } label: {
+                        Label(traceLabel,
+                              systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    }
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .selectionDisabled()
             }
         }
     }
@@ -124,8 +126,7 @@ extension InspectorView {
     @ViewBuilder
     var stylingSection: some View {
         if !model.selection.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionTitle("Style")
+            Section("Style") {
                 colorRow
                 LabeledContent("Line") {
                     Picker("Line", selection: lineWidthBinding) {
@@ -174,28 +175,17 @@ extension InspectorView {
                     }
                 }
             }
-            .font(.system(size: 11.5))
         }
     }
 
+    @ViewBuilder
     var sketchSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("Objects")
-            let groups: [(String, [SketchObject])] = [
-                ("Points", model.objects.filter { $0.isPointLike }),
-                ("Lines", model.objects.filter { isLineObject($0) }),
-                ("Circles & Regions", model.objects.filter { isRegionObject($0) }),
-                ("Measures & Text", model.objects.filter { isMeasureObject($0) })
-            ]
-            ForEach(groups, id: \.0) { title, objects in
-                if !objects.isEmpty {
-                    Text(title)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .padding(.top, 4)
+        ForEach(objectGroups, id: \.0) { title, objects in
+            if !objects.isEmpty {
+                Section(title) {
                     ForEach(objects.sorted(by: { $0.order < $1.order })) { object in
                         objectRow(object)
+                            .tag(object.id)
                     }
                 }
             }
@@ -203,82 +193,88 @@ extension InspectorView {
     }
 
     var canvasSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Canvas")
-            Toggle("Grid", isOn: $model.settings.grid)
-                .font(.system(size: 11.5))
-            Toggle("Axes", isOn: $model.settings.axes)
-                .font(.system(size: 11.5))
-            Toggle("Snap points to grid", isOn: $model.settings.snap)
-                .font(.system(size: 11.5))
-            Toggle("Show labels", isOn: $model.settings.showLabels)
-                .font(.system(size: 11.5))
-            LabeledContent("Length") {
-                Picker("Length", selection: $model.settings.lengthUnit) {
-                    ForEach(LengthUnit.allCases) { unit in
-                        Text(unit.name).tag(unit)
+        Section("Canvas") {
+            Group {
+                Toggle("Grid", isOn: $model.settings.grid)
+                Toggle("Axes", isOn: $model.settings.axes)
+                Toggle("Snap points to grid", isOn: $model.settings.snap)
+                Toggle("Show labels", isOn: $model.settings.showLabels)
+                LabeledContent("Length") {
+                    Picker("Length", selection: $model.settings.lengthUnit) {
+                        ForEach(LengthUnit.allCases) { unit in
+                            Text(unit.name).tag(unit)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                LabeledContent("Angle") {
+                    Picker("Angle", selection: $model.settings.angleUnit) {
+                        ForEach(AngleUnit.allCases) { unit in
+                            Text(unit.name).tag(unit)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                LabeledContent("Decimals") {
+                    Picker("Decimals", selection: $model.settings.precision) {
+                        ForEach(0...5, id: \.self) { p in
+                            Text("\(p)").tag(p)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                }
+                HStack(spacing: 8) {
+                    Button("Fit") { model.fitCanvas(size: CGSize(width: 900, height: 700)) }
+                    Button("100%") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
+                    Button("Reset") {
+                        model.settings.center = .zero
+                        model.setZoom(SketchMetrics.pixelsPerCentimetre)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            LabeledContent("Angle") {
-                Picker("Angle", selection: $model.settings.angleUnit) {
-                    ForEach(AngleUnit.allCases) { unit in
-                        Text(unit.name).tag(unit)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
-            LabeledContent("Decimals") {
-                Picker("Decimals", selection: $model.settings.precision) {
-                    ForEach(0...5, id: \.self) { p in
-                        Text("\(p)").tag(p)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-            }
-            HStack(spacing: 7) {
-                Button("Fit") { model.fitCanvas(size: CGSize(width: 900, height: 700)) }
-                Button("100%") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
-                Button("Reset") {
-                    model.settings.center = .zero
-                    model.setZoom(SketchMetrics.pixelsPerCentimetre)
-                }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .font(.subheadline)
+            .selectionDisabled()
         }
-        .font(.system(size: 11.5))
     }
 
     var constructSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            sectionTitle("Construct")
+        Section("Construct") {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                smallAction("Midpoint", "circle.dotted") { model.constructMidpoint() }
-                smallAction("Intersection", "circle.circle") { model.constructIntersection() }
-                smallAction("Perpendicular", "arrow.up.and.line.horizontal.and.arrow.down") { model.constructPerpendicular() }
-                smallAction("Parallel", "equal") { model.constructParallel() }
-                smallAction("Bisector", "angle") { model.constructBisector() }
-                smallAction("Circle", "circle") { model.constructCircle() }
-                smallAction("Polygon", "pentagon") { model.constructPolygon() }
-                smallAction("Point on Object", "smallcircle.filled.circle") { model.constructPointOnPath() }
+                constructButton("Midpoint", "circle.dotted") { model.constructMidpoint() }
+                constructButton("Intersection", "circle.circle") { model.constructIntersection() }
+                constructButton("Perpendicular", "arrow.up.and.line.horizontal.and.arrow.down") { model.constructPerpendicular() }
+                constructButton("Parallel", "equal") { model.constructParallel() }
+                constructButton("Bisector", "angle") { model.constructBisector() }
+                constructButton("Circle", "circle") { model.constructCircle() }
+                constructButton("Polygon", "pentagon") { model.constructPolygon() }
+                constructButton("Point on Object", "smallcircle.filled.circle") { model.constructPointOnPath() }
             }
+            .selectionDisabled()
+
             Button {
                 onTextAnnotation(model.settings.center)
             } label: {
                 Label("Add a caption", systemImage: "textformat")
-                    .font(.system(size: 11.5))
             }
-            .buttonStyle(.borderless)
-            .padding(.top, 2)
+            .selectionDisabled()
         }
     }
 
     // MARK: - Row and section helpers
+
+    private var objectGroups: [(String, [SketchObject])] {
+        [
+            ("Points", model.objects.filter { $0.isPointLike }),
+            ("Lines", model.objects.filter { isLineObject($0) }),
+            ("Circles & Regions", model.objects.filter { isRegionObject($0) }),
+            ("Measures & Text", model.objects.filter { isMeasureObject($0) })
+        ]
+    }
 
     private var traceLabel: String {
         !model.selection.isEmpty && model.selection.allSatisfy { model.tracedIDs.contains($0) }
@@ -286,97 +282,55 @@ extension InspectorView {
     }
 
     private var colorRow: some View {
-        HStack(spacing: 6) {
-            ForEach(RGBA.palette, id: \.0) { name, color in
-                Button {
-                    applyToSelection("Change Color") { object in
-                        object.style.color = color
+        LabeledContent("Color") {
+            HStack(spacing: 8) {
+                Menu {
+                    ForEach(RGBA.palette, id: \.0) { name, color in
+                        Button(name) {
+                            applyToSelection("Change Color") { object in
+                                object.style.color = color
+                            }
+                        }
                     }
                 } label: {
-                    Circle()
-                        .fill(color.color)
-                        .frame(width: 18, height: 18)
-                        .overlay {
-                            Circle()
-                                .strokeBorder(Color.white.opacity(0.8), lineWidth: 1)
-                        }
-                        .overlay {
-                            Circle()
-                                .strokeBorder(Color.primary.opacity(0.25), lineWidth: 1)
-                                .padding(-1)
-                        }
+                    Label("Palette", systemImage: "paintpalette")
+                        .labelStyle(.iconOnly)
                 }
-                .buttonStyle(.plain)
-                .help(name)
+                .help("Palette")
+                .accessibilityLabel("Palette")
+
+                ColorPicker("Color", selection: colorBinding)
+                    .labelsHidden()
             }
-            Spacer()
-            ColorPicker("", selection: colorBinding)
-                .labelsHidden()
-                .frame(width: 26)
         }
     }
 
     private func objectRow(_ object: SketchObject) -> some View {
-        Button {
-            model.selection = [object.id]
-            tab = .object
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: model.symbol(for: object))
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(model.selection.contains(object.id) ? Color.accentColor : Color.secondary)
-                    .frame(width: 15)
+        HStack(spacing: 7) {
+            Label {
                 Text(model.displayName(for: object))
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(object.visible ? Color.primary : Color.secondary)
+                    .foregroundStyle(object.visible ? .primary : .secondary)
                     .lineLimit(1)
-                Spacer()
-                if !object.visible {
-                    Image(systemName: "eye.slash")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.tertiary)
-                }
+            } icon: {
+                Image(systemName: model.symbol(for: object))
             }
-            .padding(.vertical, 3)
-            .padding(.horizontal, 6)
-            .background(model.selection.contains(object.id) ? Color.accentColor.opacity(0.1) : Color.clear,
-                        in: RoundedRectangle(cornerRadius: 5))
-            .contentShape(Rectangle())
+            Spacer()
+            if !object.visible {
+                Image(systemName: "eye.slash")
+                    .foregroundStyle(.tertiary)
+                    .accessibilityLabel("Hidden")
+            }
         }
-        .buttonStyle(.plain)
     }
 
-    private func smallAction(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+    private func constructButton(_ title: String, _ symbol: String,
+                                 action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 9.5))
-                Text(title).font(.system(size: 10.5, weight: .medium)).lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 5).padding(.horizontal, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Label(title, systemImage: symbol)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
-    }
-
-    private func actionButton(_ symbol: String, _ title: String, role: ButtonRole? = nil,
-                              action: @escaping () -> Void) -> some View {
-        Button(role: role, action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: symbol).font(.system(size: 12, weight: .medium))
-                Text(title).font(.system(size: 9.5, weight: .medium))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-    }
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.secondary)
     }
 }

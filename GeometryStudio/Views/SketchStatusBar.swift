@@ -9,11 +9,11 @@ struct SketchStatusBar: View {
         HStack(spacing: 10) {
             if let hover = model.hoverWorld {
                 Text("x \(fmt(hover.x / model.settings.lengthUnit.perUnit))   y \(fmt(hover.y / model.settings.lengthUnit.perUnit)) \(model.settings.lengthUnit.short)")
-                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    .font(.system(.caption, design: .monospaced, weight: .medium))
                     .foregroundStyle(.secondary)
             } else {
                 Text(model.tool.hint)
-                    .font(.system(size: 10.5))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -21,23 +21,23 @@ struct SketchStatusBar: View {
             if !model.draft.isEmpty {
                 Divider().frame(height: 14)
                 Text("\(model.draft.count) picked")
-                    .font(.system(size: 10.5, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                 if model.tool == .polygon && model.draft.count >= 3 {
                     Button("Close Polygon") { model.finishPolygon() }
                         .buttonStyle(.borderless)
-                        .font(.system(size: 10.5, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                 }
                 Button("Cancel") { model.cancelDraft() }
                     .buttonStyle(.borderless)
-                    .font(.system(size: 10.5))
+                    .font(.caption)
             }
 
             Spacer(minLength: 6)
 
             if !model.statusMessage.isEmpty {
                 Text(model.statusMessage)
-                    .font(.system(size: 10.5))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -45,17 +45,18 @@ struct SketchStatusBar: View {
             Divider().frame(height: 14)
 
             Text("\(model.objects.filter(\.visible).count) objects")
-                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                .font(.system(.caption, design: .rounded, weight: .medium))
                 .foregroundStyle(.secondary)
 
             if !model.selection.isEmpty {
                 Text("\(model.selection.count) selected")
-                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
             }
         }
         .padding(.horizontal, 14)
-        .frame(height: 26)
+        .padding(.vertical, 4)
+        .frame(minHeight: 26)
         .background(.bar)
         .overlay(alignment: .top) { Divider().opacity(0.5) }
     }
