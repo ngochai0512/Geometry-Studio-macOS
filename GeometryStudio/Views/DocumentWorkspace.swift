@@ -2,12 +2,12 @@ import SwiftUI
 
 struct DocumentWorkspace: View {
     var document: SketchFileDocument
-    @StateObject private var model: SketchModel
+    @State private var model: SketchModel
     @Environment(\.undoManager) private var windowUndoManager
 
     init(document: SketchFileDocument) {
         self.document = document
-        _model = StateObject(wrappedValue: SketchModel(document: document.sketch))
+        _model = State(initialValue: SketchModel(document: document.sketch))
     }
 
     var body: some View {

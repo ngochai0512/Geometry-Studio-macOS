@@ -3,7 +3,7 @@ import SwiftUI
 /// The bottom strip: pointer position or tool hint on the left, draft actions
 /// in the middle, status and counts on the right.
 struct SketchStatusBar: View {
-    @ObservedObject var model: SketchModel
+    let model: SketchModel
 
     var body: some View {
         HStack(spacing: 10) {

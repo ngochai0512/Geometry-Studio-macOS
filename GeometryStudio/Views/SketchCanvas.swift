@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct SketchCanvas: View {
-    @ObservedObject var model: SketchModel
+    let model: SketchModel
     var onTextAt: (Vec2) -> Void
     /// Printing renders a clean white page instead of the screen tint.
     var printing: Bool = false
@@ -30,7 +30,23 @@ struct SketchCanvas: View {
         Color.accentColor
     }
 
+    /// The Canvas closure draws outside the body's observation scope, so read
+    /// the state it depends on here to keep redraws tied to model changes.
+    private var observedDrawingState: (
+        SketchDocument,
+        [UUID],
+        [UUID],
+        Vec2?,
+        Set<UUID>,
+        [UUID: [Vec2]],
+        SketchTool
+    ) {
+        (model.document, model.selection, model.draft, model.hoverWorld,
+         model.tracedIDs, model.tracePaths, model.tool)
+    }
+
     var body: some View {
+        let _ = observedDrawingState
         GeometryReader { geo in
             Canvas { context, size in
                 draw(context: &context, size: size)

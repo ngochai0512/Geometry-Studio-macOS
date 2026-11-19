@@ -1,29 +1,36 @@
+import Observation
 import SwiftUI
 
-final class SketchModel: ObservableObject {
+@Observable
+final class SketchModel {
     // MARK: state
-    @Published var document: SketchDocument
-    @Published var selection: [UUID] = []
-    @Published var tool: SketchTool = .select
-    @Published var draft: [UUID] = []
-    @Published var hoverWorld: Vec2?
-    @Published var isPointerOverCanvas = false
-    @Published var inspectorVisible = true
-    @Published var statusMessage: String = ""
-    @Published var showAbout = false
+    var document: SketchDocument
+    var selection: [UUID] = []
+    var tool: SketchTool = .select
+    var draft: [UUID] = []
+    var hoverWorld: Vec2?
+    var isPointerOverCanvas = false
+    var inspectorVisible = true
+    var statusMessage: String = ""
+    var showAbout = false
     /// Animation (the original's Display > Animate).
-    @Published var animationPointID: UUID?
-    @Published var tracedIDs: Set<UUID> = []
-    @Published var tracePaths: [UUID: [Vec2]] = [:]
+    var animationPointID: UUID?
+    var tracedIDs: Set<UUID> = []
+    var tracePaths: [UUID: [Vec2]] = [:]
+    @ObservationIgnored
     var animationDirection: Double = 1
 
+    @ObservationIgnored
     private var openGroup = false
+    @ObservationIgnored
     private var lastCoalescingKey: String?
+    @ObservationIgnored
     private var lastCheckpointAt = Date.distantPast
     private let undoLimit = 80
     /// The window's undo manager. It is the only undo stack: the document
     /// architecture observes it for the edited dot, the native save sheet and
     /// autosave, so nothing else has to mirror change counts.
+    @ObservationIgnored
     weak var undoManager: UndoManager? {
         didSet {
             guard let manager = undoManager else {
@@ -42,8 +49,13 @@ final class SketchModel: ObservableObject {
             observeUndoState(of: manager)
         }
     }
+    @ObservationIgnored
     private var undoObservers: [NSObjectProtocol] = []
+    @ObservationIgnored
     private var undoRefreshPending = false
+    /// Bumped when the undo manager changes so views that read canUndo or
+    /// the action names have an observable dependency to refresh on.
+    private var undoRevision = 0
 
     init(document: SketchDocument = SketchDocument()) {
         self.document = document
@@ -76,6 +88,7 @@ final class SketchModel: ObservableObject {
     }
 
     var canUndo: Bool {
+        _ = undoRevision
         guard let undoManager else {
             return false
         }
@@ -84,6 +97,7 @@ final class SketchModel: ObservableObject {
         }
     }
     var canRedo: Bool {
+        _ = undoRevision
         guard let undoManager else {
             return false
         }
@@ -93,6 +107,7 @@ final class SketchModel: ObservableObject {
     }
     /// The action ⌘Z would take back, for menu titles and status text.
     var undoActionName: String? {
+        _ = undoRevision
         guard let undoManager else {
             return nil
         }
@@ -102,6 +117,7 @@ final class SketchModel: ObservableObject {
         return name.isEmpty ? nil : name
     }
     var redoActionName: String? {
+        _ = undoRevision
         guard let undoManager else {
             return nil
         }
@@ -345,7 +361,7 @@ final class SketchModel: ObservableObject {
                 return
             }
             undoRefreshPending = false
-            objectWillChange.send()
+            undoRevision &+= 1
         }
     }
 
