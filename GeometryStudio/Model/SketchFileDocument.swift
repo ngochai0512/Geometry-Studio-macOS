@@ -10,18 +10,12 @@ final class SketchFileDocument: Document {
     static let writableContentTypes: [UTType] = [.geometryStudioSketch]
 
     var sketch: SketchDocument
-    /// The state SwiftUI last read or wrote. Compared against the live sketch
-    /// to decide whether closing needs a save prompt.
-    var lastSavedSketch: SketchDocument
-    /// Where this document lives, for the save the dismissal dialog performs.
-    var fileURL: URL?
     /// Not persisted. Set when a damaged file was partly recovered on load so
     /// the window can tell the user once.
     var recoveryNote: String?
 
     init(sketch: SketchDocument = SketchDocument(), recoveryNote: String? = nil) {
         self.sketch = sketch
-        self.lastSavedSketch = sketch
         self.recoveryNote = recoveryNote
     }
 
@@ -35,15 +29,8 @@ final class SketchFileDocument: Document {
     }
 
     func writer(configuration: sending WriteConfiguration) -> sending FileWrapperDocumentWriter<SketchSnapshot> {
-        FileWrapperDocumentWriter(configuration) { [weak self] snapshot, _ in
-            let data = try snapshot.encodedData()
-            let saved = snapshot.sketch
-            // The writer can run off the main actor; the dirty flag is only
-            // read on it.
-            Task { @MainActor [weak self] in
-                self?.lastSavedSketch = saved
-            }
-            return FileWrapper(regularFileWithContents: data)
+        FileWrapperDocumentWriter(configuration) { snapshot, _ in
+            FileWrapper(regularFileWithContents: try snapshot.encodedData())
         }
     }
 
@@ -55,15 +42,7 @@ final class SketchFileDocument: Document {
     @MainActor
     func apply(snapshot: sending SketchSnapshot, previous: sending SketchSnapshot?) async throws {
         sketch = snapshot.sketch
-        lastSavedSketch = snapshot.sketch
         recoveryNote = snapshot.recoveryNote
-    }
-
-    /// Marks the live state as the saved state, for a save the dismissal
-    /// dialog performed itself.
-    @MainActor
-    func markSaved(_ sketch: SketchDocument) {
-        lastSavedSketch = sketch
     }
 }
 

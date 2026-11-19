@@ -23,6 +23,27 @@ final class SketchModel: ObservableObject {
     private var lastCoalescingKey: String?
     private var lastCheckpointAt = Date.distantPast
     private let undoLimit = 80
+    /// The window's undo manager, when the view hierarchy provides one. Every
+    /// undoable edit registers an inverse here so the document architecture
+    /// sees the change count: close dot, save prompt and autosave. The custom
+    /// stacks stay the source of truth; the manager only mirrors them.
+    weak var systemUndoManager: UndoManager? {
+        didSet {
+            guard let manager = systemUndoManager else {
+                return
+            }
+            MainActor.assumeIsolated {
+                if manager.levelsOfUndo != undoLimit {
+                    manager.levelsOfUndo = undoLimit
+                }
+                // Each registration below is its own top-level group, so one
+                // undo press always consumes exactly one custom snapshot.
+                if manager.groupsByEvent {
+                    manager.groupsByEvent = false
+                }
+            }
+        }
+    }
 
     init(document: SketchDocument = SketchDocument()) {
         self.document = document
@@ -214,6 +235,7 @@ final class SketchModel: ObservableObject {
         // A separate action must not merge into the step that preceded it.
         lastCoalescingKey = nil
         lastCheckpointAt = Date()
+        registerSystemUndo(action: snapshot.action)
     }
 
     /// A document swap or recovery must not continue coalescing into the
@@ -229,29 +251,106 @@ final class SketchModel: ObservableObject {
     func resetHistory() {
         undoStack.removeAll()
         redoStack.removeAll()
+        if let manager = systemUndoManager {
+            MainActor.assumeIsolated {
+                manager.removeAllActions()
+            }
+        }
         resetTransientEditingState()
     }
 
     func undo() {
+        if let manager = systemUndoManager, !undoStack.isEmpty {
+            let handled = MainActor.assumeIsolated { () -> Bool in
+                guard manager.canUndo else {
+                    return false
+                }
+                manager.undo()
+                return true
+            }
+            if handled {
+                return
+            }
+        }
+        popUndoSnapshot()
+    }
+
+    func redo() {
+        if let manager = systemUndoManager, !redoStack.isEmpty {
+            let handled = MainActor.assumeIsolated { () -> Bool in
+                guard manager.canRedo else {
+                    return false
+                }
+                manager.redo()
+                return true
+            }
+            if handled {
+                return
+            }
+        }
+        popRedoSnapshot()
+    }
+
+    /// The custom pop behind both undo paths. Returns whether a step ran, so
+    /// system handlers only register a counterpart for a real change.
+    @discardableResult
+    private func popUndoSnapshot() -> Bool {
         guard let snap = undoStack.popLast() else {
-            return
+            return false
         }
         redoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
         lastCoalescingKey = nil
         statusMessage = "Undo \(snap.action)"
+        return true
     }
 
-    func redo() {
+    /// The custom pop behind both redo paths. Returns whether a step ran, so
+    /// system handlers only register a counterpart for a real change.
+    @discardableResult
+    private func popRedoSnapshot() -> Bool {
         guard let snap = redoStack.popLast() else {
-            return
+            return false
         }
         undoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
         lastCoalescingKey = nil
         statusMessage = "Redo \(snap.action)"
+        return true
+    }
+
+    /// Mirrors one undoable edit in the system undo manager. Runs with the
+    /// snapshot push, so the two histories stay in lockstep: each system
+    /// group has exactly one custom snapshot, created and consumed together.
+    private func registerSystemUndo(action: String) {
+        guard let manager = systemUndoManager else {
+            return
+        }
+        MainActor.assumeIsolated {
+            manager.beginUndoGrouping()
+            manager.registerUndo(withTarget: self) { model in
+                if model.popUndoSnapshot() {
+                    model.registerSystemRedo()
+                }
+            }
+            manager.setActionName(action)
+            manager.endUndoGrouping()
+        }
+    }
+
+    private func registerSystemRedo() {
+        guard let manager = systemUndoManager else {
+            return
+        }
+        MainActor.assumeIsolated {
+            manager.registerUndo(withTarget: self) { model in
+                if model.popRedoSnapshot(), let action = model.undoStack.last?.action {
+                    model.registerSystemUndo(action: action)
+                }
+            }
+        }
     }
 
     /// Jumps to the state after keeping `depth` undo steps. Zero restores the
