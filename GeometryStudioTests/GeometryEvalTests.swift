@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import GeometryStudio
 
@@ -70,6 +71,22 @@ struct GeometryEvalTests {
         let result = eval.evaluate(measurement.id)
         #expect(abs((result.value ?? 0) - 5) < 1e-9)
         #expect(result.text?.hasPrefix("m ") == true)
+    }
+
+    @Test("coordinate measurements read x, y, radius and direction")
+    func coordinateMeasurements() {
+        let a = freePoint(Vec2(3, 4))
+        let abscissa = SketchObject(kind: .measurement(.abscissa, refs: [a.id]))
+        let ordinate = SketchObject(kind: .measurement(.ordinate, refs: [a.id]))
+        let polarDistance = SketchObject(kind: .measurement(.polarDistance, refs: [a.id]))
+        let polarDirection = SketchObject(kind: .measurement(.polarDirection, refs: [a.id]))
+        var eval = GeometryEval(objects: [a, abscissa, ordinate, polarDistance, polarDirection],
+                                settings: CanvasSettings())
+
+        #expect(abs((eval.evaluate(abscissa.id).value ?? 0) - 3) < 1e-9)
+        #expect(abs((eval.evaluate(ordinate.id).value ?? 0) - 4) < 1e-9)
+        #expect(abs((eval.evaluate(polarDistance.id).value ?? 0) - 5) < 1e-9)
+        #expect(abs((eval.evaluate(polarDirection.id).value ?? 0) - atan2(4.0, 3.0)) < 1e-9)
     }
 
     @Test("a self-referencing object yields nothing instead of recursing")

@@ -49,6 +49,8 @@ Deferred within Tier 1: window appearance moved to #45, where the canvas theme l
 | 24 | Coordinate systems as objects: multiple axes, polar grid, per-graph units | `0,67` | `ObjectKind` + `CanvasDrawing` | M | [ ] |
 | 25 | Graph extras: derivative and integral shading, tangent at x, root/intersection solver, value table | `0,112`–`0,115` | `Geometry/Expression`, model extensions | M | [ ] |
 
+Item 18 is partially shipped: abscissa, ordinate, polar distance and polar direction are implemented. Coordinate distance waits on coordinate systems (#24) so "coordinate" has a defined axis.
+
 ## Tier 3 — The original's signature features
 
 | # | Feature | Original evidence | Where it lands | Effort | Done |
