@@ -191,6 +191,20 @@ var title: String {
     }
 }
 ```
+Exception: if multiple cases return to the same value, you can use commas to seperate them:
+```swift
+var typeCheck: Bool {
+    switch kind {
+    case .freePoint, .pointOnPath, .midpoint, .intersection:
+        return true
+    case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector,
+        .circle, .polygon, .functionPlot, .transformed, .locus:
+        return true
+    default:
+        return false
+    }
+}
+```
 
 - **Files and types:** `UpperCamelCase` types, one primary type per file where the file is named after it. A new subsystem gets its own file; `SketchModel` behavior belongs in the extension file matching its area.
 - **Comments:** one line, one idea. Explain *why*, never restate *what*. When a value comes from the original, cite it the way `CanvasSettings` does (`routine`, `an offset`) instead of re-explaining the derivation. No process markers (`NEW`, ownerless `TODO`, conditional-free `FIXME`).
