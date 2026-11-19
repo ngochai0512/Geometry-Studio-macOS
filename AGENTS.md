@@ -151,7 +151,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
   Image(nsImage: icon).resizable().frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 20))
   ```
 
-- **Style for conditional statement if there are more than 3 conditions**:
+- **Style for conditional statements and control flows if there are more than 3 conditions**:
 ```
 if condition1,
    condition2,
@@ -160,6 +160,35 @@ if condition1,
     // ...
 } else {
     // ...
+}
+```
+
+- **Style for enum cases:** 
+  Good:
+```swift
+  case distance
+	case length
+	case perimeter
+	case circumference
+	case angle
+```
+
+  Bad: 
+```swift
+  case distance, length, perimeter, circumference, angle
+```
+
+- **Style for computed variables with switch-statement:**
+```swift
+var title: String {
+    switch self {
+    case .distance:
+			return "Distance"
+    case .length:
+			return "Length"
+    case .perimeter:
+			return "Perimeter"
+    }
 }
 ```
 
@@ -194,7 +223,7 @@ Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `project.yml` still generates into a scratch directory, and the checked-in app target builds with zero new warnings.
-- [ ] `swift test` passes (43 tests, 8 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (44 tests, 8 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
