@@ -89,6 +89,60 @@ struct GeometryEvalTests {
         #expect(abs((eval.evaluate(polarDirection.id).value ?? 0) - atan2(4.0, 3.0)) < 1e-9)
     }
 
+    @Test("an arc through three points is centred on their circumcircle")
+    func arcThroughPoints() {
+        let a = freePoint(Vec2(0, 0))
+        let b = freePoint(Vec2(1, 1))
+        let c = freePoint(Vec2(2, 0))
+        let arc = SketchObject(kind: .arcThroughPoints(a: a.id, b: b.id, c: c.id))
+        var eval = GeometryEval(objects: [a, b, c, arc], settings: CanvasSettings())
+
+        guard case .arc(let center, let radius, let start, let sweep)? = eval.path(arc.id) else {
+            Issue.record("expected an arc")
+            return
+        }
+        #expect(center.distance(to: Vec2(1, 0)) < 1e-9)
+        #expect(abs(radius - 1) < 1e-9)
+        #expect(abs(start - .pi) < 1e-9)
+        #expect(abs(sweep + .pi) < 1e-9)
+    }
+
+    @Test("an arc on a circle runs counter-clockwise between its points")
+    func arcOnCircle() {
+        let center = freePoint(Vec2(0, 0))
+        let through = freePoint(Vec2(2, 0))
+        let circle = SketchObject(kind: .circle(center: center.id, through: through.id))
+        let start = freePoint(Vec2(2, 0))
+        let end = freePoint(Vec2(0, 2))
+        let arc = SketchObject(kind: .arcOnCircle(circle: circle.id, start: start.id, end: end.id))
+        var eval = GeometryEval(objects: [center, through, circle, start, end, arc],
+                                settings: CanvasSettings())
+
+        guard case .arc(let arcCenter, let radius, let arcStart, let sweep)? = eval.path(arc.id) else {
+            Issue.record("expected an arc")
+            return
+        }
+        #expect(arcCenter.distance(to: Vec2(0, 0)) < 1e-9)
+        #expect(abs(radius - 2) < 1e-9)
+        #expect(abs(arcStart) < 1e-9)
+        #expect(abs(sweep - .pi / 2) < 1e-9)
+    }
+
+    @Test("arc angle and length measurements")
+    func arcMeasurements() {
+        let a = freePoint(Vec2(0, 0))
+        let b = freePoint(Vec2(1, 1))
+        let c = freePoint(Vec2(2, 0))
+        let arc = SketchObject(kind: .arcThroughPoints(a: a.id, b: b.id, c: c.id))
+        let angle = SketchObject(kind: .measurement(.arcAngle, refs: [arc.id]))
+        let length = SketchObject(kind: .measurement(.arcLength, refs: [arc.id]))
+        var eval = GeometryEval(objects: [a, b, c, arc, angle, length],
+                                settings: CanvasSettings())
+
+        #expect(abs((eval.evaluate(angle.id).value ?? 0) - .pi) < 1e-9)
+        #expect(abs((eval.evaluate(length.id).value ?? 0) - .pi) < 1e-9)
+    }
+
     @Test("a self-referencing object yields nothing instead of recursing")
     func cycleSafety() {
         var object = SketchObject(kind: .freePoint)

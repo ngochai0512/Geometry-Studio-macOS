@@ -134,6 +134,20 @@ struct SVGExporter {
             }
             return element("circle", [("cx", num(p.x)), ("cy", num(p.y)), ("r", num(r)),
                                       ("fill", "none")] + stroke)
+        case .arc(let center, let radius, let start, let sweep):
+            let r = radius * settings.scale
+            guard r.isFinite, r > 0 else {
+                return nil
+            }
+            let startPoint = screen(center + Vec2(cos(start), sin(start)) * radius)
+            let endPoint = screen(center + Vec2(cos(start + sweep), sin(start + sweep)) * radius)
+            let largeArc = abs(sweep) > .pi ? 1 : 0
+            // Screen y is flipped, so a positive world sweep is SVG sweep 0.
+            let sweepFlag = sweep >= 0 ? 0 : 1
+            let d = "M \(num(startPoint.x)) \(num(startPoint.y)) "
+                + "A \(num(r)) \(num(r)) 0 \(largeArc) \(sweepFlag) "
+                + "\(num(endPoint.x)) \(num(endPoint.y))"
+            return element("path", [("d", d), ("fill", "none")] + stroke)
         case .polygon(let points):
             guard points.count >= 2 else {
                 return nil

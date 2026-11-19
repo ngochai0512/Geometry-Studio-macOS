@@ -245,6 +245,8 @@ struct ContentView: View {
             Divider()
             Button("Segment") { model.constructSegment() }
             Button("Circle by Center + Point") { model.constructCircle() }
+            Button("Arc on Circle") { model.constructArcOnCircle() }
+            Button("Arc Through 3 Points") { model.constructArcThroughPoints() }
             Button("Polygon Interior") { model.constructPolygon() }
             Button("Point on Object") { model.constructPointOnPath() }
             Divider()
@@ -262,6 +264,8 @@ struct ContentView: View {
             Button("Perimeter") { model.measure(.perimeter) }
             Button("Circumference") { model.measure(.circumference) }
             Button("Angle") { model.measure(.angle) }
+            Button("Arc Angle") { model.measure(.arcAngle) }
+            Button("Arc Length") { model.measure(.arcLength) }
             Button("Area") { model.measure(.area) }
             Button("Radius") { model.measure(.radius) }
             Button("Ratio") { model.measure(.ratio) }

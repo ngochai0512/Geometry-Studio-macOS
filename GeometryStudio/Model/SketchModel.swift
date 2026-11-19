@@ -456,6 +456,8 @@ final class SketchModel {
             return "Angle Bisector"
         case .circle:
             return "Circle"
+        case .arcOnCircle, .arcThroughPoints:
+            return "Arc"
         case .polygon:
             return "Polygon"
         case .angle:
@@ -480,6 +482,7 @@ final class SketchModel {
         case .freePoint, .pointOnPath, .midpoint, .intersection: return "circle.fill"
         case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector: return "line.diagonal"
         case .circle: return "circle"
+        case .arcOnCircle, .arcThroughPoints: return "circle.dotted"
         case .polygon: return "pentagon"
         case .angle: return "angle"
         case .measurement, .calculation: return "ruler"

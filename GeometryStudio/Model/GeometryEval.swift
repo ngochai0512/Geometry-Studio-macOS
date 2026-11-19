@@ -102,6 +102,28 @@ struct GeometryEval {
                 result.path = .circle(pc, pc.distance(to: pt))
             }
 
+        case .arcOnCircle(let circle, let startPoint, let endPoint):
+            if let circlePath = path(circle),
+               case .circle(let center, let radius) = circlePath,
+               let ps = point(startPoint),
+               let pe = point(endPoint) {
+                let start = (ps - center).angle
+                var sweep = (pe - center).angle - start
+                while sweep <= 1e-9 {
+                    sweep += 2 * .pi
+                }
+                if sweep < 2 * .pi - 1e-9 {
+                    result.path = .arc(center: center, radius: radius, start: start, sweep: sweep)
+                }
+            }
+
+        case .arcThroughPoints(let a, let b, let c):
+            if let pa = point(a), let pb = point(b), let pc = point(c),
+               let arc = arcThrough(pa, pb, pc) {
+                result.path = .arc(center: arc.center, radius: arc.radius,
+                                   start: arc.start, sweep: arc.sweep)
+            }
+
         case .polygon(let vertices):
             let pts = vertices.compactMap { point($0) }
             if pts.count == vertices.count, pts.count >= 2 {
@@ -178,6 +200,45 @@ struct GeometryEval {
         }
         cache[id] = result
         return result
+    }
+
+    /// Circumcircle through three points, with the sweep chosen so the arc
+    /// runs from `a` to `c` through `b`.
+    private func arcThrough(_ a: Vec2, _ b: Vec2, _ c: Vec2)
+        -> (center: Vec2, radius: Double, start: Double, sweep: Double)? {
+        let d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y))
+        guard abs(d) > 1e-12 else {
+            return nil
+        }
+        let aa = a.dot(a)
+        let bb = b.dot(b)
+        let cc = c.dot(c)
+        let ux = (aa * (b.y - c.y) + bb * (c.y - a.y) + cc * (a.y - b.y)) / d
+        let uy = (aa * (c.x - b.x) + bb * (a.x - c.x) + cc * (b.x - a.x)) / d
+        let center = Vec2(ux, uy)
+        let radius = center.distance(to: a)
+        guard radius > 1e-9 else {
+            return nil
+        }
+        let start = (a - center).angle
+        let end = (c - center).angle
+        let through = (b - center).angle
+        let ccwSweep = positiveAngle(end - start)
+        guard ccwSweep > 1e-9 else {
+            return nil
+        }
+        let throughOffset = positiveAngle(through - start)
+        let sweep = throughOffset <= ccwSweep + 1e-9 ? ccwSweep : ccwSweep - 2 * .pi
+        return (center, radius, start, sweep)
+    }
+
+    private func positiveAngle(_ angle: Double) -> Double {
+        let twoPi = 2 * Double.pi
+        var value = angle.truncatingRemainder(dividingBy: twoPi)
+        if value < 0 {
+            value += twoPi
+        }
+        return value
     }
 
     /// Samples a driven object while its driver sweeps the driver's whole
@@ -279,6 +340,20 @@ struct GeometryEval {
                 }
                 result.text = "m∠\(labels(Array(refs.prefix(3)))) = \(formatAngle(angle))"
                 result.anchor = v + bis * 0.95
+            }
+        case .arcAngle:
+            if let first = refs.first, let p = path(first), case .arc(_, _, _, let sweep) = p {
+                let angle = settings.angleUnit == .degrees ? abs(sweep) : sweep
+                result.value = angle
+                result.text = "m \(name(of: first)) = \(formatAngle(angle))"
+                result.anchor = arcLabelAnchor(p)
+            }
+        case .arcLength:
+            if let first = refs.first, let p = path(first), case .arc(_, let radius, _, let sweep) = p {
+                let length = radius * abs(sweep)
+                result.value = length
+                result.text = "\(name(of: first)) length = \(formatLength(length))"
+                result.anchor = arcLabelAnchor(p)
             }
         case .area:
             if let first = refs.first, let p = path(first) {
@@ -386,6 +461,14 @@ struct GeometryEval {
         return result
     }
 
+    private func arcLabelAnchor(_ path: EvalPath) -> Vec2? {
+        guard case .arc(let center, let radius, let start, let sweep) = path else {
+            return nil
+        }
+        let angle = start + sweep / 2
+        return center + Vec2(cos(angle), sin(angle)) * (radius + 0.3)
+    }
+
     func name(of id: UUID) -> String {
         guard let object = objects[id] else {
             return "?"
@@ -397,6 +480,12 @@ struct GeometryEval {
             return (objects[a]?.label ?? "") + (objects[b]?.label ?? "")
         case .circle(let c, _):
             return object.label.isEmpty ? "circle \((objects[c]?.label ?? ""))" : object.label
+        case .arcOnCircle(_, let start, let end):
+            let labels = [start, end].compactMap { objects[$0]?.label }.filter { !$0.isEmpty }.joined()
+            return object.label.isEmpty ? (labels.isEmpty ? "arc" : "arc \(labels)") : object.label
+        case .arcThroughPoints(let a, let b, let c):
+            let labels = [a, b, c].compactMap { objects[$0]?.label }.filter { !$0.isEmpty }.joined()
+            return object.label.isEmpty ? (labels.isEmpty ? "arc" : "arc \(labels)") : object.label
         case .polygon(let vertices):
             return vertices.compactMap { objects[$0]?.label }.joined()
         default:
@@ -473,6 +562,25 @@ struct GeometryEval {
                 return nil
             }
             return .circle(mc, mc.distance(to: edge))
+        case .arc(let center, let radius, let start, let sweep):
+            let startPoint = center + Vec2(cos(start), sin(start)) * radius
+            let midAngle = start + sweep / 2
+            let midPoint = center + Vec2(cos(midAngle), sin(midAngle)) * radius
+            guard let mc = map(center, spec),
+                  let ms = map(startPoint, spec),
+                  let mm = map(midPoint, spec) else {
+                return nil
+            }
+            let newRadius = mc.distance(to: ms)
+            guard newRadius > 1e-9 else {
+                return nil
+            }
+            let newStart = (ms - mc).angle
+            var delta = positiveAngle((mm - mc).angle - newStart)
+            if delta > .pi {
+                delta -= 2 * .pi
+            }
+            return .arc(center: mc, radius: newRadius, start: newStart, sweep: delta * 2)
         case .polygon(let pts):
             let mapped = pts.compactMap { map($0, spec) }
             return mapped.count == pts.count ? .polygon(mapped) : nil

@@ -29,6 +29,17 @@ extension SketchModel {
                 return
             }
             refs = Array(pts.prefix(3))
+        case .arcAngle, .arcLength:
+            guard let id = ids.first(where: { id in
+                if case .arc = e.evaluate(id).path {
+                    return true
+                }
+                return false
+            }) else {
+                statusMessage = "Select an arc"
+                return
+            }
+            refs = [id]
         case .area:
             guard let id = ids.first(where: { e.evaluate($0).path != nil }) else {
                 statusMessage = "Select a polygon or circle"

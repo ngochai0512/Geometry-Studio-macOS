@@ -251,6 +251,8 @@ extension InspectorView {
                 constructButton("Parallel", "equal") { model.constructParallel() }
                 constructButton("Bisector", "angle") { model.constructBisector() }
                 constructButton("Circle", "circle") { model.constructCircle() }
+                constructButton("Arc on Circle", "circle.dotted") { model.constructArcOnCircle() }
+                constructButton("Arc Through 3", "circle.dashed") { model.constructArcThroughPoints() }
                 constructButton("Polygon", "pentagon") { model.constructPolygon() }
                 constructButton("Point on Object", "smallcircle.filled.circle") { model.constructPointOnPath() }
             }
@@ -271,6 +273,7 @@ extension InspectorView {
         [
             ("Points", model.objects.filter { $0.isPointLike }),
             ("Lines", model.objects.filter { isLineObject($0) }),
+            ("Arcs", model.objects.filter { isArcObject($0) }),
             ("Circles & Regions", model.objects.filter { isRegionObject($0) }),
             ("Measures & Text", model.objects.filter { isMeasureObject($0) })
         ]

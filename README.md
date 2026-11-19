@@ -62,7 +62,8 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 - **Constructions** — midpoint, perpendicular, parallel, angle bisector, intersection, segment,
   circle by centre + point, polygon interior, point on object and locus.
 - **Measurements** — distance, length, perimeter, circumference, angle, area, radius, ratio,
-  coordinates, abscissa/ordinate, polar distance/direction, equation, slope and calculations.
+  coordinates, abscissa/ordinate, polar distance/direction, arc angle/length, equation,
+  slope and calculations.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
   0–5 decimal places, as the original's Units preferences offer.
 - **Transforms** — reflect, rotate, dilate and translate. Images keep their source and update.

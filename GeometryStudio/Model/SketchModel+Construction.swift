@@ -141,6 +141,66 @@ extension SketchModel {
         statusMessage = "Circle created"
     }
 
+    func constructArcOnCircle() {
+        guard let circle = selectedObjects.first(where: { object in
+            if case .circle = object.kind {
+                return true
+            }
+            return false
+        }) else {
+            statusMessage = "Select a circle and two points on it"
+            return
+        }
+        let pts = selectedPoints()
+        guard pts.count >= 2 else {
+            statusMessage = "Select a circle and two points on it"
+            return
+        }
+        var e = evaluator()
+        guard let circlePath = e.path(circle.id),
+              case .circle(let center, _) = circlePath,
+              let ps = e.point(pts[0]),
+              let pe = e.point(pts[1]) else {
+            statusMessage = "Select a circle and two points on it"
+            return
+        }
+        let start = (ps - center).angle
+        var sweep = (pe - center).angle - start
+        while sweep <= 1e-9 {
+            sweep += 2 * .pi
+        }
+        guard sweep < 2 * .pi - 1e-9 else {
+            statusMessage = "Choose two different points on the circle"
+            return
+        }
+        checkpoint("Construct Arc")
+        let id = commit(kind: .arcOnCircle(circle: circle.id, start: pts[0], end: pts[1]),
+                        label: "")
+        selection = [id]
+        statusMessage = "Arc created"
+    }
+
+    func constructArcThroughPoints() {
+        let pts = selectedPoints()
+        guard pts.count >= 3 else {
+            statusMessage = "Select three points: start, through, end"
+            return
+        }
+        var e = evaluator()
+        guard let a = e.point(pts[0]), let b = e.point(pts[1]), let c = e.point(pts[2]) else {
+            statusMessage = "Select three points: start, through, end"
+            return
+        }
+        guard abs((b - a).cross(c - a)) > 1e-9 else {
+            statusMessage = "Those points are collinear"
+            return
+        }
+        checkpoint("Construct Arc")
+        let id = commit(kind: .arcThroughPoints(a: pts[0], b: pts[1], c: pts[2]), label: "")
+        selection = [id]
+        statusMessage = "Arc created"
+    }
+
     func constructPolygon() {
         let pts = selectedPoints()
         guard pts.count >= 3 else {

@@ -61,6 +61,8 @@ extension SketchModel {
         case .perpendicular(let l, let p), .parallel(let l, let p): return [l, p]
         case .angleBisector(let a, let v, let c): return [a, v, c]
         case .circle(let c, let t): return [c, t]
+        case .arcOnCircle(let circle, let start, let end): return [circle, start, end]
+        case .arcThroughPoints(let a, let b, let c): return [a, b, c]
         case .polygon(let v): return v
         case .angle(let a, let v, let c): return [a, v, c]
         case .measurement(_, let refs): return refs

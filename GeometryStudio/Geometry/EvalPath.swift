@@ -7,6 +7,7 @@ enum EvalPath {
     case ray(Vec2, Vec2)
     case line(Vec2, Vec2)
     case circle(Vec2, Double)
+    case arc(center: Vec2, radius: Double, start: Double, sweep: Double)
     case polygon([Vec2])
     case polyline([Vec2])
     case functionPlot(String)
@@ -33,6 +34,9 @@ enum EvalPath {
             return a.lerp(to: b, param)
         case .circle(let c, let r):
             return c + Vec2(cos(param), sin(param)) * r
+        case .arc(let c, let r, let start, let sweep):
+            let angle = start + sweep * param
+            return c + Vec2(cos(angle), sin(angle)) * r
         case .polygon(let pts):
             guard pts.count > 1 else {
                 return pts.first
@@ -102,6 +106,13 @@ enum EvalPath {
                 a += .pi * 2
             }
             return a
+        case .arc(let c, _, let start, let sweep):
+            if let t = arcProgress(of: (p - c).angle, start: start, sweep: sweep) {
+                return t
+            }
+            let p0 = point(at: 0) ?? c
+            let p1 = point(at: 1) ?? c
+            return p.distance(to: p0) <= p.distance(to: p1) ? 0 : 1
         case .polygon(let pts):
             guard pts.count > 1 else {
                 return 0
@@ -179,6 +190,13 @@ enum EvalPath {
             return p.distance(to: a.lerp(to: b, t))
         case .circle(let c, let r):
             return abs(p.distance(to: c) - r)
+        case .arc(let c, let r, let start, let sweep):
+            if arcProgress(of: (p - c).angle, start: start, sweep: sweep) != nil {
+                return abs(p.distance(to: c) - r)
+            }
+            let p0 = point(at: 0) ?? c
+            let p1 = point(at: 1) ?? c
+            return min(p.distance(to: p0), p.distance(to: p1))
         case .polygon(let pts):
             guard pts.count > 1 else {
                 return pts.first?.distance(to: p) ?? .infinity
@@ -210,6 +228,23 @@ enum EvalPath {
                              maxX: max(a.x, b.x), maxY: max(a.y, b.y))
         case .circle(let c, let r):
             return WorldRect(minX: c.x - r, minY: c.y - r, maxX: c.x + r, maxY: c.y + r)
+        case .arc(let c, let r, let start, let sweep):
+            var box: WorldRect?
+            func include(_ p: Vec2) {
+                if let current = box {
+                    box = WorldRect(minX: min(current.minX, p.x), minY: min(current.minY, p.y),
+                                    maxX: max(current.maxX, p.x), maxY: max(current.maxY, p.y))
+                } else {
+                    box = WorldRect(minX: p.x, minY: p.y, maxX: p.x, maxY: p.y)
+                }
+            }
+            include(c + Vec2(cos(start), sin(start)) * r)
+            include(c + Vec2(cos(start + sweep), sin(start + sweep)) * r)
+            for angle in [0, Double.pi / 2, Double.pi, 3 * Double.pi / 2]
+            where arcProgress(of: angle, start: start, sweep: sweep) != nil {
+                include(c + Vec2(cos(angle), sin(angle)) * r)
+            }
+            return box
         case .polygon(let pts):
             guard let first = pts.first else {
                 return nil
@@ -243,6 +278,7 @@ enum EvalPath {
         switch self {
         case .segment(let a, let b): return a.distance(to: b)
         case .circle(_, let r): return 2 * .pi * r
+        case .arc(_, let r, _, let sweep): return r * abs(sweep)
         case .polygon(let pts): return polygonLength(pts)
         case .polyline(let pts): return polygonLength(pts)
         case .ray, .line, .functionPlot: return nil
@@ -280,6 +316,12 @@ enum EvalPath {
         if case .circle(let c1, let r1) = self, case .circle(let c2, let r2) = other {
             return circleCircle(c1, r1, c2, r2)
         }
+        if case .arc(let c, let r, let start, let sweep) = self {
+            return arcIntersections(center: c, radius: r, start: start, sweep: sweep, with: other)
+        }
+        if case .arc(let c, let r, let start, let sweep) = other {
+            return arcIntersections(center: c, radius: r, start: start, sweep: sweep, with: self)
+        }
         if case .polygon(let pts) = self {
             var out: [Vec2] = []
             for i in 0..<max(pts.count, 1) {
@@ -313,6 +355,65 @@ enum EvalPath {
             return dedupe(out)
         }
         return []
+    }
+
+    private func arcProgress(of angle: Double, start: Double, sweep: Double) -> Double? {
+        let twoPi = 2 * Double.pi
+        guard abs(sweep) > 1e-12 else {
+            return nil
+        }
+        if sweep > 0 {
+            var delta = (angle - start).truncatingRemainder(dividingBy: twoPi)
+            if delta < 0 {
+                delta += twoPi
+            }
+            guard delta <= sweep + 1e-9 else {
+                return nil
+            }
+            return min(delta / sweep, 1)
+        }
+        var delta = (start - angle).truncatingRemainder(dividingBy: twoPi)
+        if delta < 0 {
+            delta += twoPi
+        }
+        guard delta <= -sweep + 1e-9 else {
+            return nil
+        }
+        return min(delta / -sweep, 1)
+    }
+
+    private func arcIntersections(center: Vec2, radius: Double,
+                                  start: Double, sweep: Double,
+                                  with other: EvalPath) -> [Vec2] {
+        var hits: [Vec2] = []
+        if let s = other.straight {
+            hits = lineCircle(s, center, radius)
+        } else {
+            switch other {
+            case .circle(let c, let r):
+                hits = circleCircle(center, radius, c, r)
+            case .arc(let c, let r, let otherStart, let otherSweep):
+                hits = circleCircle(center, radius, c, r).filter {
+                    arcProgress(of: ($0 - c).angle, start: otherStart, sweep: otherSweep) != nil
+                }
+            case .polygon(let pts):
+                for i in 0..<max(pts.count, 1) {
+                    let a = pts[i]
+                    let b = pts[(i + 1) % pts.count]
+                    hits.append(contentsOf: EvalPath.segment(a, b).intersections(with: .circle(center, radius)))
+                }
+            case .polyline(let pts):
+                for i in 0..<max(pts.count - 1, 0) {
+                    hits.append(contentsOf: EvalPath.segment(pts[i], pts[i + 1])
+                        .intersections(with: .circle(center, radius)))
+                }
+            case .segment, .ray, .line, .functionPlot:
+                break
+            }
+        }
+        return dedupe(hits.filter {
+            arcProgress(of: ($0 - center).angle, start: start, sweep: sweep) != nil
+        })
     }
 }
 

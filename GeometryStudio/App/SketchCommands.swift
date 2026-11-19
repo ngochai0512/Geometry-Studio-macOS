@@ -63,6 +63,10 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
             Button("Circle by Center + Point") { model?.constructCircle() }
                 .disabled(model == nil)
+            Button("Arc on Circle") { model?.constructArcOnCircle() }
+                .disabled(model == nil)
+            Button("Arc Through 3 Points") { model?.constructArcThroughPoints() }
+                .disabled(model == nil)
             Button("Polygon Interior") { model?.constructPolygon() }
                 .disabled(model == nil)
             Button("Point on Object") { model?.constructPointOnPath() }
@@ -82,6 +86,10 @@ struct SketchCommands: Commands {
             Button("Circumference") { model?.measure(.circumference) }
                 .disabled(model == nil)
             Button("Angle") { model?.measure(.angle) }
+                .disabled(model == nil)
+            Button("Arc Angle") { model?.measure(.arcAngle) }
+                .disabled(model == nil)
+            Button("Arc Length") { model?.measure(.arcLength) }
                 .disabled(model == nil)
             Button("Area") { model?.measure(.area) }
                 .disabled(model == nil)

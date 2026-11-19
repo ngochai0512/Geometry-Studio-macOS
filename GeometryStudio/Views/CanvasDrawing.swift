@@ -231,6 +231,25 @@ extension SketchCanvas {
             context.stroke(Path(ellipseIn: box),
                            with: .color(color.opacity(glow ? 0.22 : 1)), style: strokeStyle)
 
+        case .arc(let c, let r, let start, let sweep):
+            guard r.isFinite, r > 0 else {
+                return
+            }
+            let steps = min(512, max(8, Int(abs(sweep) / (2 * Double.pi) * 180)))
+            var p = Path()
+            for i in 0...steps {
+                let t = Double(i) / Double(steps)
+                let angle = start + sweep * t
+                let world = c + Vec2(cos(angle), sin(angle)) * r
+                let point = model.screenPoint(world, size: size)
+                if i == 0 {
+                    p.move(to: point)
+                } else {
+                    p.addLine(to: point)
+                }
+            }
+            context.stroke(p, with: .color(color.opacity(glow ? 0.22 : 1)), style: strokeStyle)
+
         case .polygon(let pts):
             guard pts.count >= 2 else {
                 return

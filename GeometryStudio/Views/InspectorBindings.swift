@@ -29,6 +29,13 @@ extension InspectorView {
         }
     }
 
+    func isArcObject(_ object: SketchObject) -> Bool {
+        switch object.kind {
+        case .arcOnCircle, .arcThroughPoints: return true
+        default: return false
+        }
+    }
+
     func isRegionObject(_ object: SketchObject) -> Bool {
         switch object.kind {
         case .circle, .polygon: return true
@@ -56,6 +63,8 @@ extension InspectorView {
         case .parallel: return "Parallel line"
         case .angleBisector: return "Angle bisector"
         case .circle: return "Circle"
+        case .arcOnCircle: return "Arc on a circle"
+        case .arcThroughPoints: return "Arc through three points"
         case .polygon: return "Polygon interior"
         case .angle: return "Angle marker"
         case .measurement(let kind, _): return "\(kind.title) measurement"

@@ -111,6 +111,28 @@ struct EvalPathGeometryTests {
         #expect(abs((value ?? 0) - 2 * .pi) < 1e-12)
     }
 
+    @Test("arc parameter, length and distance")
+    func arcGeometry() {
+        let arc = EvalPath.arc(center: Vec2(0, 0), radius: 1, start: 0, sweep: .pi / 2)
+        let root = 2.0.squareRoot() / 2
+        #expect(near(arc.point(at: 0.5), Vec2(root, root)))
+        let length = arc.length(settings: CanvasSettings())
+        #expect(abs((length ?? 0) - .pi / 2) < 1e-12)
+        #expect(abs(arc.nearestParam(to: Vec2(1, 1)) - 0.5) < 1e-12)
+        #expect(abs(arc.distance(to: Vec2(1, 0))) < 1e-12)
+    }
+
+    @Test("a line crosses an arc only inside its sweep")
+    func arcLineIntersection() {
+        let arc = EvalPath.arc(center: Vec2(0, 0), radius: 1, start: 0, sweep: .pi / 2)
+        let hits = arc.intersections(with: .line(Vec2(-2, 0.5), Vec2(2, 0.5)))
+        #expect(hits.count == 1)
+        #expect(near(hits.first, Vec2(3.0.squareRoot() / 2, 0.5)))
+
+        let outside = EvalPath.arc(center: Vec2(0, 0), radius: 1, start: .pi, sweep: .pi / 2)
+        #expect(outside.intersections(with: .line(Vec2(-2, 0.5), Vec2(2, 0.5))).isEmpty)
+    }
+
     @Test("polygon area is independent of winding direction")
     func shoelaceArea() {
         let square = [Vec2(0, 0), Vec2(2, 0), Vec2(2, 2), Vec2(0, 2)]

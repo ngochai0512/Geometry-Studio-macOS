@@ -3,66 +3,37 @@ import Foundation
 // MARK: - Object model
 
 enum MeasureKind: String, Codable, CaseIterable, Identifiable {
-    case distance
-	case length
-	case perimeter
-	case circumference
-	case angle
-	case area
-	case radius
-	case ratio
-	case coordinates
-	case abscissa
-	case ordinate
-	case polarDistance
-	case polarDirection
-	case equation
-	case slope
-	
+    case distance, length, perimeter, circumference, angle, arcAngle, arcLength, area,
+         radius, ratio, coordinates, abscissa, ordinate, polarDistance, polarDirection,
+         equation, slope
     var id: String {
         rawValue
     }
     var title: String {
         switch self {
-        case .distance:
-			return "Distance"
-        case .length:
-			return "Length"
-        case .perimeter:
-			return "Perimeter"
-        case .circumference:
-			return "Circumference"
-        case .angle:
-			return "Angle"
-        case .area:
-			return "Area"
-        case .radius:
-			return "Radius"
-        case .ratio:
-			return "Ratio"
-        case .coordinates:
-			return "Coordinates"
-        case .abscissa:
-			return "Abscissa"
-        case .ordinate:
-			return "Ordinate"
-        case .polarDistance:
-			return "Polar Distance"
-        case .polarDirection:
-			return "Polar Direction"
-        case .equation:
-			return "Equation"
-        case .slope:
-			return "Slope"
+        case .distance: return "Distance"
+        case .length: return "Length"
+        case .perimeter: return "Perimeter"
+        case .circumference: return "Circumference"
+        case .angle: return "Angle"
+        case .arcAngle: return "Arc Angle"
+        case .arcLength: return "Arc Length"
+        case .area: return "Area"
+        case .radius: return "Radius"
+        case .ratio: return "Ratio"
+        case .coordinates: return "Coordinates"
+        case .abscissa: return "Abscissa"
+        case .ordinate: return "Ordinate"
+        case .polarDistance: return "Polar Distance"
+        case .polarDirection: return "Polar Direction"
+        case .equation: return "Equation"
+        case .slope: return "Slope"
         }
     }
 }
 
 enum TransformKind: String, Codable, CaseIterable, Identifiable {
-    case reflect
-	case rotate
-	case translate
-	case dilate
+    case reflect, rotate, translate, dilate
     var id: String {
         rawValue
     }
@@ -115,6 +86,8 @@ enum ObjectKind: Codable, Hashable {
     case parallel(line: UUID, point: UUID)
     case angleBisector(a: UUID, vertex: UUID, c: UUID)
     case circle(center: UUID, through: UUID)
+    case arcOnCircle(circle: UUID, start: UUID, end: UUID)
+    case arcThroughPoints(a: UUID, b: UUID, c: UUID)
     case polygon(vertices: [UUID])
     case angle(a: UUID, vertex: UUID, c: UUID)
     case measurement(MeasureKind, refs: [UUID])
@@ -171,7 +144,8 @@ struct SketchObject: Identifiable, Codable, Hashable {
     var isPathLike: Bool {
         switch kind {
         case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector,
-             .circle, .polygon, .functionPlot, .transformed, .locus:
+             .circle, .arcOnCircle, .arcThroughPoints, .polygon, .functionPlot,
+             .transformed, .locus:
             return true
         default:
             return false
