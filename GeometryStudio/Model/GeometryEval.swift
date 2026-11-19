@@ -321,6 +321,35 @@ struct GeometryEval {
                 result.text = "\(name) = (\(formatNumber(x, precision: settings.precision)), \(formatNumber(y, precision: settings.precision))) \(settings.lengthUnit.short)"
                 result.anchor = p + Vec2(0.55, 0.5)
             }
+        case .abscissa:
+            if let first = refs.first, let p = point(first) {
+                result.value = p.x
+                result.text = "x \(name(of: first)) = \(formatLength(p.x))"
+                result.anchor = p + Vec2(0.55, 0.35)
+            }
+        case .ordinate:
+            if let first = refs.first, let p = point(first) {
+                result.value = p.y
+                result.text = "y \(name(of: first)) = \(formatLength(p.y))"
+                result.anchor = p + Vec2(0.55, 0.1)
+            }
+        case .polarDistance:
+            if let first = refs.first, let p = point(first) {
+                let distance = p.length
+                result.value = distance
+                result.text = "r \(name(of: first)) = \(formatLength(distance))"
+                result.anchor = p + Vec2(0.55, -0.15)
+            }
+        case .polarDirection:
+            if let first = refs.first, let p = point(first) {
+                var direction = atan2(p.y, p.x)
+                if settings.angleUnit == .degrees, direction < 0 {
+                    direction += 2 * .pi
+                }
+                result.value = direction
+                result.text = "θ \(name(of: first)) = \(formatAngle(direction))"
+                result.anchor = p + Vec2(0.55, -0.4)
+            }
         case .equation:
             if let first = refs.first, let p = path(first) {
                 let prefix = name(of: first)

@@ -3,30 +3,66 @@ import Foundation
 // MARK: - Object model
 
 enum MeasureKind: String, Codable, CaseIterable, Identifiable {
-    case distance, length, perimeter, circumference, angle, area, radius, ratio,
-         coordinates, equation, slope
+    case distance
+	case length
+	case perimeter
+	case circumference
+	case angle
+	case area
+	case radius
+	case ratio
+	case coordinates
+	case abscissa
+	case ordinate
+	case polarDistance
+	case polarDirection
+	case equation
+	case slope
+	
     var id: String {
         rawValue
     }
     var title: String {
         switch self {
-        case .distance: return "Distance"
-        case .length: return "Length"
-        case .perimeter: return "Perimeter"
-        case .circumference: return "Circumference"
-        case .angle: return "Angle"
-        case .area: return "Area"
-        case .radius: return "Radius"
-        case .ratio: return "Ratio"
-        case .coordinates: return "Coordinates"
-        case .equation: return "Equation"
-        case .slope: return "Slope"
+        case .distance:
+			return "Distance"
+        case .length:
+			return "Length"
+        case .perimeter:
+			return "Perimeter"
+        case .circumference:
+			return "Circumference"
+        case .angle:
+			return "Angle"
+        case .area:
+			return "Area"
+        case .radius:
+			return "Radius"
+        case .ratio:
+			return "Ratio"
+        case .coordinates:
+			return "Coordinates"
+        case .abscissa:
+			return "Abscissa"
+        case .ordinate:
+			return "Ordinate"
+        case .polarDistance:
+			return "Polar Distance"
+        case .polarDirection:
+			return "Polar Direction"
+        case .equation:
+			return "Equation"
+        case .slope:
+			return "Slope"
         }
     }
 }
 
 enum TransformKind: String, Codable, CaseIterable, Identifiable {
-    case reflect, rotate, translate, dilate
+    case reflect
+	case rotate
+	case translate
+	case dilate
     var id: String {
         rawValue
     }

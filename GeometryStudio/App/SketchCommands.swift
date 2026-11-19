@@ -92,6 +92,14 @@ struct SketchCommands: Commands {
             Divider()
             Button("Coordinates") { model?.measure(.coordinates) }
                 .disabled(model == nil)
+            Button("Abscissa") { model?.measure(.abscissa) }
+                .disabled(model == nil)
+            Button("Ordinate") { model?.measure(.ordinate) }
+                .disabled(model == nil)
+            Button("Polar Distance") { model?.measure(.polarDistance) }
+                .disabled(model == nil)
+            Button("Polar Direction") { model?.measure(.polarDirection) }
+                .disabled(model == nil)
             Button("Equation") { model?.measure(.equation) }
                 .disabled(model == nil)
             Button("Slope") { model?.measure(.slope) }

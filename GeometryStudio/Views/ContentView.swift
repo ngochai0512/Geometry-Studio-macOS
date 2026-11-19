@@ -267,6 +267,10 @@ struct ContentView: View {
             Button("Ratio") { model.measure(.ratio) }
             Divider()
             Button("Coordinates") { model.measure(.coordinates) }
+            Button("Abscissa") { model.measure(.abscissa) }
+            Button("Ordinate") { model.measure(.ordinate) }
+            Button("Polar Distance") { model.measure(.polarDistance) }
+            Button("Polar Direction") { model.measure(.polarDirection) }
             Button("Equation") { model.measure(.equation) }
             Button("Slope") { model.measure(.slope) }
             Divider()

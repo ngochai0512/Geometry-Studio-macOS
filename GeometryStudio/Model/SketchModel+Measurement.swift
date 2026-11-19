@@ -42,7 +42,7 @@ extension SketchModel {
                 return
             }
             refs = Array(paths.prefix(2))
-        case .coordinates:
+        case .coordinates, .abscissa, .ordinate, .polarDistance, .polarDirection:
             guard let id = ids.first(where: { e.evaluate($0).point != nil }) else {
                 statusMessage = "Select a point"
                 return
