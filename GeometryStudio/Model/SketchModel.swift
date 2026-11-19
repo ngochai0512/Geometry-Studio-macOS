@@ -17,33 +17,33 @@ final class SketchModel: ObservableObject {
     @Published var tracePaths: [UUID: [Vec2]] = [:]
     var animationDirection: Double = 1
 
-    private var undoStack: [Snapshot] = []
-    private var redoStack: [Snapshot] = []
-    private var openGroup: Snapshot?
+    private var openGroup = false
     private var lastCoalescingKey: String?
     private var lastCheckpointAt = Date.distantPast
     private let undoLimit = 80
-    /// The window's undo manager, when the view hierarchy provides one. Every
-    /// undoable edit registers an inverse here so the document architecture
-    /// sees the change count: close dot, save prompt and autosave. The custom
-    /// stacks stay the source of truth; the manager only mirrors them.
-    weak var systemUndoManager: UndoManager? {
+    /// The window's undo manager. It is the only undo stack: the document
+    /// architecture observes it for the edited dot, the native save sheet and
+    /// autosave, so nothing else has to mirror change counts.
+    weak var undoManager: UndoManager? {
         didSet {
-            guard let manager = systemUndoManager else {
+            guard let manager = undoManager else {
                 return
             }
             MainActor.assumeIsolated {
                 if manager.levelsOfUndo != undoLimit {
                     manager.levelsOfUndo = undoLimit
                 }
-                // Each registration below is its own top-level group, so one
-                // undo press always consumes exactly one custom snapshot.
+                // Each registration is its own top-level group, so one ⌘Z
+                // always takes back exactly one step.
                 if manager.groupsByEvent {
                     manager.groupsByEvent = false
                 }
             }
+            observeUndoState(of: manager)
         }
     }
+    private var undoObservers: [NSObjectProtocol] = []
+    private var undoRefreshPending = false
 
     init(document: SketchDocument = SketchDocument()) {
         self.document = document
@@ -52,13 +52,6 @@ final class SketchModel: ObservableObject {
     struct Snapshot {
         var objects: [SketchObject]
         var selection: [UUID]
-        /// The action that produced the state after this snapshot.
-        var action: String
-    }
-
-    struct UndoStep: Identifiable {
-        let id: Int
-        let name: String
     }
 
     var objects: [SketchObject] {
@@ -83,22 +76,39 @@ final class SketchModel: ObservableObject {
     }
 
     var canUndo: Bool {
-        !undoStack.isEmpty
+        guard let undoManager else {
+            return false
+        }
+        return MainActor.assumeIsolated {
+            undoManager.canUndo
+        }
     }
     var canRedo: Bool {
-        !redoStack.isEmpty
+        guard let undoManager else {
+            return false
+        }
+        return MainActor.assumeIsolated {
+            undoManager.canRedo
+        }
     }
     /// The action ⌘Z would take back, for menu titles and status text.
     var undoActionName: String? {
-        undoStack.last?.action
+        guard let undoManager else {
+            return nil
+        }
+        let name = MainActor.assumeIsolated {
+            undoManager.undoActionName
+        }
+        return name.isEmpty ? nil : name
     }
     var redoActionName: String? {
-        redoStack.last?.action
-    }
-    /// Oldest first. An entry's `id` is the number of undo steps before it,
-    /// which is the depth to keep to take that step back.
-    var undoHistory: [UndoStep] {
-        undoStack.enumerated().map { UndoStep(id: $0.offset, name: $0.element.action) }
+        guard let undoManager else {
+            return nil
+        }
+        let name = MainActor.assumeIsolated {
+            undoManager.redoActionName
+        }
+        return name.isEmpty ? nil : name
     }
 
     // MARK: document lifecycle
@@ -195,7 +205,7 @@ final class SketchModel: ObservableObject {
     /// `coalescing` folds continuous edits (typing, dragging a slider) into
     /// the step that started them while the same key keeps arriving.
     func checkpoint(_ action: String = "Change", coalescing key: String? = nil) {
-        guard openGroup == nil else {
+        guard !openGroup else {
             return
         }
         if let key, key == lastCoalescingKey,
@@ -204,44 +214,71 @@ final class SketchModel: ObservableObject {
             lastCheckpointAt = Date()
             return
         }
-        push(Snapshot(objects: objects, selection: selection, action: action))
+        registerUndo(action: action, snapshot: Snapshot(objects: objects, selection: selection))
         lastCoalescingKey = key
+        lastCheckpointAt = Date()
     }
 
     /// Runs a multi-step change as one undoable action. Nested checkpoints are
     /// folded into the snapshot taken here, so drawing a segment does not leave
     /// its two new endpoints behind as separate steps.
     func perform(_ action: String, _ body: () -> Void) {
-        guard openGroup == nil else {
+        guard !openGroup else {
             body()
             return
         }
-        let before = Snapshot(objects: objects, selection: selection, action: action)
-        openGroup = before
+        let before = Snapshot(objects: objects, selection: selection)
+        openGroup = true
         body()
-        openGroup = nil
+        openGroup = false
         guard before.objects != objects || before.selection != selection else {
             return
         }
-        push(before)
+        registerUndo(action: action, snapshot: before)
     }
 
-    private func push(_ snapshot: Snapshot) {
-        undoStack.append(snapshot)
-        if undoStack.count > undoLimit {
-            undoStack.removeFirst()
+    /// Registers the inverse of a change about to be made. Each registration
+    /// is its own top-level group so one ⌘Z takes back one step.
+    private func registerUndo(action: String, snapshot: Snapshot) {
+        guard let undoManager else {
+            return
         }
-        redoStack.removeAll()
-        // A separate action must not merge into the step that preceded it.
+        MainActor.assumeIsolated {
+            undoManager.beginUndoGrouping()
+            undoManager.registerUndo(withTarget: self) { model in
+                model.restore(snapshot, action: action)
+            }
+            undoManager.setActionName(action)
+            undoManager.endUndoGrouping()
+        }
         lastCoalescingKey = nil
         lastCheckpointAt = Date()
-        registerSystemUndo(action: snapshot.action)
+    }
+
+    /// Applies a snapshot and registers its inverse. `NSUndoManager` routes
+    /// that inverse to the redo stack while undoing and the undo stack while
+    /// redoing, so the manager already knows which direction runs.
+    private func restore(_ snapshot: Snapshot, action: String) {
+        guard let undoManager else {
+            return
+        }
+        let current = Snapshot(objects: objects, selection: selection)
+        objects = snapshot.objects
+        selection = snapshot.selection
+        lastCoalescingKey = nil
+        MainActor.assumeIsolated {
+            undoManager.registerUndo(withTarget: self) { model in
+                model.restore(current, action: action)
+            }
+            undoManager.setActionName(action)
+            statusMessage = undoManager.isUndoing ? "Undo \(action)" : "Redo \(action)"
+        }
     }
 
     /// A document swap or recovery must not continue coalescing into the
     /// previous document's edit.
     func resetTransientEditingState() {
-        openGroup = nil
+        openGroup = false
         lastCoalescingKey = nil
     }
 
@@ -249,122 +286,67 @@ final class SketchModel: ObservableObject {
     /// objects and selection only, so undoing across a swap would leave the
     /// window pointing at the wrong file.
     func resetHistory() {
-        undoStack.removeAll()
-        redoStack.removeAll()
-        if let manager = systemUndoManager {
+        if let undoManager {
             MainActor.assumeIsolated {
-                manager.removeAllActions()
+                undoManager.removeAllActions()
             }
         }
         resetTransientEditingState()
     }
 
     func undo() {
-        if let manager = systemUndoManager, !undoStack.isEmpty {
-            let handled = MainActor.assumeIsolated { () -> Bool in
-                guard manager.canUndo else {
-                    return false
-                }
-                manager.undo()
-                return true
-            }
-            if handled {
-                return
-            }
+        guard let undoManager else {
+            return
         }
-        popUndoSnapshot()
+        MainActor.assumeIsolated {
+            undoManager.undo()
+        }
     }
 
     func redo() {
-        if let manager = systemUndoManager, !redoStack.isEmpty {
-            let handled = MainActor.assumeIsolated { () -> Bool in
-                guard manager.canRedo else {
-                    return false
+        guard let undoManager else {
+            return
+        }
+        MainActor.assumeIsolated {
+            undoManager.redo()
+        }
+    }
+
+    /// Undo state lives in NSUndoManager, not in a published property, so
+    /// views that show it (the toolbar) re-render from its own notifications.
+    private func observeUndoState(of manager: UndoManager) {
+        for observer in undoObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        let names: [Notification.Name] = [
+            .NSUndoManagerCheckpoint,
+            .NSUndoManagerDidUndoChange,
+            .NSUndoManagerDidRedoChange
+        ]
+        undoObservers = names.map { name in
+            NotificationCenter.default.addObserver(forName: name, object: manager, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.scheduleUndoRefresh()
                 }
-                manager.redo()
-                return true
             }
-            if handled {
+        }
+    }
+
+    /// Notifications can fire while SwiftUI is updating views, and publishing
+    /// then is undefined. Defer one change to the next turn and coalesce the
+    /// burst of checkpoints a single edit produces.
+    private func scheduleUndoRefresh() {
+        guard !undoRefreshPending else {
+            return
+        }
+        undoRefreshPending = true
+        Task { @MainActor [weak self] in
+            guard let self else {
                 return
             }
+            undoRefreshPending = false
+            objectWillChange.send()
         }
-        popRedoSnapshot()
-    }
-
-    /// The custom pop behind both undo paths. Returns whether a step ran, so
-    /// system handlers only register a counterpart for a real change.
-    @discardableResult
-    private func popUndoSnapshot() -> Bool {
-        guard let snap = undoStack.popLast() else {
-            return false
-        }
-        redoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
-        objects = snap.objects
-        selection = snap.selection
-        lastCoalescingKey = nil
-        statusMessage = "Undo \(snap.action)"
-        return true
-    }
-
-    /// The custom pop behind both redo paths. Returns whether a step ran, so
-    /// system handlers only register a counterpart for a real change.
-    @discardableResult
-    private func popRedoSnapshot() -> Bool {
-        guard let snap = redoStack.popLast() else {
-            return false
-        }
-        undoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
-        objects = snap.objects
-        selection = snap.selection
-        lastCoalescingKey = nil
-        statusMessage = "Redo \(snap.action)"
-        return true
-    }
-
-    /// Mirrors one undoable edit in the system undo manager. Runs with the
-    /// snapshot push, so the two histories stay in lockstep: each system
-    /// group has exactly one custom snapshot, created and consumed together.
-    private func registerSystemUndo(action: String) {
-        guard let manager = systemUndoManager else {
-            return
-        }
-        MainActor.assumeIsolated {
-            manager.beginUndoGrouping()
-            manager.registerUndo(withTarget: self) { model in
-                if model.popUndoSnapshot() {
-                    model.registerSystemRedo()
-                }
-            }
-            manager.setActionName(action)
-            manager.endUndoGrouping()
-        }
-    }
-
-    private func registerSystemRedo() {
-        guard let manager = systemUndoManager else {
-            return
-        }
-        MainActor.assumeIsolated {
-            manager.registerUndo(withTarget: self) { model in
-                if model.popRedoSnapshot(), let action = model.undoStack.last?.action {
-                    model.registerSystemUndo(action: action)
-                }
-            }
-        }
-    }
-
-    /// Jumps to the state after keeping `depth` undo steps. Zero restores the
-    /// state the document opened in.
-    func revert(toUndoDepth depth: Int) {
-        let target = max(0, min(depth, undoStack.count))
-        guard target < undoStack.count else {
-            return
-        }
-        let name = target == 0 ? "Original State" : undoStack[target - 1].action
-        while undoStack.count > target {
-            undo()
-        }
-        statusMessage = "Went back to \(name)"
     }
 
     // MARK: object helpers

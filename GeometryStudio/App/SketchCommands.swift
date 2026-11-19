@@ -8,23 +8,6 @@ struct SketchCommands: Commands {
             Button("About Geometry Studio") { model?.showAbout = true }
         }
 
-        CommandGroup(replacing: .undoRedo) {
-            Button(model?.undoActionName.map { "Undo \($0)" } ?? "Undo") { model?.undo() }
-                .keyboardShortcut("z", modifiers: .command)
-                .disabled(model?.canUndo != true)
-            Button(model?.redoActionName.map { "Redo \($0)" } ?? "Redo") { model?.redo() }
-                .keyboardShortcut("z", modifiers: [.command, .shift])
-                .disabled(model?.canRedo != true)
-            Menu("Undo History") {
-                Text("Current State")
-                Divider()
-                ForEach((model?.undoHistory ?? []).reversed()) { step in
-                    Button(step.name) { model?.revert(toUndoDepth: step.id) }
-                }
-            }
-            .disabled(model?.canUndo != true)
-        }
-
         CommandGroup(after: .pasteboard) {
             Divider()
             Button("Delete") { model?.deleteSelection() }

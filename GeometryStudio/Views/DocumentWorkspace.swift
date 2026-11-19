@@ -15,7 +15,9 @@ struct DocumentWorkspace: View {
             .frame(minWidth: 900, minHeight: 620)
             .focusedSceneValue(\.sketchModel, model)
             .onAppear {
-                model.systemUndoManager = windowUndoManager
+                // The window's undo manager is the only undo stack; Edit > Undo
+                // and the document's edited state both read it.
+                model.undoManager = windowUndoManager
             }
             .onChange(of: model.document) { _, newValue in
                 if document.sketch != newValue {
