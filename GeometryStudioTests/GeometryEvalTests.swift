@@ -8,7 +8,9 @@ private func freePoint(_ p: Vec2) -> SketchObject {
 }
 
 private func near(_ a: Vec2?, _ b: Vec2) -> Bool {
-    guard let a else { return false }
+    guard let a else {
+        return false
+    }
     return a.distance(to: b) <= 1e-7
 }
 

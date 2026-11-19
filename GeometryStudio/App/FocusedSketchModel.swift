@@ -7,7 +7,11 @@ struct SketchModelFocusedValueKey: FocusedValueKey {
 
 extension FocusedValues {
     var sketchModel: SketchModel? {
-        get { self[SketchModelFocusedValueKey.self] }
-        set { self[SketchModelFocusedValueKey.self] = newValue }
+        get {
+            self[SketchModelFocusedValueKey.self]
+        }
+        set {
+            self[SketchModelFocusedValueKey.self] = newValue
+        }
     }
 }

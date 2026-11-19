@@ -22,14 +22,20 @@ struct Expression {
         var i = 0
         while i < chars.count {
             let c = chars[i]
-            if c.isWhitespace { i += 1; continue }
+            if c.isWhitespace {
+                i += 1
+                continue
+            }
             if c.isNumber || c == "." {
                 var s = String(c)
                 i += 1
                 while i < chars.count, chars[i].isNumber || chars[i] == "." {
-                    s.append(chars[i]); i += 1
+                    s.append(chars[i])
+                    i += 1
                 }
-                guard let d = Double(s) else { return nil }
+                guard let d = Double(s) else {
+                    return nil
+                }
                 out.append(.number(d))
                 continue
             }
@@ -37,7 +43,8 @@ struct Expression {
                 var s = String(c)
                 i += 1
                 while i < chars.count, chars[i].isLetter || chars[i].isNumber || chars[i] == "_" {
-                    s.append(chars[i]); i += 1
+                    s.append(chars[i])
+                    i += 1
                 }
                 out.append(.name(s))
                 continue
@@ -51,11 +58,15 @@ struct Expression {
             }
             i += 1
         }
-        if out.isEmpty { return nil }
+        if out.isEmpty {
+            return nil
+        }
         tokens = out
     }
 
-    mutating func setAngleUnit(_ unit: AngleUnit) { angleUnit = unit }
+    mutating func setAngleUnit(_ unit: AngleUnit) {
+        angleUnit = unit
+    }
 
     mutating func evaluate(x: Double = 0, variables: [String: Double] = [:]) -> Double? {
         index = 0
@@ -68,12 +79,19 @@ struct Expression {
         index < tokens.count ? tokens[index] : nil
     }
     private mutating func take() -> Token? {
-        guard index < tokens.count else { return nil }
-        defer { index += 1 }
+        guard index < tokens.count else {
+            return nil
+        }
+        defer {
+            index += 1
+        }
         return tokens[index]
     }
     private mutating func match(_ t: Token) -> Bool {
-        if peek() == t { index += 1; return true }
+        if peek() == t {
+            index += 1
+            return true
+        }
         return false
     }
 
@@ -81,7 +99,9 @@ struct Expression {
         var value = parseTerm(vars)
         while let tok = peek(), case .op(let op) = tok, op == "+" || op == "-" {
             _ = take()
-            guard let rhs = parseTerm(vars), let lhs = value else { return nil }
+            guard let rhs = parseTerm(vars), let lhs = value else {
+                return nil
+            }
             value = op == "+" ? lhs + rhs : lhs - rhs
         }
         return value
@@ -91,7 +111,9 @@ struct Expression {
         var value = parseUnary(vars)
         while let tok = peek(), case .op(let op) = tok, op == "*" || op == "/" {
             _ = take()
-            guard let rhs = parseUnary(vars), let lhs = value else { return nil }
+            guard let rhs = parseUnary(vars), let lhs = value else {
+                return nil
+            }
             value = op == "*" ? lhs * rhs : (abs(rhs) < 1e-15 ? nil : lhs / rhs)
         }
         return value
@@ -110,30 +132,42 @@ struct Expression {
     }
 
     private mutating func parsePower(_ vars: [String: Double]) -> Double? {
-        guard let base = parseAtom(vars) else { return nil }
+        guard let base = parseAtom(vars) else {
+            return nil
+        }
         if let tok = peek(), case .op(let op) = tok, op == "^" {
             _ = take()
-            guard let exp = parseUnary(vars) else { return nil }
+            guard let exp = parseUnary(vars) else {
+                return nil
+            }
             return pow(base, exp)
         }
         return base
     }
 
     private mutating func parseAtom(_ vars: [String: Double]) -> Double? {
-        guard let tok = take() else { return nil }
+        guard let tok = take() else {
+            return nil
+        }
         switch tok {
         case .number(let d): return d
         case .lparen:
             let v = parseExpression(vars)
-            guard match(.rparen) else { return nil }
+            guard match(.rparen) else {
+                return nil
+            }
             return v
         case .name(let name):
-            if let v = vars[name] { return v }
+            if let v = vars[name] {
+                return v
+            }
             switch name {
             case "pi", "π": return .pi
             case "e": return M_E
             case "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "abs", "ln", "log", "exp", "floor", "ceil", "round":
-                guard match(.lparen), let arg = parseExpression(vars), match(.rparen) else { return nil }
+                guard match(.lparen), let arg = parseExpression(vars), match(.rparen) else {
+                    return nil
+                }
                 switch name {
                 case "sin": return sin(trigInput(arg))
                 case "cos": return cos(trigInput(arg))

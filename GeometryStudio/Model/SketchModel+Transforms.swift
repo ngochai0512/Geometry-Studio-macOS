@@ -58,7 +58,10 @@ extension SketchModel {
 
     func translateSelection(dx: Double, dy: Double) {
         let sources = selection
-        guard !sources.isEmpty else { statusMessage = "Select objects to translate"; return }
+        guard !sources.isEmpty else {
+            statusMessage = "Select objects to translate"
+            return
+        }
         checkpoint("Translate")
         var created: [UUID] = []
         for source in sources {

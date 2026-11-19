@@ -20,9 +20,15 @@ struct SketchCanvas: View {
     @State var magnifyBase: Double?
     @State var lastClickAt: Date = .distantPast
 
-    var ink: Color { RGBA.ink.color }
-    var secondaryInk: Color { RGBA.secondaryInk.color }
-    var accent: Color { Color.accentColor }
+    var ink: Color {
+        RGBA.ink.color
+    }
+    var secondaryInk: Color {
+        RGBA.secondaryInk.color
+    }
+    var accent: Color {
+        Color.accentColor
+    }
 
     var body: some View {
         GeometryReader { geo in

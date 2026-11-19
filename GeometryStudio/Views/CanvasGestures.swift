@@ -28,7 +28,11 @@ extension SketchCanvas {
                                 dragLabelID = hit
                                 dragLabelBaseOffset = object.offset
                                 dragLabelBasePosition = object.position ?? .zero
-                                if case .caption = object.kind { dragLabelIsCaption = true } else { dragLabelIsCaption = false }
+                                if case .caption = object.kind {
+                                    dragLabelIsCaption = true
+                                } else {
+                                    dragLabelIsCaption = false
+                                }
                                 model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
                             } else {
                                 model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
@@ -104,7 +108,9 @@ extension SketchCanvas {
                             model.draft = []
                             let a = model.ensurePoint(at: start, tolerance: tol)
                             let b = model.ensurePoint(at: end, tolerance: tol)
-                            guard a != b else { return }
+                            guard a != b else {
+                                return
+                            }
                             let kind: ObjectKind = tool == .segment ? .segment(a: a, b: b)
                                 : tool == .ray ? .ray(a: a, b: b) : .line(a: a, b: b)
                             var object = SketchObject(kind: kind)
@@ -120,7 +126,9 @@ extension SketchCanvas {
                             model.draft = []
                             let center = model.ensurePoint(at: start, tolerance: tol)
                             let edge = model.ensurePoint(at: end, tolerance: tol)
-                            guard center != edge else { return }
+                            guard center != edge else {
+                                return
+                            }
                             var object = SketchObject(kind: .circle(center: center, through: edge))
                             object.order = (model.objects.map(\.order).max() ?? 0) + 1
                             model.objects.append(object)
@@ -151,7 +159,9 @@ extension SketchCanvas {
     func magnification(size: CGSize) -> some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                if magnifyBase == nil { magnifyBase = model.settings.scale }
+                if magnifyBase == nil {
+                    magnifyBase = model.settings.scale
+                }
                 let scale = (magnifyBase ?? SketchMetrics.pixelsPerCentimetre) * value.magnification
                 model.settings.scale = min(max(scale, 12), 420)
             }
@@ -168,21 +178,31 @@ extension SketchCanvas {
         for object in model.objects where object.visible {
             let r = e.evaluate(object.id)
             if let p = r.point {
-                if rect.contains(model.screenPoint(p, size: size)) { hits.append(object.id); continue }
+                if rect.contains(model.screenPoint(p, size: size)) {
+                    hits.append(object.id)
+                    continue
+                }
             }
             if let box = r.path?.boundingBox {
                 let a = model.screenPoint(Vec2(box.minX, box.minY), size: size)
                 let b = model.screenPoint(Vec2(box.maxX, box.maxY), size: size)
                 let screenBox = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
                                        width: abs(a.x - b.x), height: abs(a.y - b.y))
-                if rect.intersects(screenBox) { hits.append(object.id); continue }
+                if rect.intersects(screenBox) {
+                    hits.append(object.id)
+                    continue
+                }
             }
             if let anchor = r.anchor {
-                if rect.contains(model.screenPoint(anchor, size: size)) { hits.append(object.id) }
+                if rect.contains(model.screenPoint(anchor, size: size)) {
+                    hits.append(object.id)
+                }
             }
         }
         if NSEvent.modifierFlags.contains(.shift) {
-            for h in hits where !model.selection.contains(h) { model.selection.append(h) }
+            for h in hits where !model.selection.contains(h) {
+                model.selection.append(h)
+            }
         } else {
             model.selection = hits
         }

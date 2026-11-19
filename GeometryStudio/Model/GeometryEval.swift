@@ -22,11 +22,19 @@ struct GeometryEval {
     }
 
     mutating func evaluate(_ id: UUID) -> EvalResult {
-        if let cached = cache[id] { return cached }
-        guard let object = objects[id] else { return EvalResult() }
-        if visiting.contains(id) { return EvalResult() }
+        if let cached = cache[id] {
+            return cached
+        }
+        guard let object = objects[id] else {
+            return EvalResult()
+        }
+        if visiting.contains(id) {
+            return EvalResult()
+        }
         visiting.insert(id)
-        defer { visiting.remove(id) }
+        defer {
+            visiting.remove(id)
+        }
 
         var result = EvalResult()
         switch object.kind {
@@ -46,17 +54,25 @@ struct GeometryEval {
         case .intersection(let a, let b, let index):
             if let pa = path(a), let pb = path(b) {
                 let hits = pa.intersections(with: pb)
-                if index >= 0 && index < hits.count { result.point = hits[index] }
+                if index >= 0 && index < hits.count {
+                    result.point = hits[index]
+                }
             }
 
         case .segment(let a, let b):
-            if let pa = point(a), let pb = point(b) { result.path = .segment(pa, pb) }
+            if let pa = point(a), let pb = point(b) {
+                result.path = .segment(pa, pb)
+            }
 
         case .ray(let a, let b):
-            if let pa = point(a), let pb = point(b) { result.path = .ray(pa, pb) }
+            if let pa = point(a), let pb = point(b) {
+                result.path = .ray(pa, pb)
+            }
 
         case .line(let a, let b):
-            if let pa = point(a), let pb = point(b) { result.path = .line(pa, pb) }
+            if let pa = point(a), let pb = point(b) {
+                result.path = .line(pa, pb)
+            }
 
         case .perpendicular(let lineID, let pointID):
             if let s = path(lineID)?.straight, let p = point(pointID) {
@@ -75,7 +91,9 @@ struct GeometryEval {
                 let u = (pa - pv).normalized()
                 let v = (pc - pv).normalized()
                 var d = (u + v).normalized()
-                if d.length < 1e-9 { d = u.perpendicular() }
+                if d.length < 1e-9 {
+                    d = u.perpendicular()
+                }
                 result.path = .line(pv, pv + d)
             }
 
@@ -99,7 +117,9 @@ struct GeometryEval {
                 // radians keep the sign, as in the original's preferences.
                 let raw = settings.angleUnit == .degrees ? unsigned : atan2(u.cross(v), u.dot(v))
                 var bis = (u + v).normalized()
-                if bis.length < 1e-9 { bis = u.perpendicular() }
+                if bis.length < 1e-9 {
+                    bis = u.perpendicular()
+                }
                 result.value = raw
                 result.angleValue = raw
                 result.anglePoints = (pa, pv, pc)
@@ -120,7 +140,9 @@ struct GeometryEval {
                 result.text = text
                 result.value = value
                 result.anchor = objects.values.first(where: {
-                    if case .measurement = $0.kind { return true }
+                    if case .measurement = $0.kind {
+                        return true
+                    }
                     return false
                 })?.position ?? Vec2(0, 0)
             } else {
@@ -166,13 +188,23 @@ struct GeometryEval {
         guard let driverObject = objects[driver],
               case .pointOnPath(let pathID, _) = driverObject.kind,
               let driverPath = path(pathID),
-              objects[target] != nil else { return nil }
-        if case .locus = objects[target]?.kind { return nil }
+              objects[target] != nil else {
+            return nil
+        }
+        if case .locus = objects[target]?.kind {
+            return nil
+        }
         let closed: Bool
-        if case .circle = driverPath { closed = true } else { closed = false }
+        if case .circle = driverPath {
+            closed = true
+        } else {
+            closed = false
+        }
         let steps = 96
         var base = Array(objects.values)
-        guard let i = base.firstIndex(where: { $0.id == driver }) else { return nil }
+        guard let i = base.firstIndex(where: { $0.id == driver }) else {
+            return nil
+        }
         var points: [Vec2] = []
         for step in 0...steps {
             let unit = Double(step) / Double(steps)
@@ -187,8 +219,12 @@ struct GeometryEval {
         return points.count > 1 ? points : nil
     }
 
-    mutating func point(_ id: UUID) -> Vec2? { evaluate(id).point }
-    mutating func path(_ id: UUID) -> EvalPath? { evaluate(id).path }
+    mutating func point(_ id: UUID) -> Vec2? {
+        evaluate(id).point
+    }
+    mutating func path(_ id: UUID) -> EvalPath? {
+        evaluate(id).path
+    }
 
     // MARK: measurement
 
@@ -226,7 +262,10 @@ struct GeometryEval {
                 result.anchor = c + Vec2(0, r + 0.3)
             }
         case .angle:
-            if refs.count >= 3, let a = point(refs[0]), let v = point(refs[1]), let c = point(refs[2]) {
+            if refs.count >= 3,
+               let a = point(refs[0]),
+               let v = point(refs[1]),
+               let c = point(refs[2]) {
                 let u = (a - v).normalized()
                 let w = (c - v).normalized()
                 let unsigned = acos(min(max(u.dot(w), -1), 1))
@@ -235,7 +274,9 @@ struct GeometryEval {
                 result.anglePoints = (a, v, c)
                 result.angleValue = angle
                 var bis = (u + w).normalized()
-                if bis.length < 1e-9 { bis = u.perpendicular() }
+                if bis.length < 1e-9 {
+                    bis = u.perpendicular()
+                }
                 result.text = "m∠\(labels(Array(refs.prefix(3)))) = \(formatAngle(angle))"
                 result.anchor = v + bis * 0.95
             }
@@ -260,8 +301,12 @@ struct GeometryEval {
                 result.anchor = c + Vec2(r * 0.55, 0.3)
             }
         case .ratio:
-            if refs.count >= 2, let p1 = path(refs[0]), let p2 = path(refs[1]),
-               let l1 = p1.length(settings: settings), let l2 = p2.length(settings: settings), l2 > 1e-12 {
+            if refs.count >= 2,
+               let p1 = path(refs[0]),
+               let p2 = path(refs[1]),
+               let l1 = p1.length(settings: settings),
+               let l2 = p2.length(settings: settings),
+               l2 > 1e-12 {
                 let v = l1 / l2
                 result.value = v
                 result.text = "\(name(of: refs[0]))/\(name(of: refs[1])) = \(formatNumber(v, precision: settings.precision))"
@@ -313,7 +358,9 @@ struct GeometryEval {
     }
 
     func name(of id: UUID) -> String {
-        guard let object = objects[id] else { return "?" }
+        guard let object = objects[id] else {
+            return "?"
+        }
         switch object.kind {
         case .freePoint, .pointOnPath, .midpoint, .intersection:
             return object.label.isEmpty ? "P" : object.label
@@ -346,23 +393,31 @@ struct GeometryEval {
     private mutating func map(_ p: Vec2, _ spec: TransformSpec) -> Vec2? {
         switch spec.kind {
         case .reflect:
-            guard let ref = spec.reference, let s = path(ref)?.straight else { return nil }
+            guard let ref = spec.reference, let s = path(ref)?.straight else {
+                return nil
+            }
             let a = s.a
             let d = (s.b - s.a).normalized()
             let t = (p - a).dot(d)
             let foot = a + d * t
             return foot * 2 - p
         case .rotate:
-            guard let ref = spec.reference, let c = point(ref) else { return nil }
+            guard let ref = spec.reference, let c = point(ref) else {
+                return nil
+            }
             return c + (p - c).rotated(by: spec.angle * .pi / 180)
         case .translate:
-            if let a = spec.reference, let b = spec.secondReference,
-               let pa = point(a), let pb = point(b) {
+            if let a = spec.reference,
+               let b = spec.secondReference,
+               let pa = point(a),
+               let pb = point(b) {
                 return p + (pb - pa)
             }
             return p + Vec2(spec.dx, spec.dy)
         case .dilate:
-            guard let ref = spec.reference, let c = point(ref) else { return nil }
+            guard let ref = spec.reference, let c = point(ref) else {
+                return nil
+            }
             return c + (p - c) * spec.factor
         }
     }
@@ -370,16 +425,24 @@ struct GeometryEval {
     private mutating func map(_ path: EvalPath, _ spec: TransformSpec) -> EvalPath? {
         switch path {
         case .segment(let a, let b):
-            guard let ma = map(a, spec), let mb = map(b, spec) else { return nil }
+            guard let ma = map(a, spec), let mb = map(b, spec) else {
+                return nil
+            }
             return .segment(ma, mb)
         case .ray(let a, let b):
-            guard let ma = map(a, spec), let mb = map(b, spec) else { return nil }
+            guard let ma = map(a, spec), let mb = map(b, spec) else {
+                return nil
+            }
             return .ray(ma, mb)
         case .line(let a, let b):
-            guard let ma = map(a, spec), let mb = map(b, spec) else { return nil }
+            guard let ma = map(a, spec), let mb = map(b, spec) else {
+                return nil
+            }
             return .line(ma, mb)
         case .circle(let c, let r):
-            guard let mc = map(c, spec), let edge = map(c + Vec2(r, 0), spec) else { return nil }
+            guard let mc = map(c, spec), let edge = map(c + Vec2(r, 0), spec) else {
+                return nil
+            }
             return .circle(mc, mc.distance(to: edge))
         case .polygon(let pts):
             let mapped = pts.compactMap { map($0, spec) }
@@ -395,8 +458,12 @@ struct GeometryEval {
     // MARK: formatting
 
     func formatNumber(_ value: Double, precision: Int) -> String {
-        if !value.isFinite { return "undefined" }
-        if abs(value) >= 1_000_000 { return String(format: "%.3g", value) }
+        if !value.isFinite {
+            return "undefined"
+        }
+        if abs(value) >= 1_000_000 {
+            return String(format: "%.3g", value)
+        }
         return String(format: "%.\(max(0, min(precision, 6)))f", value)
     }
 

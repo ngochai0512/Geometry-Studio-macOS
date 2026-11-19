@@ -106,7 +106,9 @@ extension SketchDocument {
             }
             recovered.append(object)
         }
-        guard !recovered.isEmpty else { return nil }
+        guard !recovered.isEmpty else {
+            return nil
+        }
 
         var document = SketchDocument()
         document.objects = recovered

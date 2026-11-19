@@ -97,10 +97,14 @@ enum ScreenshotRunner {
     }
 
     private static func isBlank(_ rep: NSBitmapImageRep) -> Bool {
-        guard let data = rep.bitmapData else { return false }
+        guard let data = rep.bitmapData else {
+            return false
+        }
         let width = rep.pixelsWide
         let height = rep.pixelsHigh
-        guard width > 10, height > 10 else { return true }
+        guard width > 10, height > 10 else {
+            return true
+        }
         let samplesX = 40
         let samplesY = 30
         var nonWhite = 0
@@ -108,10 +112,14 @@ enum ScreenshotRunner {
         for y in stride(from: 2, to: height - 2, by: max(1, height / samplesY)) {
             for x in stride(from: 2, to: width - 2, by: max(1, width / samplesX)) {
                 let offset = y * rep.bytesPerRow + x * 4
-                guard offset + 3 < rep.bytesPerRow * height else { continue }
+                guard offset + 3 < rep.bytesPerRow * height else {
+                    continue
+                }
                 let r = data[offset], g = data[offset + 1], b = data[offset + 2], a = data[offset + 3]
                 total += 1
-                if a > 8 && (r < 244 || g < 244 || b < 244) { nonWhite += 1 }
+                if a > 8 && (r < 244 || g < 244 || b < 244) {
+                    nonWhite += 1
+                }
             }
         }
         return total == 0 || Double(nonWhite) / Double(total) < 0.004

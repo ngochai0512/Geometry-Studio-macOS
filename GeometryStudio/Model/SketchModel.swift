@@ -41,23 +41,39 @@ final class SketchModel: ObservableObject {
     }
 
     var objects: [SketchObject] {
-        get { document.objects }
-        set { document.objects = newValue }
+        get {
+            document.objects
+        }
+        set {
+            document.objects = newValue
+        }
     }
     var settings: CanvasSettings {
-        get { document.settings }
-        set { document.settings = newValue }
+        get {
+            document.settings
+        }
+        set {
+            document.settings = newValue
+        }
     }
 
     var selectedObjects: [SketchObject] {
         selection.compactMap { id in objects.first(where: { $0.id == id }) }
     }
 
-    var canUndo: Bool { !undoStack.isEmpty }
-    var canRedo: Bool { !redoStack.isEmpty }
+    var canUndo: Bool {
+        !undoStack.isEmpty
+    }
+    var canRedo: Bool {
+        !redoStack.isEmpty
+    }
     /// The action ⌘Z would take back, for menu titles and status text.
-    var undoActionName: String? { undoStack.last?.action }
-    var redoActionName: String? { redoStack.last?.action }
+    var undoActionName: String? {
+        undoStack.last?.action
+    }
+    var redoActionName: String? {
+        redoStack.last?.action
+    }
     /// Oldest first. An entry's `id` is the number of undo steps before it,
     /// which is the depth to keep to take that step back.
     var undoHistory: [UndoStep] {
@@ -108,8 +124,14 @@ final class SketchModel: ObservableObject {
         let e = add(kind: .midpoint(a: b, b: c), label: "E", silent: true)
         let perp1 = add(kind: .perpendicular(line: ab, point: d), silent: true)
         let perp2 = add(kind: .perpendicular(line: bc, point: e), silent: true)
-        if let i = index(of: perp1) { objects[i].style.dash = .dashed; objects[i].style.color = .secondaryInk }
-        if let i = index(of: perp2) { objects[i].style.dash = .dashed; objects[i].style.color = .secondaryInk }
+        if let i = index(of: perp1) {
+            objects[i].style.dash = .dashed
+            objects[i].style.color = .secondaryInk
+        }
+        if let i = index(of: perp2) {
+            objects[i].style.dash = .dashed
+            objects[i].style.color = .secondaryInk
+        }
 
         let o = add(kind: .intersection(a: perp1, b: perp2, index: 0), label: "O", silent: true)
         let circle = add(kind: .circle(center: o, through: a), silent: true)
@@ -177,13 +199,17 @@ final class SketchModel: ObservableObject {
         openGroup = before
         body()
         openGroup = nil
-        guard before.objects != objects || before.selection != selection else { return }
+        guard before.objects != objects || before.selection != selection else {
+            return
+        }
         push(before)
     }
 
     private func push(_ snapshot: Snapshot) {
         undoStack.append(snapshot)
-        if undoStack.count > undoLimit { undoStack.removeFirst() }
+        if undoStack.count > undoLimit {
+            undoStack.removeFirst()
+        }
         redoStack.removeAll()
         // A separate action must not merge into the step that preceded it.
         lastCoalescingKey = nil
@@ -207,7 +233,9 @@ final class SketchModel: ObservableObject {
     }
 
     func undo() {
-        guard let snap = undoStack.popLast() else { return }
+        guard let snap = undoStack.popLast() else {
+            return
+        }
         redoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
@@ -216,7 +244,9 @@ final class SketchModel: ObservableObject {
     }
 
     func redo() {
-        guard let snap = redoStack.popLast() else { return }
+        guard let snap = redoStack.popLast() else {
+            return
+        }
         undoStack.append(Snapshot(objects: objects, selection: selection, action: snap.action))
         objects = snap.objects
         selection = snap.selection
@@ -228,17 +258,25 @@ final class SketchModel: ObservableObject {
     /// state the document opened in.
     func revert(toUndoDepth depth: Int) {
         let target = max(0, min(depth, undoStack.count))
-        guard target < undoStack.count else { return }
+        guard target < undoStack.count else {
+            return
+        }
         let name = target == 0 ? "Original State" : undoStack[target - 1].action
-        while undoStack.count > target { undo() }
+        while undoStack.count > target {
+            undo()
+        }
         statusMessage = "Went back to \(name)"
     }
 
     // MARK: object helpers
 
-    func index(of id: UUID) -> Int? { objects.firstIndex(where: { $0.id == id }) }
+    func index(of id: UUID) -> Int? {
+        objects.firstIndex(where: { $0.id == id })
+    }
 
-    func objectByID(_ id: UUID) -> SketchObject? { objects.first(where: { $0.id == id }) }
+    func objectByID(_ id: UUID) -> SketchObject? {
+        objects.first(where: { $0.id == id })
+    }
 
     @discardableResult
     func add(kind: ObjectKind,
@@ -287,13 +325,17 @@ final class SketchModel: ObservableObject {
         let letters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
         for letter in letters {
             let s = String(letter)
-            if !used.contains(s) { return s }
+            if !used.contains(s) {
+                return s
+            }
         }
         var i = 1
         while true {
             for letter in letters {
                 let s = "\(letter)\(i)"
-                if !used.contains(s) { return s }
+                if !used.contains(s) {
+                    return s
+                }
             }
             i += 1
         }

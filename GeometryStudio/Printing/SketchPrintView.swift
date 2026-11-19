@@ -26,7 +26,9 @@ final class SketchPrintView: NSView {
         fatalError("SketchPrintView is created in code")
     }
 
-    override var isFlipped: Bool { true }
+    override var isFlipped: Bool {
+        true
+    }
 
     override func knowsPageRange(_ range: NSRangePointer) -> Bool {
         range.pointee = NSRange(location: 1, length: 1)
@@ -43,7 +45,9 @@ final class SketchPrintView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        guard image.size.width > 0, image.size.height > 0 else { return }
+        guard image.size.width > 0, image.size.height > 0 else {
+            return
+        }
         let target = pageRect.width > 1 && pageRect.height > 1 ? pageRect : bounds
         let ratio = min(target.width / image.size.width,
                         target.height / image.size.height)

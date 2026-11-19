@@ -50,12 +50,16 @@ struct SVGExporter {
         // Fills sit under the lines, as on the canvas.
         for object in ordered where object.visible {
             guard let path = evaluator.evaluate(object.id).path,
-                  let fill = fillElement(path, style: object.style) else { continue }
+                  let fill = fillElement(path, style: object.style) else {
+                continue
+            }
             parts.append(fill)
         }
         for object in ordered where object.visible {
             guard let path = evaluator.evaluate(object.id).path,
-                  let stroke = strokeElement(path, style: object.style) else { continue }
+                  let stroke = strokeElement(path, style: object.style) else {
+                continue
+            }
             parts.append(stroke)
         }
         for object in ordered where object.visible {
@@ -82,14 +86,18 @@ struct SVGExporter {
     private func fillElement(_ path: EvalPath, style: ObjectStyle) -> String? {
         switch path {
         case .polygon(let points):
-            guard points.count >= 3 else { return nil }
+            guard points.count >= 3 else {
+                return nil
+            }
             return element("polygon", [("points", pointList(points)),
                                        ("fill", hex(style.color)),
                                        ("fill-opacity", opacity(style.fillOpacity))])
         case .circle(let center, let radius):
             let p = screen(center)
             let r = radius * settings.scale
-            guard r.isFinite, r < 200_000 else { return nil }
+            guard r.isFinite, r < 200_000 else {
+                return nil
+            }
             return element("circle", [("cx", num(p.x)), ("cy", num(p.y)), ("r", num(r)),
                                       ("fill", hex(style.color)),
                                       ("fill-opacity", opacity(style.fillOpacity * 0.7))])
@@ -106,28 +114,40 @@ struct SVGExporter {
         case .ray(let a, let b):
             let direction = (b - a).normalized()
             let end = a + direction * max(visibleRect.width, visibleRect.height) * 3
-            guard let (ca, cb) = clipLine(a, end, to: visibleRect) else { return nil }
+            guard let (ca, cb) = clipLine(a, end, to: visibleRect) else {
+                return nil
+            }
             return lineElement(ca, cb, attributes: stroke)
         case .line(let a, let b):
             let direction = (b - a).normalized()
             let far = max(visibleRect.width, visibleRect.height) * 4
             guard let (ca, cb) = clipLine(a - direction * far, b + direction * far,
-                                          to: visibleRect) else { return nil }
+                                          to: visibleRect) else {
+                return nil
+            }
             return lineElement(ca, cb, attributes: stroke)
         case .circle(let center, let radius):
             let p = screen(center)
             let r = radius * settings.scale
-            guard r.isFinite, r < 200_000 else { return nil }
+            guard r.isFinite, r < 200_000 else {
+                return nil
+            }
             return element("circle", [("cx", num(p.x)), ("cy", num(p.y)), ("r", num(r)),
                                       ("fill", "none")] + stroke)
         case .polygon(let points):
-            guard points.count >= 2 else { return nil }
+            guard points.count >= 2 else {
+                return nil
+            }
             return element("polygon", [("points", pointList(points)), ("fill", "none")] + stroke)
         case .polyline(let points):
-            guard points.count > 1 else { return nil }
+            guard points.count > 1 else {
+                return nil
+            }
             return element("polyline", [("points", pointList(points)), ("fill", "none")] + stroke)
         case .functionPlot(let expression):
-            guard let d = functionPath(expression) else { return nil }
+            guard let d = functionPath(expression) else {
+                return nil
+            }
             return element("path", [("d", d), ("fill", "none")] + stroke)
         }
     }
@@ -141,11 +161,17 @@ struct SVGExporter {
     }
 
     private func angleElement(_ object: SketchObject, result: EvalResult) -> String? {
-        guard let (a, vertex, c) = result.anglePoints else { return nil }
+        guard let (a, vertex, c) = result.anglePoints else {
+            return nil
+        }
         let start = atan2(a.y - vertex.y, a.x - vertex.x)
         var delta = atan2(c.y - vertex.y, c.x - vertex.x) - start
-        while delta > .pi { delta -= .pi * 2 }
-        while delta < -.pi { delta += .pi * 2 }
+        while delta > .pi {
+            delta -= .pi * 2
+        }
+        while delta < -.pi {
+            delta += .pi * 2
+        }
         let radius = 0.62
         var points: [Vec2] = []
         for i in 0...30 {
@@ -201,9 +227,13 @@ struct SVGExporter {
     }
 
     private func textElement(_ object: SketchObject, result: EvalResult) -> String? {
-        guard let text = result.text, !text.isEmpty, let anchor = result.anchor else { return nil }
+        guard let text = result.text, !text.isEmpty, let anchor = result.anchor else {
+            return nil
+        }
         var isCaption = false
-        if case .caption = object.kind { isCaption = true }
+        if case .caption = object.kind {
+            isCaption = true
+        }
 
         let fontSize = isCaption ? 13.0 : 12.0
         let metrics = textMetrics(text, size: fontSize, italic: isCaption)
@@ -251,10 +281,14 @@ struct SVGExporter {
     // MARK: grid and scale bar
 
     private func gridParts() -> [String] {
-        guard settings.grid || settings.axes else { return [] }
+        guard settings.grid || settings.axes else {
+            return []
+        }
         let step = GridMetrics.step(scale: settings.scale,
                                     perUnit: settings.lengthUnit.perUnit)
-        guard step > 0, step.isFinite else { return [] }
+        guard step > 0, step.isFinite else {
+            return []
+        }
         var parts: [String] = []
 
         if settings.grid {
@@ -363,10 +397,16 @@ struct SVGExporter {
     private func scaleBarElement() -> String? {
         let unit = settings.lengthUnit
         let oneUnit = settings.scale * unit.perUnit
-        guard oneUnit > 0, oneUnit.isFinite else { return nil }
+        guard oneUnit > 0, oneUnit.isFinite else {
+            return nil
+        }
         var length = oneUnit
-        while length < 46 { length *= 2 }
-        while length > 140 { length /= 2 }
+        while length < 46 {
+            length *= 2
+        }
+        while length > 140 {
+            length /= 2
+        }
         let x = 18.0
         let y = height - 20
         let d = "M \(num(x)) \(num(y)) L \(num(x + length)) \(num(y)) "
@@ -389,7 +429,9 @@ struct SVGExporter {
     // MARK: function plots
 
     private func functionPath(_ expression: String) -> String? {
-        guard var parser = Expression(expression) else { return nil }
+        guard var parser = Expression(expression) else {
+            return nil
+        }
         parser.setAngleUnit(settings.angleUnit)
         let rect = visibleRect
         let dx = 2.0 / settings.scale
@@ -415,8 +457,12 @@ struct SVGExporter {
 
     // MARK: geometry
 
-    private var width: Double { Double(size.width) }
-    private var height: Double { Double(size.height) }
+    private var width: Double {
+        Double(size.width)
+    }
+    private var height: Double {
+        Double(size.height)
+    }
 
     private var visibleRect: WorldRect {
         let topLeft = worldPoint(0, 0)
@@ -493,12 +539,16 @@ struct SVGExporter {
     }
 
     private func num(_ value: Double) -> String {
-        guard value.isFinite else { return "0" }
+        guard value.isFinite else {
+            return "0"
+        }
         return String(format: "%.2f", value)
     }
 
     private func opacity(_ value: Double) -> String {
-        guard value.isFinite else { return "0" }
+        guard value.isFinite else {
+            return "0"
+        }
         return String(format: "%.3f", min(max(value, 0), 1))
     }
 
@@ -507,7 +557,9 @@ struct SVGExporter {
     }
 
     private func channel(_ value: Double) -> Int {
-        guard value.isFinite else { return 0 }
+        guard value.isFinite else {
+            return 0
+        }
         return Int((min(max(value, 0), 1) * 255).rounded())
     }
 

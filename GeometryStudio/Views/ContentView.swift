@@ -25,7 +25,9 @@ struct ContentView: View {
     enum InspectorTab: String, CaseIterable, Identifiable {
         case object = "Object"
         case sketch = "Sketch"
-        var id: String { rawValue }
+        var id: String {
+            rawValue
+        }
     }
 
     init(model: SketchModel) {
@@ -63,12 +65,16 @@ struct ContentView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear(perform: installScrollMonitor)
         .onDisappear {
-            if let monitor = scrollMonitor { NSEvent.removeMonitor(monitor) }
+            if let monitor = scrollMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
             scrollMonitor = nil
         }
         .onExitCommand { model.cancelDraft() }
         .onReceive(animationClock) { _ in
-            if model.animationPointID != nil { model.advanceAnimation() }
+            if model.animationPointID != nil {
+                model.advanceAnimation()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openRotate)) { _ in
             showRotate = true
@@ -277,9 +283,13 @@ struct ContentView: View {
     // MARK: scroll monitor
 
     private func installScrollMonitor() {
-        guard scrollMonitor == nil else { return }
+        guard scrollMonitor == nil else {
+            return
+        }
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
-            guard model.isPointerOverCanvas else { return event }
+            guard model.isPointerOverCanvas else {
+                return event
+            }
             let dx = event.scrollingDeltaX
             let dy = event.scrollingDeltaY
             if event.modifierFlags.contains(.command) {
@@ -307,14 +317,18 @@ struct ContentView: View {
 
     private func selectedPoint() -> UUID? {
         model.selection.first { id in
-            guard let object = model.objectByID(id) else { return false }
+            guard let object = model.objectByID(id) else {
+                return false
+            }
             return model.evaluated(object.id).point != nil
         }
     }
 
     private func firstPoint() -> UUID? {
         model.objects.first { object in
-            guard object.visible else { return false }
+            guard object.visible else {
+                return false
+            }
             return model.evaluated(object.id).point != nil
         }?.id
     }
@@ -323,13 +337,17 @@ struct ContentView: View {
     /// label verbatim, as the inline forms did.
     private func rotateCenterName() -> String? {
         guard let id = selectedPoint() ?? firstPoint(),
-              let object = model.objectByID(id) else { return nil }
+              let object = model.objectByID(id) else {
+            return nil
+        }
         return object.label.isEmpty ? "Point" : object.label
     }
 
     private func dilateCenterName() -> String? {
         guard let id = selectedPoint() ?? firstPoint(),
-              let object = model.objectByID(id) else { return nil }
+              let object = model.objectByID(id) else {
+            return nil
+        }
         return object.label
     }
 }

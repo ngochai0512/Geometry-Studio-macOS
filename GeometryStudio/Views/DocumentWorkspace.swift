@@ -89,7 +89,9 @@ struct DocumentWorkspace: View {
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
         panel.nameFieldStringValue = defaultFileName
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
         write(data, to: url)
     }
 
@@ -115,7 +117,11 @@ struct DocumentWorkspace: View {
     private var recoveryNotePresented: Binding<Bool> {
         Binding(
             get: { document.recoveryNote != nil },
-            set: { if !$0 { document.recoveryNote = nil } }
+            set: { value in
+                if !value {
+                    document.recoveryNote = nil
+                }
+            }
         )
     }
 }

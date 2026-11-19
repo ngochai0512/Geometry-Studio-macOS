@@ -7,7 +7,9 @@ enum SketchExportFormat: String, CaseIterable, Identifiable {
     case svg
     case png
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var title: String {
         switch self {
@@ -17,7 +19,9 @@ enum SketchExportFormat: String, CaseIterable, Identifiable {
         }
     }
 
-    var fileExtension: String { rawValue }
+    var fileExtension: String {
+        rawValue
+    }
 
     var contentType: UTType {
         switch self {

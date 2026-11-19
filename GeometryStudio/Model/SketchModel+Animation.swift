@@ -8,13 +8,17 @@ extension SketchModel {
     /// first point-on-path parent of a selected dependent object.
     var animatablePoint: UUID? {
         for id in selection {
-            if case .pointOnPath = objectByID(id)?.kind { return id }
+            if case .pointOnPath = objectByID(id)?.kind {
+                return id
+            }
         }
         for id in selection {
             var current = objectByID(id)
             var hops = 0
             while let object = current, hops < 24 {
-                if case .pointOnPath = object.kind { return object.id }
+                if case .pointOnPath = object.kind {
+                    return object.id
+                }
                 current = parents(of: object).first.flatMap { objectByID($0) }
                 hops += 1
             }
@@ -41,17 +45,28 @@ extension SketchModel {
     /// all the way round, following the original's motion principles.
     func advanceAnimation() {
         var e = evaluator()
-        guard let id = animationPointID, let i = index(of: id),
+        guard let id = animationPointID,
+              let i = index(of: id),
               case .pointOnPath(let parent, let param) = objects[i].kind,
-              let path = e.path(parent) else { return }
+              let path = e.path(parent) else {
+            return
+        }
         var next = param
         if case .circle = path {
             next = (param + 0.022).truncatingRemainder(dividingBy: 2 * .pi)
-            if next < 0 { next += 2 * .pi }
+            if next < 0 {
+                next += 2 * .pi
+            }
         } else {
             next = param + 0.0045 * animationDirection
-            if next > 1 { next = 1; animationDirection = -1 }
-            if next < 0 { next = 0; animationDirection = 1 }
+            if next > 1 {
+                next = 1
+                animationDirection = -1
+            }
+            if next < 0 {
+                next = 0
+                animationDirection = 1
+            }
         }
         objects[i].kind = .pointOnPath(path: parent, param: next)
         recordTraceSamples()
@@ -63,10 +78,14 @@ extension SketchModel {
             return
         }
         if selection.allSatisfy({ tracedIDs.contains($0) }) {
-            for id in selection { tracedIDs.remove(id) }
+            for id in selection {
+                tracedIDs.remove(id)
+            }
             statusMessage = "Tracing off"
         } else {
-            for id in selection { tracedIDs.insert(id) }
+            for id in selection {
+                tracedIDs.insert(id)
+            }
             statusMessage = "Tracing \(selection.count) object\(selection.count == 1 ? "" : "s")"
         }
     }
@@ -77,15 +96,21 @@ extension SketchModel {
     }
 
     func recordTraceSamples() {
-        guard !tracedIDs.isEmpty else { return }
+        guard !tracedIDs.isEmpty else {
+            return
+        }
         var e = evaluator()
         for id in tracedIDs {
-            guard let p = e.evaluate(id).point else { continue }
+            guard let p = e.evaluate(id).point else {
+                continue
+            }
             var points = tracePaths[id] ?? []
             if points.last?.distance(to: p) ?? .greatestFiniteMagnitude > 0.004 {
                 points.append(p)
             }
-            if points.count > 800 { points.removeFirst(points.count - 800) }
+            if points.count > 800 {
+                points.removeFirst(points.count - 800)
+            }
             tracePaths[id] = points
         }
     }
@@ -95,7 +120,9 @@ extension SketchModel {
     func constructLocus() {
         let chosen = selection.compactMap { objectByID($0) }
         guard let driver = chosen.first(where: {
-            if case .pointOnPath = $0.kind { return true }
+            if case .pointOnPath = $0.kind {
+                return true
+            }
             return false
         }) else {
             statusMessage = "A locus needs a point on a path plus the point it drives"

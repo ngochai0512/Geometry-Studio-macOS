@@ -2,9 +2,15 @@ import Foundation
 
 enum LengthUnit: String, Codable, CaseIterable, Identifiable {
     case cm, inches, pixels
-    var id: String { rawValue }
-    var name: String { self == .cm ? "Centimeters" : self == .inches ? "Inches" : "Pixels" }
-    var short: String { self == .cm ? "cm" : self == .inches ? "in" : "px" }
+    var id: String {
+        rawValue
+    }
+    var name: String {
+        self == .cm ? "Centimeters" : self == .inches ? "Inches" : "Pixels"
+    }
+    var short: String {
+        self == .cm ? "cm" : self == .inches ? "in" : "px"
+    }
 
     /// The original keeps canvases in screen points and converts for display:
     /// `routine` builds the factor table `[1, 72 / 2.54, 72]` for the three
@@ -32,7 +38,9 @@ enum SketchMetrics {
 
 enum AngleUnit: String, Codable, CaseIterable, Identifiable {
     case degrees, directedDegrees, radians
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
     var name: String {
         switch self {
         case .degrees: return "Degrees"
@@ -40,5 +48,7 @@ enum AngleUnit: String, Codable, CaseIterable, Identifiable {
         case .radians: return "Radians"
         }
     }
-    var short: String { self == .radians ? "rad" : "°" }
+    var short: String {
+        self == .radians ? "rad" : "°"
+    }
 }

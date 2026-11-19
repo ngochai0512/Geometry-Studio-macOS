@@ -73,7 +73,9 @@ extension InspectorView {
         Binding(
             get: { model.objectByID(id)?.label ?? "" },
             set: { value in
-                guard let i = model.index(of: id) else { return }
+                guard let i = model.index(of: id) else {
+                    return
+                }
                 model.checkpoint("Edit Label", coalescing: "label-\(id)")
                 model.objects[i].label = value
             }
@@ -83,11 +85,15 @@ extension InspectorView {
     func captionBinding(_ id: UUID) -> Binding<String> {
         Binding(
             get: {
-                if let object = model.objectByID(id), case .caption(let text) = object.kind { return text }
+                if let object = model.objectByID(id), case .caption(let text) = object.kind {
+                    return text
+                }
                 return ""
             },
             set: { value in
-                guard let i = model.index(of: id) else { return }
+                guard let i = model.index(of: id) else {
+                    return
+                }
                 if case .caption = model.objects[i].kind {
                     model.checkpoint("Edit Text", coalescing: "caption-\(id)")
                     model.objects[i].kind = .caption(value)
@@ -100,7 +106,9 @@ extension InspectorView {
         Binding(
             get: { model.objectByID(id)?.showLabel ?? true },
             set: { value in
-                guard let i = model.index(of: id) else { return }
+                guard let i = model.index(of: id) else {
+                    return
+                }
                 model.checkpoint(value ? "Show Label" : "Hide Label")
                 model.objects[i].showLabel = value
             }
@@ -111,7 +119,9 @@ extension InspectorView {
         Binding(
             get: { model.objectByID(id)?.visible ?? true },
             set: { value in
-                guard let i = model.index(of: id) else { return }
+                guard let i = model.index(of: id) else {
+                    return
+                }
                 model.checkpoint(value ? "Show Object" : "Hide Object")
                 model.objects[i].visible = value
             }
@@ -152,14 +162,22 @@ extension InspectorView {
     var dashBinding: Binding<DashStyle> {
         Binding(
             get: { model.selectedObjects.first?.style.dash ?? .solid },
-            set: { value in applyToSelection("Change Dash") { $0.style.dash = value } }
+            set: { value in
+            applyToSelection("Change Dash") {
+                $0.style.dash = value
+            }
+        }
         )
     }
 
     var pointShapeBinding: Binding<PointShape> {
         Binding(
             get: { model.selectedObjects.first?.style.pointShape ?? .filled },
-            set: { value in applyToSelection("Change Point Shape") { $0.style.pointShape = value } }
+            set: { value in
+            applyToSelection("Change Point Shape") {
+                $0.style.pointShape = value
+            }
+        }
         )
     }
 
@@ -207,7 +225,9 @@ extension InspectorView {
 
     func applyToSelection(_ name: String, coalescing key: String? = nil,
                           _ change: (inout SketchObject) -> Void) {
-        guard !model.selection.isEmpty else { return }
+        guard !model.selection.isEmpty else {
+            return
+        }
         model.checkpoint(name, coalescing: key)
         for id in model.selection {
             if let i = model.index(of: id) {

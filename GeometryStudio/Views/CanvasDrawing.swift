@@ -15,13 +15,19 @@ extension SketchCanvas {
 
         // Fills first: polygons and circles sit under the lines.
         for object in ordered where object.visible {
-            guard let path = e.evaluate(object.id).path else { continue }
+            guard let path = e.evaluate(object.id).path else {
+                continue
+            }
             switch path {
             case .polygon(let pts):
-                guard pts.count >= 3 else { continue }
+                guard pts.count >= 3 else {
+                    continue
+                }
                 var p = Path()
                 p.move(to: model.screenPoint(pts[0], size: size))
-                for pt in pts.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
+                for pt in pts.dropFirst() {
+                    p.addLine(to: model.screenPoint(pt, size: size))
+                }
                 p.closeSubpath()
                 context.fill(p, with: .color(object.style.color.color.opacity(object.style.fillOpacity)))
             case .circle(let c, let r):
@@ -36,7 +42,9 @@ extension SketchCanvas {
 
         // Paths.
         for object in ordered where object.visible {
-            guard let path = e.evaluate(object.id).path else { continue }
+            guard let path = e.evaluate(object.id).path else {
+                continue
+            }
             let selected = model.isSelected(object.id)
             if selected {
                 stroke(path: path, style: object.style, selected: false, glow: true,
@@ -62,17 +70,23 @@ extension SketchCanvas {
 
     private func drawTraces(context: inout GraphicsContext, size: CGSize) {
         for (id, points) in model.tracePaths where points.count > 1 {
-            guard let object = model.objectByID(id), object.visible else { continue }
+            guard let object = model.objectByID(id), object.visible else {
+                continue
+            }
             var p = Path()
             p.move(to: model.screenPoint(points[0], size: size))
-            for pt in points.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
+            for pt in points.dropFirst() {
+                p.addLine(to: model.screenPoint(pt, size: size))
+            }
             context.stroke(p, with: .color(object.style.color.color.opacity(0.5)),
                            style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
         }
     }
 
     private func drawGrid(context: inout GraphicsContext, size: CGSize, rect: WorldRect) {
-        guard model.settings.grid || model.settings.axes else { return }
+        guard model.settings.grid || model.settings.axes else {
+            return
+        }
         let scale = model.settings.scale
         // Labels are in the chosen distance unit; the sketch stores world
         // centimetres, so the step converts through the display unit.
@@ -210,24 +224,34 @@ extension SketchCanvas {
         case .circle(let c, let r):
             let center = model.screenPoint(c, size: size)
             let rr = r * model.settings.scale
-            guard rr.isFinite, rr < 200_000 else { return }
+            guard rr.isFinite, rr < 200_000 else {
+                return
+            }
             let box = CGRect(x: center.x - rr, y: center.y - rr, width: rr * 2, height: rr * 2)
             context.stroke(Path(ellipseIn: box),
                            with: .color(color.opacity(glow ? 0.22 : 1)), style: strokeStyle)
 
         case .polygon(let pts):
-            guard pts.count >= 2 else { return }
+            guard pts.count >= 2 else {
+                return
+            }
             var p = Path()
             p.move(to: model.screenPoint(pts[0], size: size))
-            for pt in pts.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
+            for pt in pts.dropFirst() {
+                p.addLine(to: model.screenPoint(pt, size: size))
+            }
             p.closeSubpath()
             context.stroke(p, with: .color(color.opacity(glow ? 0.22 : 1)), style: strokeStyle)
 
         case .polyline(let pts):
-            guard pts.count > 1 else { break }
+            guard pts.count > 1 else {
+                break
+            }
             var p = Path()
             p.move(to: model.screenPoint(pts[0], size: size))
-            for pt in pts.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
+            for pt in pts.dropFirst() {
+                p.addLine(to: model.screenPoint(pt, size: size))
+            }
             context.stroke(p, with: .color(color.opacity(glow ? 0.18 : 1)), style: strokeStyle)
 
         case .functionPlot(let expression):
@@ -240,7 +264,9 @@ extension SketchCanvas {
                               context: inout GraphicsContext, size: CGSize, rect: WorldRect) {
         var parser = Expression(expression)
         parser?.setAngleUnit(model.settings.angleUnit)
-        guard var p = parser else { return }
+        guard var p = parser else {
+            return
+        }
         let stepPx = 2.0
         let dx = stepPx / model.settings.scale
         var x = rect.minX
@@ -252,7 +278,8 @@ extension SketchCanvas {
                 let pt = model.screenPoint(Vec2(x, y), size: size)
                 if pt.y > -size.height * 2 && pt.y < size.height * 3 {
                     if !began {
-                        path.move(to: pt); began = true
+                        path.move(to: pt)
+                        began = true
                     } else {
                         path.addLine(to: pt)
                     }
@@ -265,7 +292,9 @@ extension SketchCanvas {
             x += dx
         }
         current = path
-        guard let final = current else { return }
+        guard let final = current else {
+            return
+        }
         let color = glow ? accent : (selected ? accent : style.color.color)
         context.stroke(final, with: .color(color.opacity(glow ? 0.2 : 1)),
                        style: StrokeStyle(lineWidth: glow ? style.lineWidth + 4 : style.lineWidth,
@@ -276,11 +305,17 @@ extension SketchCanvas {
         let ordered = model.objects.sorted { $0.order < $1.order }
         for object in ordered where object.visible {
             let result = evaluator.evaluate(object.id)
-            guard let (a, v, c) = result.anglePoints else { continue }
+            guard let (a, v, c) = result.anglePoints else {
+                continue
+            }
             let start = atan2(a.y - v.y, a.x - v.x)
             var delta = atan2(c.y - v.y, c.x - v.x) - start
-            while delta > .pi { delta -= .pi * 2 }
-            while delta < -.pi { delta += .pi * 2 }
+            while delta > .pi {
+                delta -= .pi * 2
+            }
+            while delta < -.pi {
+                delta += .pi * 2
+            }
             let radius = 0.62
             var arc = Path()
             for i in 0...30 {
@@ -288,7 +323,11 @@ extension SketchCanvas {
                 let angle = start + delta * t
                 let point = v + Vec2(cos(angle), sin(angle)) * radius
                 let screen = model.screenPoint(point, size: size)
-                if i == 0 { arc.move(to: screen) } else { arc.addLine(to: screen) }
+                if i == 0 {
+                    arc.move(to: screen)
+                } else {
+                    arc.addLine(to: screen)
+                }
             }
             let selected = model.isSelected(object.id)
             let color = selected ? accent : object.style.color.color
@@ -300,7 +339,9 @@ extension SketchCanvas {
     private func drawPoints(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
         let ordered = model.objects.sorted { $0.order < $1.order }
         for object in ordered where object.visible {
-            guard let p = evaluator.evaluate(object.id).point else { continue }
+            guard let p = evaluator.evaluate(object.id).point else {
+                continue
+            }
             let s = model.screenPoint(p, size: size)
             let selected = model.isSelected(object.id)
             let r = object.style.pointSize
@@ -351,18 +392,28 @@ extension SketchCanvas {
         let ordered = model.objects.sorted { $0.order < $1.order }
         for object in ordered where object.visible {
             let r = evaluator.evaluate(object.id)
-            guard let text = r.text, let anchor = r.anchor else { continue }
+            guard let text = r.text, let anchor = r.anchor else {
+                continue
+            }
             let selected = model.isSelected(object.id)
             let isCaption = {
-                if case .caption = object.kind { return true }
+                if case .caption = object.kind {
+                    return true
+                }
                 return false
             }()
 
             let style: Font.TextStyle = isCaption ? .body : .callout
             var font = Font.system(style, design: .rounded, weight: .medium)
-            if case .caption = object.kind { font = font.italic() }
+            if case .caption = object.kind {
+                font = font.italic()
+            }
             let fg = selected ? accent : (isCaption ? secondaryInk : object.style.color.color)
-            let resolved = context.resolve(Text(text).font(font).foregroundStyle(fg))
+            let resolved = context.resolve(
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(fg)
+            )
             let measured = resolved.measure(in: CGSize(width: 800, height: 200))
             let padX: CGFloat = isCaption ? 7 : 7
             let padY: CGFloat = isCaption ? 4 : 4
@@ -387,13 +438,19 @@ extension SketchCanvas {
     }
 
     private func drawDraft(context: inout GraphicsContext, size: CGSize) {
-        guard !model.draft.isEmpty else { return }
+        guard !model.draft.isEmpty else {
+            return
+        }
         var e = model.evaluator()
         let pts = model.draft.compactMap { e.evaluate($0).point }
-        guard !pts.isEmpty else { return }
+        guard !pts.isEmpty else {
+            return
+        }
         var p = Path()
         p.move(to: model.screenPoint(pts[0], size: size))
-        for pt in pts.dropFirst() { p.addLine(to: model.screenPoint(pt, size: size)) }
+        for pt in pts.dropFirst() {
+            p.addLine(to: model.screenPoint(pt, size: size))
+        }
         if let hover = model.hoverWorld {
             p.addLine(to: model.screenPoint(hover, size: size))
         }
@@ -412,7 +469,9 @@ extension SketchCanvas {
         if pts.count >= 3 && model.tool == .polygon {
             var fill = Path()
             fill.move(to: model.screenPoint(pts[0], size: size))
-            for pt in pts.dropFirst() { fill.addLine(to: model.screenPoint(pt, size: size)) }
+            for pt in pts.dropFirst() {
+                fill.addLine(to: model.screenPoint(pt, size: size))
+            }
             fill.closeSubpath()
             context.fill(fill, with: .color(accent.opacity(0.07)))
         }
@@ -425,8 +484,12 @@ extension SketchCanvas {
         let oneUnit = scale * unit.perUnit
         let target = oneUnit
         var length = target
-        while length < 46 { length *= 2 }
-        while length > 140 { length /= 2 }
+        while length < 46 {
+            length *= 2
+        }
+        while length > 140 {
+            length /= 2
+        }
         let x: CGFloat = 18
         let y = size.height - 20
         var p = Path()

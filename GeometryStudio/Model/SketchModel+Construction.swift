@@ -21,7 +21,9 @@ extension SketchModel {
     func selectedStraights() -> [UUID] {
         selectedObjects.filter { object in
             var e = evaluator()
-            guard let p = e.evaluate(object.id).path?.straight else { return false }
+            guard let p = e.evaluate(object.id).path?.straight else {
+                return false
+            }
             _ = p
             return true
         }.map(\.id)
@@ -94,7 +96,9 @@ extension SketchModel {
             return
         }
         var e = evaluator()
-        guard let p1 = e.path(paths[0]), let p2 = e.path(paths[1]) else { return }
+        guard let p1 = e.path(paths[0]), let p2 = e.path(paths[1]) else {
+            return
+        }
         let hits = p1.intersections(with: p2)
         guard !hits.isEmpty else {
             statusMessage = "Those objects do not meet"
@@ -156,7 +160,9 @@ extension SketchModel {
         }
         _ = object
         var e = evaluator()
-        guard let path = e.path(id) else { return }
+        guard let path = e.path(id) else {
+            return
+        }
         let worldCenter = settings.center
         checkpoint("Construct Point on Path")
         let newID = commit(kind: .pointOnPath(path: id, param: path.nearestParam(to: worldCenter)),
@@ -166,7 +172,9 @@ extension SketchModel {
     }
 
     func ensureSilentPoint(at p: Vec2) -> UUID {
-        if let id = existingPoint(near: p, tolerance: 0.04) { return id }
+        if let id = existingPoint(near: p, tolerance: 0.04) {
+            return id
+        }
         var object = SketchObject(kind: .freePoint)
         object.position = p
         object.label = nextPointLabel()
@@ -183,7 +191,6 @@ extension SketchModel {
         objects.append(object)
         return object.id
     }
-
 
     // MARK: graph
 

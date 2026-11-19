@@ -3,7 +3,9 @@ import Testing
 
 /// Distance comparisons use the dedupe threshold already used by `EvalPath`.
 private func near(_ a: Vec2?, _ b: Vec2, tolerance: Double = 1e-7) -> Bool {
-    guard let a else { return false }
+    guard let a else {
+        return false
+    }
     return a.distance(to: b) <= tolerance
 }
 

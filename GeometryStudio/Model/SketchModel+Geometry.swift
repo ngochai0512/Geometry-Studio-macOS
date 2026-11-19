@@ -47,10 +47,13 @@ extension SketchModel {
         var pts: [Vec2] = []
         for object in objects where object.visible {
             let r = e.evaluate(object.id)
-            if let p = r.point { pts.append(p) }
+            if let p = r.point {
+                pts.append(p)
+            }
             if let b = r.path?.boundingBox {
                 if b.width.isFinite && b.height.isFinite && b.width < 1_000 && b.height < 1_000 {
-                    pts.append(Vec2(b.minX, b.minY)); pts.append(Vec2(b.maxX, b.maxY))
+                    pts.append(Vec2(b.minX, b.minY))
+                    pts.append(Vec2(b.maxX, b.maxY))
                 }
             }
         }
@@ -61,8 +64,10 @@ extension SketchModel {
         }
         var box = WorldRect(minX: pts[0].x, minY: pts[0].y, maxX: pts[0].x, maxY: pts[0].y)
         for p in pts {
-            box.minX = min(box.minX, p.x); box.maxX = max(box.maxX, p.x)
-            box.minY = min(box.minY, p.y); box.maxY = max(box.maxY, p.y)
+            box.minX = min(box.minX, p.x)
+            box.maxX = max(box.maxX, p.x)
+            box.minY = min(box.minY, p.y)
+            box.maxY = max(box.maxY, p.y)
         }
         let w = max(box.width, 2), h = max(box.height, 2)
         settings.center = box.center
@@ -80,11 +85,15 @@ extension SketchModel {
             if let pt = e.evaluate(object.id).point {
                 let d = pt.distance(to: p)
                 if d <= tol + 0.04 {
-                    if best == nil || d < best!.1 { best = (object.id, d) }
+                    if best == nil || d < best!.1 {
+                        best = (object.id, d)
+                    }
                 }
             }
         }
-        if let best { return best.0 }
+        if let best {
+            return best.0
+        }
         // Paths.
         for object in objects.reversed() where object.visible {
             if case .functionPlot(let expression) = object.kind {
@@ -97,16 +106,22 @@ extension SketchModel {
                 continue
             }
             if let path = e.evaluate(object.id).path {
-                if path.distance(to: p) <= tol { return object.id }
+                if path.distance(to: p) <= tol {
+                    return object.id
+                }
                 // A polygon interior is a target too. routine uses the
                 // winding-number rule for polygon hit testing.
-                if path.contains(p) { return object.id }
+                if path.contains(p) {
+                    return object.id
+                }
             }
         }
         // Measurement / caption boxes.
         for object in objects.reversed() where object.visible {
             let r = e.evaluate(object.id)
-            guard let text = r.text, let anchor = r.anchor else { continue }
+            guard let text = r.text, let anchor = r.anchor else {
+                continue
+            }
             if textBounds(text: text, anchor: anchor).inset(-0.1).contains(p) {
                 return object.id
             }

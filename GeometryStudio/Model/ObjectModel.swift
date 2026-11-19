@@ -5,7 +5,9 @@ import Foundation
 enum MeasureKind: String, Codable, CaseIterable, Identifiable {
     case distance, length, perimeter, circumference, angle, area, radius, ratio,
          coordinates, equation, slope
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
     var title: String {
         switch self {
         case .distance: return "Distance"
@@ -25,8 +27,12 @@ enum MeasureKind: String, Codable, CaseIterable, Identifiable {
 
 enum TransformKind: String, Codable, CaseIterable, Identifiable {
     case reflect, rotate, translate, dilate
-    var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var id: String {
+        rawValue
+    }
+    var title: String {
+        rawValue.capitalized
+    }
 }
 
 struct TransformSpec: Codable, Hashable {

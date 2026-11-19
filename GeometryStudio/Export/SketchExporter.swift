@@ -11,7 +11,9 @@ enum SketchExporter {
         panel.isExtensionHidden = false
         panel.nameFieldStringValue = "\(fileName(for: model)).\(format.fileExtension)"
 
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
 
         guard let data = data(for: format, model: model) else {
             model.statusMessage = "Could not prepare the \(format.title) export"

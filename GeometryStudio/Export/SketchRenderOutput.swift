@@ -40,7 +40,9 @@ enum SketchRenderOutput {
 
     static func image(for document: SketchDocument, fitting size: CGSize,
                       scale: CGFloat = SketchExportMetrics.rasterScale) -> NSImage? {
-        guard let cgImage = cgImage(for: document, fitting: size, scale: scale) else { return nil }
+        guard let cgImage = cgImage(for: document, fitting: size, scale: scale) else {
+            return nil
+        }
         return NSImage(cgImage: cgImage, size: size)
     }
 
@@ -52,9 +54,13 @@ enum SketchRenderOutput {
         var data: Data?
         renderer.render { _, draw in
             let output = NSMutableData()
-            guard let consumer = CGDataConsumer(data: output as CFMutableData) else { return }
+            guard let consumer = CGDataConsumer(data: output as CFMutableData) else {
+                return
+            }
             var mediaBox = CGRect(origin: .zero, size: size)
-            guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else { return }
+            guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
+                return
+            }
             context.beginPDFPage(nil)
             draw(context)
             context.endPDFPage()
@@ -66,7 +72,9 @@ enum SketchRenderOutput {
 
     static func png(for document: SketchDocument, fitting size: CGSize,
                     scale: CGFloat = SketchExportMetrics.rasterScale) -> Data? {
-        guard let cgImage = cgImage(for: document, fitting: size, scale: scale) else { return nil }
+        guard let cgImage = cgImage(for: document, fitting: size, scale: scale) else {
+            return nil
+        }
         let rep = NSBitmapImageRep(cgImage: cgImage)
         return rep.representation(using: .png, properties: [:])
     }

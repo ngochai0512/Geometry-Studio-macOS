@@ -10,11 +10,18 @@ struct RGBA: Codable, Hashable {
     var a: Double
 
     init(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) {
-        self.r = r; self.g = g; self.b = b; self.a = a
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
     }
 
-    var color: Color { Color(red: r, green: g, blue: b).opacity(a) }
-    var nsColor: NSColor { NSColor(srgbRed: r, green: g, blue: b, alpha: a) }
+    var color: Color {
+        Color(red: r, green: g, blue: b).opacity(a)
+    }
+    var nsColor: NSColor {
+        NSColor(srgbRed: r, green: g, blue: b, alpha: a)
+    }
 
     static let ink = RGBA(0.12, 0.13, 0.16)
     static let secondaryInk = RGBA(0.35, 0.37, 0.42)
@@ -38,14 +45,22 @@ struct RGBA: Codable, Hashable {
 
 enum DashStyle: String, Codable, CaseIterable, Identifiable {
     case solid, dashed, dotted
-    var id: String { rawValue }
-    var name: String { rawValue.capitalized }
+    var id: String {
+        rawValue
+    }
+    var name: String {
+        rawValue.capitalized
+    }
 }
 
 enum PointShape: String, Codable, CaseIterable, Identifiable {
     case filled, hollow, square, cross
-    var id: String { rawValue }
-    var name: String { rawValue.capitalized }
+    var id: String {
+        rawValue
+    }
+    var name: String {
+        rawValue.capitalized
+    }
 }
 
 struct ObjectStyle: Codable, Hashable {

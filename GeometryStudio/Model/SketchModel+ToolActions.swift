@@ -11,7 +11,9 @@ extension SketchModel {
             if let pt = e.evaluate(object.id).point {
                 let d = pt.distance(to: p)
                 if d <= max(tolerance, 0.05) {
-                    if best == nil || d < best!.1 { best = (object.id, d) }
+                    if best == nil || d < best!.1 {
+                        best = (object.id, d)
+                    }
                 }
             }
         }
@@ -19,7 +21,9 @@ extension SketchModel {
     }
 
     func ensurePoint(at p: Vec2, tolerance: Double) -> UUID {
-        if let existing = existingPoint(near: p, tolerance: tolerance) { return existing }
+        if let existing = existingPoint(near: p, tolerance: tolerance) {
+            return existing
+        }
         // Attach to a path when the click is close to one.
         var e = evaluator()
         var bestPath: (UUID, Double)?
@@ -27,7 +31,9 @@ extension SketchModel {
             if let path = e.evaluate(object.id).path {
                 let d = path.distance(to: p)
                 if d <= max(tolerance, 0.05) {
-                    if bestPath == nil || d < bestPath!.1 { bestPath = (object.id, d) }
+                    if bestPath == nil || d < bestPath!.1 {
+                        bestPath = (object.id, d)
+                    }
                 }
             }
         }
@@ -106,7 +112,9 @@ extension SketchModel {
                 let center = draft[0]
                 perform("Draw Circle") {
                     let id = ensurePoint(at: p, tolerance: tolerance)
-                    guard id != center else { return }
+                    guard id != center else {
+                        return
+                    }
                     var object = SketchObject(kind: .circle(center: center, through: id))
                     object.order = (objects.map(\.order).max() ?? 0) + 1
                     objects.append(object)
@@ -122,7 +130,9 @@ extension SketchModel {
                 finishPolygon()
                 return
             }
-            if !draft.contains(id) { draft.append(id) }
+            if !draft.contains(id) {
+                draft.append(id)
+            }
             selection = draft
             statusMessage = draft.count >= 3 ? "Press Return to close the polygon" : "Click more vertices"
 
@@ -141,7 +151,9 @@ extension SketchModel {
                 }
                 perform("Mark Angle") {
                     let id = ensurePoint(at: p, tolerance: tolerance)
-                    if id == draft[0] || id == draft[1] { return }
+                    if id == draft[0] || id == draft[1] {
+                        return
+                    }
                     draft.append(id)
                     var object = SketchObject(kind: .angle(a: draft[0], vertex: draft[1], c: draft[2]))
                     object.label = "m∠\(objectByID(draft[0])?.label ?? "")\(objectByID(draft[1])?.label ?? "")\(objectByID(draft[2])?.label ?? "")"

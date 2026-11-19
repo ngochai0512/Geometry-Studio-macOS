@@ -2,7 +2,9 @@ import SwiftUI
 
 enum SketchTool: String, CaseIterable, Identifiable {
     case select, point, segment, ray, line, circle, polygon, angle, text
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
     var title: String {
         switch self {
         case .select: return "Select"

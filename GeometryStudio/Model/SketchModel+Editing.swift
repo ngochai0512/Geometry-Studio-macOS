@@ -4,24 +4,35 @@ extension SketchModel {
 
     // MARK: selection
 
-    func isSelected(_ id: UUID) -> Bool { selection.contains(id) }
+    func isSelected(_ id: UUID) -> Bool {
+        selection.contains(id)
+    }
 
     func select(_ id: UUID, additive: Bool = false) {
         if additive {
-            if let i = selection.firstIndex(of: id) { selection.remove(at: i) }
-            else { selection.append(id) }
+            if let i = selection.firstIndex(of: id) {
+                selection.remove(at: i)
+            } else {
+                selection.append(id)
+            }
         } else {
             selection = [id]
         }
         statusMessage = ""
     }
 
-    func clearSelection() { selection = [] }
+    func clearSelection() {
+        selection = []
+    }
 
-    func selectAll() { selection = objects.filter(\.visible).map(\.id) }
+    func selectAll() {
+        selection = objects.filter(\.visible).map(\.id)
+    }
 
     func deleteSelection() {
-        guard !selection.isEmpty else { return }
+        guard !selection.isEmpty else {
+            return
+        }
         checkpoint(selection.count == 1 ? "Delete Object" : "Delete \(selection.count) Objects")
         var doomed = Set(selection)
         var changed = true
@@ -29,7 +40,8 @@ extension SketchModel {
             changed = false
             for object in objects where !doomed.contains(object.id) {
                 if parents(of: object).contains(where: { doomed.contains($0) }) {
-                    doomed.insert(object.id); changed = true
+                    doomed.insert(object.id)
+                    changed = true
                 }
             }
         }
@@ -54,18 +66,26 @@ extension SketchModel {
         case .measurement(_, let refs): return refs
         case .transformed(let s, let spec):
             var out = [s]
-            if let r = spec.reference { out.append(r) }
-            if let r = spec.secondReference { out.append(r) }
+            if let r = spec.reference {
+                out.append(r)
+            }
+            if let r = spec.secondReference {
+                out.append(r)
+            }
             return out
         case .locus(let driver, let target): return [driver, target]
         }
     }
 
     func hideSelection() {
-        guard !selection.isEmpty else { return }
+        guard !selection.isEmpty else {
+            return
+        }
         checkpoint(selection.count == 1 ? "Hide Object" : "Hide \(selection.count) Objects")
         for id in selection {
-            if let i = index(of: id) { objects[i].visible = false }
+            if let i = index(of: id) {
+                objects[i].visible = false
+            }
         }
         selection = []
         statusMessage = "Objects hidden"
@@ -73,15 +93,21 @@ extension SketchModel {
 
     func showAll() {
         checkpoint("Show All Objects")
-        for i in objects.indices { objects[i].visible = true }
+        for i in objects.indices {
+            objects[i].visible = true
+        }
         statusMessage = "All hidden objects are visible again"
     }
 
     func toggleLabels(for ids: [UUID]) {
-        guard !ids.isEmpty else { return }
+        guard !ids.isEmpty else {
+            return
+        }
         checkpoint("Toggle Labels")
         for id in ids {
-            if let i = index(of: id) { objects[i].showLabel.toggle() }
+            if let i = index(of: id) {
+                objects[i].showLabel.toggle()
+            }
         }
     }
 
@@ -92,7 +118,9 @@ extension SketchModel {
     // MARK: drag
 
     func beginDrag(at p: Vec2, tolerance: Double) -> UUID? {
-        guard let hit = hitTest(p, tolerance: tolerance), let object = objectByID(hit) else { return nil }
+        guard let hit = hitTest(p, tolerance: tolerance), let object = objectByID(hit) else {
+            return nil
+        }
         switch object.kind {
         case .freePoint, .pointOnPath:
             return hit
@@ -102,7 +130,9 @@ extension SketchModel {
     }
 
     func dragPoint(_ id: UUID, to p: Vec2) {
-        guard let i = index(of: id) else { return }
+        guard let i = index(of: id) else {
+            return
+        }
         switch objects[i].kind {
         case .freePoint:
             if settings.snap {
@@ -113,7 +143,9 @@ extension SketchModel {
             }
         case .pointOnPath(let parent, let oldParam):
             var e = evaluator()
-            guard let path = e.path(parent) else { return }
+            guard let path = e.path(parent) else {
+                return
+            }
             var target = p
             if settings.snap, case .circle(let c, _) = path {
                 let a = atan2(target.y - c.y, target.x - c.x)
@@ -145,7 +177,9 @@ extension SketchModel {
     }
 
     func translateObject(_ id: UUID, by delta: Vec2) {
-        guard let i = index(of: id) else { return }
+        guard let i = index(of: id) else {
+            return
+        }
         switch objects[i].kind {
         case .freePoint, .caption:
             objects[i].position = (objects[i].position ?? .zero) + delta
@@ -157,17 +191,23 @@ extension SketchModel {
     }
 
     func setLabelOffset(_ id: UUID, _ offset: Vec2) {
-        guard let i = index(of: id) else { return }
+        guard let i = index(of: id) else {
+            return
+        }
         objects[i].offset = offset
     }
 
     func setCaptionPosition(_ id: UUID, _ position: Vec2) {
-        guard let i = index(of: id) else { return }
+        guard let i = index(of: id) else {
+            return
+        }
         objects[i].position = position
     }
 
     func setCaptionText(_ id: UUID, _ text: String) {
-        guard let i = index(of: id) else { return }
+        guard let i = index(of: id) else {
+            return
+        }
         if case .caption = objects[i].kind {
             checkpoint("Edit Text")
             objects[i].kind = .caption(text)
@@ -175,7 +215,9 @@ extension SketchModel {
     }
 
     func moveLabel(_ id: UUID, by delta: Vec2) {
-        guard let i = index(of: id) else { return }
+        guard let i = index(of: id) else {
+            return
+        }
         if case .measurement = objects[i].kind {
             objects[i].offset = objects[i].offset + delta
         } else if case .calculation = objects[i].kind {

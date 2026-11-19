@@ -34,11 +34,17 @@ enum EvalPath {
         case .circle(let c, let r):
             return c + Vec2(cos(param), sin(param)) * r
         case .polygon(let pts):
-            guard pts.count > 1 else { return pts.first }
+            guard pts.count > 1 else {
+                return pts.first
+            }
             let total = polygonLength(pts)
-            guard total > 1e-12 else { return pts.first }
+            guard total > 1e-12 else {
+                return pts.first
+            }
             var remaining = param.truncatingRemainder(dividingBy: 1)
-            if remaining < 0 { remaining += 1 }
+            if remaining < 0 {
+                remaining += 1
+            }
             var target = remaining * total
             for i in 0..<pts.count {
                 let a = pts[i]
@@ -51,9 +57,13 @@ enum EvalPath {
             }
             return pts.first
         case .polyline(let pts):
-            guard pts.count > 1 else { return pts.first }
+            guard pts.count > 1 else {
+                return pts.first
+            }
             let total = polygonLength(pts)
-            guard total > 1e-12 else { return pts.first }
+            guard total > 1e-12 else {
+                return pts.first
+            }
             let target = min(max(param, 0), 1) * total
             var walked = 0.0
             for i in 0..<(pts.count - 1) {
@@ -76,7 +86,9 @@ enum EvalPath {
         case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
             let d = b - a
             let denom = d.dot(d)
-            guard denom > 1e-12 else { return 0 }
+            guard denom > 1e-12 else {
+                return 0
+            }
             var t = (p - a).dot(d) / denom
             switch self {
             case .segment: t = min(max(t, 0), 1)
@@ -86,12 +98,18 @@ enum EvalPath {
             return t
         case .circle(let c, _):
             var a = (p - c).angle
-            if a < 0 { a += .pi * 2 }
+            if a < 0 {
+                a += .pi * 2
+            }
             return a
         case .polygon(let pts):
-            guard pts.count > 1 else { return 0 }
+            guard pts.count > 1 else {
+                return 0
+            }
             let total = polygonLength(pts)
-            guard total > 1e-12 else { return 0 }
+            guard total > 1e-12 else {
+                return 0
+            }
             var best = 0.0
             var bestDist = Double.greatestFiniteMagnitude
             var walked = 0.0
@@ -113,9 +131,13 @@ enum EvalPath {
             }
             return best
         case .polyline(let pts):
-            guard pts.count > 1 else { return 0 }
+            guard pts.count > 1 else {
+                return 0
+            }
             let total = polygonLength(pts)
-            guard total > 1e-12 else { return 0 }
+            guard total > 1e-12 else {
+                return 0
+            }
             var best = 0.0
             var bestDist = Double.greatestFiniteMagnitude
             var walked = 0.0
@@ -145,7 +167,9 @@ enum EvalPath {
         case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
             let d = b - a
             let denom = d.dot(d)
-            if denom < 1e-12 { return p.distance(to: a) }
+            if denom < 1e-12 {
+                return p.distance(to: a)
+            }
             var t = (p - a).dot(d) / denom
             switch self {
             case .segment: t = min(max(t, 0), 1)
@@ -156,7 +180,9 @@ enum EvalPath {
         case .circle(let c, let r):
             return abs(p.distance(to: c) - r)
         case .polygon(let pts):
-            guard pts.count > 1 else { return pts.first?.distance(to: p) ?? .infinity }
+            guard pts.count > 1 else {
+                return pts.first?.distance(to: p) ?? .infinity
+            }
             var best = Double.greatestFiniteMagnitude
             for i in 0..<pts.count {
                 let seg = EvalPath.segment(pts[i], pts[(i + 1) % pts.count])
@@ -164,7 +190,9 @@ enum EvalPath {
             }
             return best
         case .polyline(let pts):
-            guard pts.count > 1 else { return pts.first?.distance(to: p) ?? .infinity }
+            guard pts.count > 1 else {
+                return pts.first?.distance(to: p) ?? .infinity
+            }
             var best = Double.greatestFiniteMagnitude
             for i in 0..<(pts.count - 1) {
                 best = min(best, EvalPath.segment(pts[i], pts[i + 1]).distance(to: p))
@@ -183,19 +211,27 @@ enum EvalPath {
         case .circle(let c, let r):
             return WorldRect(minX: c.x - r, minY: c.y - r, maxX: c.x + r, maxY: c.y + r)
         case .polygon(let pts):
-            guard let first = pts.first else { return nil }
+            guard let first = pts.first else {
+                return nil
+            }
             var box = WorldRect(minX: first.x, minY: first.y, maxX: first.x, maxY: first.y)
             for p in pts {
-                box.minX = min(box.minX, p.x); box.maxX = max(box.maxX, p.x)
-                box.minY = min(box.minY, p.y); box.maxY = max(box.maxY, p.y)
+                box.minX = min(box.minX, p.x)
+                box.maxX = max(box.maxX, p.x)
+                box.minY = min(box.minY, p.y)
+                box.maxY = max(box.maxY, p.y)
             }
             return box
         case .polyline(let pts):
-            guard let first = pts.first else { return nil }
+            guard let first = pts.first else {
+                return nil
+            }
             var box = WorldRect(minX: first.x, minY: first.y, maxX: first.x, maxY: first.y)
             for p in pts {
-                box.minX = min(box.minX, p.x); box.maxX = max(box.maxX, p.x)
-                box.minY = min(box.minY, p.y); box.maxY = max(box.maxY, p.y)
+                box.minX = min(box.minX, p.x)
+                box.maxX = max(box.maxX, p.x)
+                box.minY = min(box.minY, p.y)
+                box.maxY = max(box.maxY, p.y)
             }
             return box
         case .functionPlot:
@@ -219,7 +255,9 @@ enum EvalPath {
     /// part against 0 within 1e-12. That is the winding-number test; a
     /// non-zero winding count means inside.
     func contains(_ p: Vec2) -> Bool {
-        guard case .polygon(let pts) = self, pts.count >= 3 else { return false }
+        guard case .polygon(let pts) = self, pts.count >= 3 else {
+            return false
+        }
         var sum = 0.0
         for i in 0..<pts.count {
             let a = pts[i] - p
@@ -279,7 +317,9 @@ enum EvalPath {
 }
 
 func polygonLength(_ pts: [Vec2]) -> Double {
-    guard pts.count > 1 else { return 0 }
+    guard pts.count > 1 else {
+        return 0
+    }
     var total = 0.0
     for i in 0..<pts.count {
         total += pts[i].distance(to: pts[(i + 1) % pts.count])
@@ -291,7 +331,9 @@ func polygonLength(_ pts: [Vec2]) -> Double {
 /// winding directions work and the compiler never has to solve a long chain of
 /// collection operators.
 func polygonArea(_ pts: [Vec2]) -> Double {
-    guard pts.count >= 3 else { return 0 }
+    guard pts.count >= 3 else {
+        return 0
+    }
     var twiceArea = 0.0
     for i in 0..<pts.count {
         let a = pts[i]
@@ -314,14 +356,24 @@ private func straightIntersections(_ s1: (a: Vec2, b: Vec2, kind: Int),
     let r = s1.b - s1.a
     let s = s2.b - s2.a
     let denom = r.cross(s)
-    if abs(denom) < 1e-12 { return [] }
+    if abs(denom) < 1e-12 {
+        return []
+    }
     let qp = s2.a - s1.a
     let t = qp.cross(s) / denom
     let u = qp.cross(r) / denom
-    if s1.kind == 0 && (t < -1e-9 || t > 1 + 1e-9) { return [] }
-    if s1.kind == 1 && t < -1e-9 { return [] }
-    if s2.kind == 0 && (u < -1e-9 || u > 1 + 1e-9) { return [] }
-    if s2.kind == 1 && u < -1e-9 { return [] }
+    if s1.kind == 0 && (t < -1e-9 || t > 1 + 1e-9) {
+        return []
+    }
+    if s1.kind == 1 && t < -1e-9 {
+        return []
+    }
+    if s2.kind == 0 && (u < -1e-9 || u > 1 + 1e-9) {
+        return []
+    }
+    if s2.kind == 1 && u < -1e-9 {
+        return []
+    }
     return [s1.a.lerp(to: s1.b, t)]
 }
 
@@ -329,33 +381,47 @@ private func lineCircle(_ s: (a: Vec2, b: Vec2, kind: Int), _ c: Vec2, _ r: Doub
     let d = s.b - s.a
     let f = s.a - c
     let a = d.dot(d)
-    guard a > 1e-12 else { return [] }
+    guard a > 1e-12 else {
+        return []
+    }
     let b = 2 * f.dot(d)
     let cc = f.dot(f) - r * r
     let disc = b * b - 4 * a * cc
-    if disc < -1e-9 { return [] }
+    if disc < -1e-9 {
+        return []
+    }
     let sq = sqrt(max(disc, 0))
     var ts = [(-b - sq) / (2 * a), (-b + sq) / (2 * a)]
     ts.sort()
     var out: [Vec2] = []
     for t in ts {
-        if s.kind == 0 && (t < -1e-9 || t > 1 + 1e-9) { continue }
-        if s.kind == 1 && t < -1e-9 { continue }
+        if s.kind == 0 && (t < -1e-9 || t > 1 + 1e-9) {
+            continue
+        }
+        if s.kind == 1 && t < -1e-9 {
+            continue
+        }
         let p = s.a.lerp(to: s.b, t)
-        if !out.contains(where: { $0.distance(to: p) < 1e-7 }) { out.append(p) }
+        if !out.contains(where: { $0.distance(to: p) < 1e-7 }) {
+            out.append(p)
+        }
     }
     return out
 }
 
 private func circleCircle(_ c1: Vec2, _ r1: Double, _ c2: Vec2, _ r2: Double) -> [Vec2] {
     let d = c1.distance(to: c2)
-    if d < 1e-12 || d > r1 + r2 + 1e-9 || d < abs(r1 - r2) - 1e-9 { return [] }
+    if d < 1e-12 || d > r1 + r2 + 1e-9 || d < abs(r1 - r2) - 1e-9 {
+        return []
+    }
     let a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
     let h2 = r1 * r1 - a * a
     let h = sqrt(max(h2, 0))
     let mid = c1 + (c2 - c1).normalized() * a
     let perp = (c2 - c1).normalized().perpendicular()
-    if h < 1e-9 { return [mid] }
+    if h < 1e-9 {
+        return [mid]
+    }
     return [mid + perp * h, mid - perp * h]
 }
 
@@ -369,15 +435,25 @@ func clipLine(_ a: Vec2, _ b: Vec2, to rect: WorldRect) -> (Vec2, Vec2)? {
     let q = [a.x - rect.minX, rect.maxX - a.x, a.y - rect.minY, rect.maxY - a.y]
     for i in 0..<4 {
         if abs(p[i]) < 1e-12 {
-            if q[i] < 0 { return nil }
+            if q[i] < 0 {
+                return nil
+            }
         } else {
             let r = q[i] / p[i]
             if p[i] < 0 {
-                if r > t1 { return nil }
-                if r > t0 { t0 = r }
+                if r > t1 {
+                    return nil
+                }
+                if r > t0 {
+                    t0 = r
+                }
             } else {
-                if r < t0 { return nil }
-                if r < t1 { t1 = r }
+                if r < t0 {
+                    return nil
+                }
+                if r < t1 {
+                    t1 = r
+                }
             }
         }
     }
