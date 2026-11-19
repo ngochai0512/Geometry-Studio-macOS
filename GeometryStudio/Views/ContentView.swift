@@ -3,7 +3,7 @@ import AppKit
 import Combine
 
 struct ContentView: View {
-    @ObservedObject var model: SketchModel
+    @Bindable var model: SketchModel
 
     @State private var textAnchor: Vec2 = .zero
     @State private var showTextSheet = false
@@ -31,7 +31,7 @@ struct ContentView: View {
     }
 
     init(model: SketchModel) {
-        self.model = model
+        _model = Bindable(wrappedValue: model)
     }
 
     var body: some View {
@@ -155,12 +155,15 @@ struct ContentView: View {
         }
 
         ForEach(SketchTool.allCases) { tool in
-            ToolbarItem(placement: .principal) {
+            ToolbarItem(id: tool.rawValue, placement: .principal) {
                 Toggle(isOn: toolBinding(tool)) {
                     Label(tool.title, systemImage: tool.symbol)
                 }
                 .toggleStyle(.button)
                 .help("\(tool.title) (\(String(tool.shortcut.character)))")
+                // Toolbar content caches its selected look; rebuild it when
+                // the active tool changes so the highlight follows the model.
+                .id(model.tool)
             }
         }
 

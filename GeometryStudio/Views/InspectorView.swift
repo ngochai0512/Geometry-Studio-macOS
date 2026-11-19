@@ -5,9 +5,17 @@ import AppKit
 /// the sections live in `InspectorSections.swift` and the model plumbing in
 /// `InspectorBindings.swift`.
 struct InspectorView: View {
-    @ObservedObject var model: SketchModel
+    @Bindable var model: SketchModel
     @Binding var tab: ContentView.InspectorTab
     var onTextAnnotation: (Vec2) -> Void
+
+    init(model: SketchModel,
+         tab: Binding<ContentView.InspectorTab>,
+         onTextAnnotation: @escaping (Vec2) -> Void) {
+        _model = Bindable(wrappedValue: model)
+        _tab = tab
+        self.onTextAnnotation = onTextAnnotation
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,8 +31,6 @@ struct InspectorView: View {
             }
             .padding(16)
 
-            Divider()
-
             switch tab {
             case .object:
                 List {
@@ -32,7 +38,7 @@ struct InspectorView: View {
                     actionsSection
                     stylingSection
                 }
-                .listStyle(.inset)
+                .listStyle(.sidebar)
                 .scrollContentBackground(.hidden)
             case .sketch:
                 List(selection: objectSelection) {
@@ -40,7 +46,7 @@ struct InspectorView: View {
                     canvasSection
                     constructSection
                 }
-                .listStyle(.inset)
+                .listStyle(.sidebar)
                 .scrollContentBackground(.hidden)
             }
         }
