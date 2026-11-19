@@ -146,7 +146,7 @@ extension InspectorView {
                         }
                     }
                     .labelsHidden()
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
                 }
                 LabeledContent("Point") {
                     Picker("Point", selection: pointShapeBinding) {
