@@ -163,10 +163,10 @@ extension InspectorView {
         Binding(
             get: { model.selectedObjects.first?.style.dash ?? .solid },
             set: { value in
-            applyToSelection("Change Dash") {
-                $0.style.dash = value
+                applyToSelection("Change Dash") {
+                    $0.style.dash = value
+                }
             }
-        }
         )
     }
 
@@ -174,10 +174,10 @@ extension InspectorView {
         Binding(
             get: { model.selectedObjects.first?.style.pointShape ?? .filled },
             set: { value in
-            applyToSelection("Change Point Shape") {
-                $0.style.pointShape = value
+                applyToSelection("Change Point Shape") {
+                    $0.style.pointShape = value
+                }
             }
-        }
         )
     }
 
