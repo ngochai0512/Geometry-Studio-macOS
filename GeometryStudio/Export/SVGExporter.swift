@@ -581,12 +581,18 @@ struct SVGExporter {
         var out = ""
         for character in text {
             switch character {
-            case "&": out += "&amp;"
-            case "<": out += "&lt;"
-            case ">": out += "&gt;"
-            case "\"": out += "&quot;"
-            case "'": out += "&apos;"
-            default: out.append(character)
+            case "&":
+                out += "&amp;"
+            case "<":
+                out += "&lt;"
+            case ">":
+                out += "&gt;"
+            case "\"":
+                out += "&quot;"
+            case "'":
+                out += "&apos;"
+            default:
+                out.append(character)
             }
         }
         return out

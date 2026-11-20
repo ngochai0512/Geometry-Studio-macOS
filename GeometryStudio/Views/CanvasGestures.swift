@@ -211,8 +211,10 @@ extension SketchCanvas {
 
     private func isLabelLike(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .measurement, .calculation, .caption, .angle: return true
-        default: return false
+        case .measurement, .calculation, .caption, .angle:
+            return true
+        default:
+            return false
         }
     }
 

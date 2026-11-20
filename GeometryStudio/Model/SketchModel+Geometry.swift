@@ -69,7 +69,8 @@ extension SketchModel {
             box.minY = min(box.minY, p.y)
             box.maxY = max(box.maxY, p.y)
         }
-        let w = max(box.width, 2), h = max(box.height, 2)
+        let w = max(box.width, 2)
+        let h = max(box.height, 2)
         settings.center = box.center
         settings.scale = min(max(min(size.width / (w * 1.35), size.height / (h * 1.35)), 18), 180)
     }

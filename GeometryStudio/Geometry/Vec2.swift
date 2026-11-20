@@ -41,7 +41,8 @@ struct Vec2: Codable, Hashable {
         Vec2(-y, x)
     }
     func rotated(by radians: Double) -> Vec2 {
-        let c = cos(radians), s = sin(radians)
+        let c = cos(radians)
+        let s = sin(radians)
         return Vec2(x * c - y * s, x * s + y * c)
     }
     func scaled(_ k: Double) -> Vec2 {

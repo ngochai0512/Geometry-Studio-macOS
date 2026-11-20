@@ -53,19 +53,32 @@ extension SketchModel {
 
     func parents(of object: SketchObject) -> [UUID] {
         switch object.kind {
-        case .freePoint, .caption, .functionPlot, .calculation: return []
-        case .pointOnPath(let p, _): return [p]
-        case .midpoint(let a, let b): return [a, b]
-        case .intersection(let a, let b, _): return [a, b]
-        case .segment(let a, let b), .ray(let a, let b), .line(let a, let b): return [a, b]
-        case .perpendicular(let l, let p), .parallel(let l, let p): return [l, p]
-        case .angleBisector(let a, let v, let c): return [a, v, c]
-        case .circle(let c, let t): return [c, t]
-        case .arcOnCircle(let circle, let start, let end): return [circle, start, end]
-        case .arcThroughPoints(let a, let b, let c): return [a, b, c]
-        case .polygon(let v): return v
-        case .angle(let a, let v, let c): return [a, v, c]
-        case .measurement(_, let refs): return refs
+        case .freePoint, .caption, .functionPlot, .calculation:
+            return []
+        case .pointOnPath(let p, _):
+            return [p]
+        case .midpoint(let a, let b):
+            return [a, b]
+        case .intersection(let a, let b, _):
+            return [a, b]
+        case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
+            return [a, b]
+        case .perpendicular(let l, let p), .parallel(let l, let p):
+            return [l, p]
+        case .angleBisector(let a, let v, let c):
+            return [a, v, c]
+        case .circle(let c, let t):
+            return [c, t]
+        case .arcOnCircle(let circle, let start, let end):
+            return [circle, start, end]
+        case .arcThroughPoints(let a, let b, let c):
+            return [a, b, c]
+        case .polygon(let v):
+            return v
+        case .angle(let a, let v, let c):
+            return [a, v, c]
+        case .measurement(_, let refs):
+            return refs
         case .transformed(let s, let spec):
             var out = [s]
             if let r = spec.reference {
@@ -75,7 +88,8 @@ extension SketchModel {
                 out.append(r)
             }
             return out
-        case .locus(let driver, let target): return [driver, target]
+        case .locus(let driver, let target):
+            return [driver, target]
         }
     }
 

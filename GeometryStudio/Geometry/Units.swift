@@ -1,15 +1,31 @@
 import Foundation
 
 enum LengthUnit: String, Codable, CaseIterable, Identifiable {
-    case cm, inches, pixels
+    case cm
+    case inches
+    case pixels
     var id: String {
         rawValue
     }
     var name: String {
-        self == .cm ? "Centimeters" : self == .inches ? "Inches" : "Pixels"
+        switch self {
+        case .cm:
+            return "Centimeters"
+        case .inches:
+            return "Inches"
+        case .pixels:
+            return "Pixels"
+        }
     }
     var short: String {
-        self == .cm ? "cm" : self == .inches ? "in" : "px"
+        switch self {
+        case .cm:
+            return "cm"
+        case .inches:
+            return "in"
+        case .pixels:
+            return "px"
+        }
     }
 
     /// The original keeps canvases in screen points and converts for display:
@@ -21,9 +37,12 @@ enum LengthUnit: String, Codable, CaseIterable, Identifiable {
     /// pixel.)
     var perUnit: Double {
         switch self {
-        case .cm: return 1
-        case .inches: return 2.54
-        case .pixels: return SketchMetrics.centimetresPerInch / SketchMetrics.pointsPerInch
+        case .cm:
+            return 1
+        case .inches:
+            return 2.54
+        case .pixels:
+            return SketchMetrics.centimetresPerInch / SketchMetrics.pointsPerInch
         }
     }
 }
@@ -37,18 +56,30 @@ enum SketchMetrics {
 }
 
 enum AngleUnit: String, Codable, CaseIterable, Identifiable {
-    case degrees, directedDegrees, radians
+    case degrees
+    case directedDegrees
+    case radians
     var id: String {
         rawValue
     }
     var name: String {
         switch self {
-        case .degrees: return "Degrees"
-        case .directedDegrees: return "Directed degrees"
-        case .radians: return "Radians"
+        case .degrees:
+            return "Degrees"
+        case .directedDegrees:
+            return "Directed degrees"
+        case .radians:
+            return "Radians"
         }
     }
     var short: String {
-        self == .radians ? "rad" : "°"
+        switch self {
+        case .degrees:
+            return "°"
+        case .directedDegrees:
+            return "°"
+        case .radians:
+            return "rad"
+        }
     }
 }

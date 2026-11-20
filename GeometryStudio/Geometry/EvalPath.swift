@@ -14,17 +14,23 @@ enum EvalPath {
 
     var isStraight: Bool {
         switch self {
-        case .segment, .ray, .line: return true
-        default: return false
+        case .segment, .ray, .line:
+            return true
+        default:
+            return false
         }
     }
 
     var straight: (a: Vec2, b: Vec2, kind: Int)? {
         switch self {
-        case .segment(let a, let b): return (a, b, 0)
-        case .ray(let a, let b): return (a, b, 1)
-        case .line(let a, let b): return (a, b, 2)
-        default: return nil
+        case .segment(let a, let b):
+            return (a, b, 0)
+        case .ray(let a, let b):
+            return (a, b, 1)
+        case .line(let a, let b):
+            return (a, b, 2)
+        default:
+            return nil
         }
     }
 
@@ -95,9 +101,12 @@ enum EvalPath {
             }
             var t = (p - a).dot(d) / denom
             switch self {
-            case .segment: t = min(max(t, 0), 1)
-            case .ray: t = max(t, 0)
-            default: break
+            case .segment:
+                t = min(max(t, 0), 1)
+            case .ray:
+                t = max(t, 0)
+            default:
+                break
             }
             return t
         case .circle(let c, _):
@@ -153,7 +162,8 @@ enum EvalPath {
             var bestDist = Double.greatestFiniteMagnitude
             var walked = 0.0
             for i in 0..<(pts.count - 1) {
-                let a = pts[i], b = pts[i + 1]
+                let a = pts[i]
+                let b = pts[i + 1]
                 let l = a.distance(to: b)
                 let d = b - a
                 let denom = d.dot(d)
@@ -183,9 +193,12 @@ enum EvalPath {
             }
             var t = (p - a).dot(d) / denom
             switch self {
-            case .segment: t = min(max(t, 0), 1)
-            case .ray: t = max(t, 0)
-            default: break
+            case .segment:
+                t = min(max(t, 0), 1)
+            case .ray:
+                t = max(t, 0)
+            default:
+                break
             }
             return p.distance(to: a.lerp(to: b, t))
         case .circle(let c, let r):
@@ -276,12 +289,18 @@ enum EvalPath {
 
     func length(settings: CanvasSettings) -> Double? {
         switch self {
-        case .segment(let a, let b): return a.distance(to: b)
-        case .circle(_, let r): return 2 * .pi * r
-        case .arc(_, let r, _, let sweep): return r * abs(sweep)
-        case .polygon(let pts): return polygonLength(pts)
-        case .polyline(let pts): return polygonLength(pts)
-        case .ray, .line, .functionPlot: return nil
+        case .segment(let a, let b):
+            return a.distance(to: b)
+        case .circle(_, let r):
+            return 2 * .pi * r
+        case .arc(_, let r, _, let sweep):
+            return r * abs(sweep)
+        case .polygon(let pts):
+            return polygonLength(pts)
+        case .polyline(let pts):
+            return polygonLength(pts)
+        case .ray, .line, .functionPlot:
+            return nil
         }
     }
 

@@ -90,9 +90,12 @@ extension SketchModel {
                     }
                     let kind: ObjectKind
                     switch tool {
-                    case .segment: kind = .segment(a: first, b: id)
-                    case .ray: kind = .ray(a: first, b: id)
-                    default: kind = .line(a: first, b: id)
+                    case .segment:
+                        kind = .segment(a: first, b: id)
+                    case .ray:
+                        kind = .ray(a: first, b: id)
+                    default:
+                        kind = .line(a: first, b: id)
                     }
                     var object = SketchObject(kind: kind)
                     object.label = ""
@@ -156,7 +159,10 @@ extension SketchModel {
                     }
                     draft.append(id)
                     var object = SketchObject(kind: .angle(a: draft[0], vertex: draft[1], c: draft[2]))
-                    object.label = "m∠\(objectByID(draft[0])?.label ?? "")\(objectByID(draft[1])?.label ?? "")\(objectByID(draft[2])?.label ?? "")"
+                    let firstLabel = objectByID(draft[0])?.label ?? ""
+                    let vertexLabel = objectByID(draft[1])?.label ?? ""
+                    let secondLabel = objectByID(draft[2])?.label ?? ""
+                    object.label = "m∠\(firstLabel)\(vertexLabel)\(secondLabel)"
                     object.order = (objects.map(\.order).max() ?? 0) + 1
                     objects.append(object)
                     selection = [object.id]

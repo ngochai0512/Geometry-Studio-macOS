@@ -50,11 +50,16 @@ struct Expression {
                 continue
             }
             switch c {
-            case "+", "-", "*", "/", "^": out.append(.op(c))
-            case "(": out.append(.lparen)
-            case ")": out.append(.rparen)
-            case ",": out.append(.comma)
-            default: return nil
+            case "+", "-", "*", "/", "^":
+                out.append(.op(c))
+            case "(":
+                out.append(.lparen)
+            case ")":
+                out.append(.rparen)
+            case ",":
+                out.append(.comma)
+            default:
+                return nil
             }
             i += 1
         }
@@ -150,7 +155,8 @@ struct Expression {
             return nil
         }
         switch tok {
-        case .number(let d): return d
+        case .number(let d):
+            return d
         case .lparen:
             let v = parseExpression(vars)
             guard match(.rparen) else {
@@ -162,29 +168,45 @@ struct Expression {
                 return v
             }
             switch name {
-            case "pi", "π": return .pi
-            case "e": return M_E
-            case "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "abs", "ln", "log", "exp", "floor", "ceil", "round":
+            case "pi", "π":
+                return .pi
+            case "e":
+                return M_E
+            case "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "abs", "ln",
+                 "log", "exp", "floor", "ceil", "round":
                 guard match(.lparen), let arg = parseExpression(vars), match(.rparen) else {
                     return nil
                 }
                 switch name {
-                case "sin": return sin(trigInput(arg))
-                case "cos": return cos(trigInput(arg))
+                case "sin":
+                    return sin(trigInput(arg))
+                case "cos":
+                    return cos(trigInput(arg))
                 case "tan":
                     let t = tan(trigInput(arg))
                     return abs(t) > 1e12 ? nil : t
-                case "asin": return asin(arg)
-                case "acos": return acos(arg)
-                case "atan": return atan(arg)
-                case "sqrt": return arg < 0 ? nil : sqrt(arg)
-                case "abs": return abs(arg)
-                case "ln", "log": return arg <= 0 ? nil : log(arg)
-                case "exp": return exp(arg)
-                case "floor": return floor(arg)
-                case "ceil": return ceil(arg)
-                case "round": return arg.rounded()
-                default: return nil
+                case "asin":
+                    return asin(arg)
+                case "acos":
+                    return acos(arg)
+                case "atan":
+                    return atan(arg)
+                case "sqrt":
+                    return arg < 0 ? nil : sqrt(arg)
+                case "abs":
+                    return abs(arg)
+                case "ln", "log":
+                    return arg <= 0 ? nil : log(arg)
+                case "exp":
+                    return exp(arg)
+                case "floor":
+                    return floor(arg)
+                case "ceil":
+                    return ceil(arg)
+                case "round":
+                    return arg.rounded()
+                default:
+                    return nil
                 }
             default:
                 return nil

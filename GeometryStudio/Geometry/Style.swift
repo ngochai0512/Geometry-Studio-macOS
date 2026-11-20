@@ -44,7 +44,9 @@ struct RGBA: Codable, Hashable {
 }
 
 enum DashStyle: String, Codable, CaseIterable, Identifiable {
-    case solid, dashed, dotted
+    case solid
+    case dashed
+    case dotted
     var id: String {
         rawValue
     }
@@ -54,7 +56,10 @@ enum DashStyle: String, Codable, CaseIterable, Identifiable {
 }
 
 enum PointShape: String, Codable, CaseIterable, Identifiable {
-    case filled, hollow, square, cross
+    case filled
+    case hollow
+    case square
+    case cross
     var id: String {
         rawValue
     }

@@ -402,9 +402,12 @@ final class SketchModel {
 
     func isLabelWorthy(_ kind: ObjectKind) -> Bool {
         switch kind {
-        case .freePoint, .pointOnPath, .midpoint, .intersection: return true
-        case .caption, .measurement, .calculation, .angle: return true
-        default: return false
+        case .freePoint, .pointOnPath, .midpoint, .intersection:
+            return true
+        case .caption, .measurement, .calculation, .angle:
+            return true
+        default:
+            return false
         }
     }
 
@@ -479,17 +482,28 @@ final class SketchModel {
 
     func symbol(for object: SketchObject) -> String {
         switch object.kind {
-        case .freePoint, .pointOnPath, .midpoint, .intersection: return "circle.fill"
-        case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector: return "line.diagonal"
-        case .circle: return "circle"
-        case .arcOnCircle, .arcThroughPoints: return "circle.dotted"
-        case .polygon: return "pentagon"
-        case .angle: return "angle"
-        case .measurement, .calculation: return "ruler"
-        case .caption: return "textformat"
-        case .functionPlot: return "function"
-        case .transformed: return "arrow.triangle.2.circlepath"
-        case .locus: return "scribble"
+        case .freePoint, .pointOnPath, .midpoint, .intersection:
+            return "circle.fill"
+        case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector:
+            return "line.diagonal"
+        case .circle:
+            return "circle"
+        case .arcOnCircle, .arcThroughPoints:
+            return "circle.dotted"
+        case .polygon:
+            return "pentagon"
+        case .angle:
+            return "angle"
+        case .measurement, .calculation:
+            return "ruler"
+        case .caption:
+            return "textformat"
+        case .functionPlot:
+            return "function"
+        case .transformed:
+            return "arrow.triangle.2.circlepath"
+        case .locus:
+            return "scribble"
         }
     }
 }

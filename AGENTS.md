@@ -163,19 +163,19 @@ if condition1,
 }
 ```
 
-- **Style for enum cases:** 
+- **Style for enum cases:**
   Good:
 ```swift
-  case distance
-	case length
-	case perimeter
-	case circumference
-	case angle
+    case distance
+    case length
+    case perimeter
+    case circumference
+    case angle
 ```
 
-  Bad: 
+  Bad:
 ```swift
-  case distance, length, perimeter, circumference, angle
+    case distance, length, perimeter, circumference, angle
 ```
 
 - **Style for computed variables with switch-statement:**
@@ -183,15 +183,15 @@ if condition1,
 var title: String {
     switch self {
     case .distance:
-			return "Distance"
+        return "Distance"
     case .length:
-			return "Length"
+        return "Length"
     case .perimeter:
-			return "Perimeter"
+        return "Perimeter"
     }
 }
 ```
-Exception: if multiple cases return to the same value, you can use commas to seperate them:
+Exception: if multiple cases return to the same value, you can use commas to separate them:
 ```swift
 var typeCheck: Bool {
     switch kind {

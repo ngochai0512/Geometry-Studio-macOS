@@ -232,7 +232,9 @@ struct ContentView: View {
     }
 
     @State private var lastCanvasSize = CGSize(width: 900, height: 720)
-    private let animationClock = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
+    private let animationClock = Timer
+        .publish(every: 1.0 / 60.0, on: .main, in: .common)
+        .autoconnect()
 
     private var constructMenu: some View {
         Menu {

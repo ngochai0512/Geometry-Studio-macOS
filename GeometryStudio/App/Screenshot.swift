@@ -115,7 +115,10 @@ enum ScreenshotRunner {
                 guard offset + 3 < rep.bytesPerRow * height else {
                     continue
                 }
-                let r = data[offset], g = data[offset + 1], b = data[offset + 2], a = data[offset + 3]
+                let r = data[offset]
+                let g = data[offset + 1]
+                let b = data[offset + 2]
+                let a = data[offset + 3]
                 total += 1
                 if a > 8 && (r < 244 || g < 244 || b < 244) {
                     nonWhite += 1

@@ -36,7 +36,8 @@ extension SketchCanvas {
                 let box = CGRect(x: center.x - rr, y: center.y - rr, width: rr * 2, height: rr * 2)
                 context.fill(Path(ellipseIn: box),
                              with: .color(object.style.color.color.opacity(object.style.fillOpacity * 0.7)))
-            default: break
+            default:
+                break
             }
         }
 

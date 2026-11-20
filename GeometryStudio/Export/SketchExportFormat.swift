@@ -13,9 +13,12 @@ enum SketchExportFormat: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .pdf: return "PDF"
-        case .svg: return "SVG"
-        case .png: return "PNG"
+        case .pdf:
+            return "PDF"
+        case .svg:
+            return "SVG"
+        case .png:
+            return "PNG"
         }
     }
 
@@ -25,9 +28,12 @@ enum SketchExportFormat: String, CaseIterable, Identifiable {
 
     var contentType: UTType {
         switch self {
-        case .pdf: return .pdf
-        case .svg: return .svg
-        case .png: return .png
+        case .pdf:
+            return .pdf
+        case .svg:
+            return .svg
+        case .png:
+            return .png
         }
     }
 }

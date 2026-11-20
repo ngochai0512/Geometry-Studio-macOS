@@ -10,69 +10,102 @@ extension InspectorView {
 
     func needsLabel(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .freePoint, .pointOnPath, .midpoint, .intersection, .caption, .angle: return true
-        default: return false
+        case .freePoint, .pointOnPath, .midpoint, .intersection, .caption, .angle:
+            return true
+        default:
+            return false
         }
     }
 
     func isMeasurement(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .measurement, .calculation, .angle: return true
-        default: return false
+        case .measurement, .calculation, .angle:
+            return true
+        default:
+            return false
         }
     }
 
     func isLineObject(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector: return true
-        default: return false
+        case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector:
+            return true
+        default:
+            return false
         }
     }
 
     func isArcObject(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .arcOnCircle, .arcThroughPoints: return true
-        default: return false
+        case .arcOnCircle, .arcThroughPoints:
+            return true
+        default:
+            return false
         }
     }
 
     func isRegionObject(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .circle, .polygon: return true
-        default: return false
+        case .circle, .polygon:
+            return true
+        default:
+            return false
         }
     }
 
     func isMeasureObject(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .measurement, .calculation, .caption, .angle, .functionPlot: return true
-        default: return false
+        case .measurement, .calculation, .caption, .angle, .functionPlot:
+            return true
+        default:
+            return false
         }
     }
 
     func typeDescription(_ object: SketchObject) -> String {
         switch object.kind {
-        case .freePoint: return "Free point"
-        case .pointOnPath: return "Point on an object"
-        case .midpoint: return "Constructed midpoint"
-        case .intersection: return "Constructed intersection"
-        case .segment: return "Segment"
-        case .ray: return "Ray"
-        case .line: return "Line"
-        case .perpendicular: return "Perpendicular line"
-        case .parallel: return "Parallel line"
-        case .angleBisector: return "Angle bisector"
-        case .circle: return "Circle"
-        case .arcOnCircle: return "Arc on a circle"
-        case .arcThroughPoints: return "Arc through three points"
-        case .polygon: return "Polygon interior"
-        case .angle: return "Angle marker"
-        case .measurement(let kind, _): return "\(kind.title) measurement"
-        case .calculation: return "Calculation"
-        case .caption: return "Caption"
-        case .functionPlot: return "Function plot"
-        case .transformed(_, let spec): return "\(spec.kind.title) image"
-        case .locus: return "Locus"
+        case .freePoint:
+            return "Free point"
+        case .pointOnPath:
+            return "Point on an object"
+        case .midpoint:
+            return "Constructed midpoint"
+        case .intersection:
+            return "Constructed intersection"
+        case .segment:
+            return "Segment"
+        case .ray:
+            return "Ray"
+        case .line:
+            return "Line"
+        case .perpendicular:
+            return "Perpendicular line"
+        case .parallel:
+            return "Parallel line"
+        case .angleBisector:
+            return "Angle bisector"
+        case .circle:
+            return "Circle"
+        case .arcOnCircle:
+            return "Arc on a circle"
+        case .arcThroughPoints:
+            return "Arc through three points"
+        case .polygon:
+            return "Polygon interior"
+        case .angle:
+            return "Angle marker"
+        case .measurement(let kind, _):
+            return "\(kind.title) measurement"
+        case .calculation:
+            return "Calculation"
+        case .caption:
+            return "Caption"
+        case .functionPlot:
+            return "Function plot"
+        case .transformed(_, let spec):
+            return "\(spec.kind.title) image"
+        case .locus:
+            return "Locus"
         }
     }
 
