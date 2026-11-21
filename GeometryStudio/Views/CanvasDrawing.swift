@@ -13,32 +13,17 @@ extension SketchCanvas {
         var e = model.evaluator()
         let ordered = model.objects.sorted { $0.order < $1.order }
 
-        // Fills first: polygons and circles sit under the lines.
+        // Fills first: polygons, circles and filled arcs sit under the lines.
         for object in ordered where object.visible {
-            guard let path = e.evaluate(object.id).path else {
+            let result = e.evaluate(object.id)
+            if let fill = result.fill {
+                drawFill(fill, style: object.style, context: &context, size: size)
                 continue
             }
-            switch path {
-            case .polygon(let pts):
-                guard pts.count >= 3 else {
-                    continue
-                }
-                var p = Path()
-                p.move(to: model.screenPoint(pts[0], size: size))
-                for pt in pts.dropFirst() {
-                    p.addLine(to: model.screenPoint(pt, size: size))
-                }
-                p.closeSubpath()
-                context.fill(p, with: .color(object.style.color.color.opacity(object.style.fillOpacity)))
-            case .circle(let c, let r):
-                let center = model.screenPoint(c, size: size)
-                let rr = r * model.settings.scale
-                let box = CGRect(x: center.x - rr, y: center.y - rr, width: rr * 2, height: rr * 2)
-                context.fill(Path(ellipseIn: box),
-                             with: .color(object.style.color.color.opacity(object.style.fillOpacity * 0.7)))
-            default:
-                break
+            guard let path = result.path else {
+                continue
             }
+            drawFill(path, style: object.style, context: &context, size: size)
         }
 
         // Paths.
@@ -66,6 +51,36 @@ extension SketchCanvas {
                            width: abs(mc.x - ms.x), height: abs(mc.y - ms.y))
             context.fill(Path(roundedRect: r, cornerRadius: 2), with: .color(accent.opacity(0.08)))
             context.stroke(Path(roundedRect: r, cornerRadius: 2), with: .color(accent.opacity(0.7)), lineWidth: 1)
+        }
+    }
+
+    private func drawFill(_ path: EvalPath, style: ObjectStyle,
+                          context: inout GraphicsContext, size: CGSize) {
+        switch path {
+        case .polygon(let points):
+            guard points.count >= 3 else {
+                return
+            }
+            var fill = Path()
+            fill.move(to: model.screenPoint(points[0], size: size))
+            for point in points.dropFirst() {
+                fill.addLine(to: model.screenPoint(point, size: size))
+            }
+            fill.closeSubpath()
+            context.fill(fill, with: .color(style.color.color.opacity(style.fillOpacity)))
+        case .circle(let center, let radius):
+            let point = model.screenPoint(center, size: size)
+            let scaledRadius = radius * model.settings.scale
+            let box = CGRect(
+                x: point.x - scaledRadius,
+                y: point.y - scaledRadius,
+                width: scaledRadius * 2,
+                height: scaledRadius * 2
+            )
+            context.fill(Path(ellipseIn: box),
+                         with: .color(style.color.color.opacity(style.fillOpacity * 0.7)))
+        default:
+            break
         }
     }
 

@@ -69,6 +69,8 @@ extension SketchModel {
             return [a, v, c]
         case .circle(let c, let t):
             return [c, t]
+        case .circleRadius(let c, _):
+            return [c]
         case .arcOnCircle(let circle, let start, let end):
             return [circle, start, end]
         case .arcThroughPoints(let a, let b, let c):
@@ -91,6 +93,11 @@ extension SketchModel {
         case .locus(let driver, let target):
             return [driver, target]
         }
+    }
+
+    func definition(for object: SketchObject) -> String {
+        let eval = evaluator()
+        return eval.definition(of: object.id)
     }
 
     func hideSelection() {

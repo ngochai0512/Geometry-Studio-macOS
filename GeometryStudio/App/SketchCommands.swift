@@ -63,6 +63,10 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
             Button("Circle by Center + Point") { model?.constructCircle() }
                 .disabled(model == nil)
+            Button("Circle by Center + Radius…") {
+                NotificationCenter.default.post(name: .openCircleRadius, object: nil)
+            }
+            .disabled(model == nil)
             Button("Arc on Circle") { model?.constructArcOnCircle() }
                 .disabled(model == nil)
             Button("Arc Through 3 Points") { model?.constructArcThroughPoints() }
@@ -74,6 +78,11 @@ struct SketchCommands: Commands {
             Divider()
             Button("Locus from Selection") { model?.constructLocus() }
                 .disabled(model == nil)
+            Divider()
+            Button("Construction Protocol…") {
+                NotificationCenter.default.post(name: .openProtocol, object: nil)
+            }
+            .disabled(model == nil)
         }
 
         CommandMenu("Measure") {

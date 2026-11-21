@@ -19,6 +19,10 @@ extension InspectorView {
                         Text(typeDescription(object))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        Text(model.definition(for: object))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                     }
                 }
 
@@ -168,10 +172,21 @@ extension InspectorView {
                     .labelsHidden()
                     .pickerStyle(.menu)
                 }
-                if anySelectedIsRegion {
+                if anySelectedIsRegion || anySelectedIsArc {
                     LabeledContent("Fill") {
                         Slider(value: fillBinding, in: 0...0.4)
                             .labelsHidden()
+                    }
+                }
+                if anySelectedIsArc {
+                    LabeledContent("Arc fill") {
+                        Picker("Arc fill", selection: arcFillBinding) {
+                            ForEach(ArcFill.allCases) { fill in
+                                Text(fill.title).tag(fill)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
                     }
                 }
             }
@@ -251,6 +266,9 @@ extension InspectorView {
                 constructButton("Parallel", "equal") { model.constructParallel() }
                 constructButton("Bisector", "angle") { model.constructBisector() }
                 constructButton("Circle", "circle") { model.constructCircle() }
+                constructButton("Circle by Radius", "circle.dashed") {
+                    NotificationCenter.default.post(name: .openCircleRadius, object: nil)
+                }
                 constructButton("Arc on Circle", "circle.dotted") { model.constructArcOnCircle() }
                 constructButton("Arc Through 3", "circle.dashed") { model.constructArcThroughPoints() }
                 constructButton("Polygon", "pentagon") { model.constructPolygon() }

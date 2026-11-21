@@ -231,6 +231,82 @@ struct CalculationSheet: View {
     }
 }
 
+struct CircleRadiusSheet: View {
+    @Binding var radius: Double
+    var centerName: String?
+    var unit: String
+    var onConstruct: (Double) -> Void
+
+    private var isValid: Bool {
+        centerName != nil && radius.isFinite && radius > 0
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    if let centerName {
+                        LabeledContent("Center") {
+                            Text(centerName)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    LabeledContent("Radius") {
+                        HStack(spacing: 6) {
+                            TextField("Radius", value: $radius, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 80)
+                            Text(unit)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Label("Circle by Radius", systemImage: "circle")
+                } footer: {
+                    if centerName == nil {
+                        Text("Select a center point first.")
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("Draw a circle with a fixed radius around the selected point.")
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            SheetFooter("Create", isEnabled: isValid) { onConstruct(radius) }
+        }
+        .frame(minWidth: 420, minHeight: 240)
+    }
+}
+
+struct ProtocolSheet: View {
+    var steps: [String]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if steps.isEmpty {
+                Text("No construction steps yet.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(Array(steps.enumerated()), id: \.offset) { index, step in
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("\(index + 1).")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, alignment: .trailing)
+                        Text(step)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+            SheetFooter("Done") {}
+        }
+        .frame(minWidth: 560, minHeight: 420)
+    }
+}
+
 /// The Cancel/confirm pair every sheet closes with.
 private struct SheetFooter: View {
     var title: String
@@ -290,4 +366,17 @@ private struct SheetFooter: View {
 #Preview("Calculate") {
     CalculationSheet(text: .constant("d1 + d2"),
                     names: ["d1", "d2", "angle_A"]) { _ in }
+}
+
+#Preview("Circle by Radius") {
+    CircleRadiusSheet(radius: .constant(2), centerName: "A", unit: "in") { _ in }
+}
+
+#Preview("Construction Protocol") {
+    ProtocolSheet(steps: [
+        "Free point A at (0.00, 0.00) in",
+        "Free point B at (2.00, 1.00) in",
+        "Segment AB",
+        "Midpoint M of A and B"
+    ])
 }

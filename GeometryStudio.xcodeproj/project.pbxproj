@@ -49,6 +49,7 @@
 		CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987F7F66DD38C75F1D729436 /* EvalPath.swift */; };
 		CDBC2D996978D6D899969106 /* SketchFileDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */; };
 		DAB47DB594C47302FC93AD93 /* SketchExportFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D74F851B5B433EF3608964 /* SketchExportFormat.swift */; };
+		CEC5175D79F2496F983AEC44 /* GeometryEval+Definition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C4338544594E91A77ACA55 /* GeometryEval+Definition.swift */; };
 		DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */; };
 		EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB58632CC8F51EBE9099D9C2 /* Expression.swift */; };
 		EE60F31F6E7148993377E610 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A28D11FAD1ACA69B2FD090 /* ContentView.swift */; };
@@ -80,6 +81,7 @@
 		5A138890201ED3147E98C533 /* SketchExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchExporter.swift; sourceTree = "<group>"; };
 		6871105ED6530E352D506C92 /* SketchFileType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchFileType.swift; sourceTree = "<group>"; };
 		6AD2AFA7548106CEEBBB5CC8 /* SketchCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchCanvas.swift; sourceTree = "<group>"; };
+		41C4338544594E91A77ACA55 /* GeometryEval+Definition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GeometryEval+Definition.swift"; sourceTree = "<group>"; };
 		6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryEval.swift; sourceTree = "<group>"; };
 		727F065C238FED4F7D4752EF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8CE812B7A2607107B1662098 /* Units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Units.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 			children = (
 				21056A4CBEA9102B7A633016 /* AppPreferences.swift */,
 				B2C88C96DAAA8F36C4AA4F10 /* Document.swift */,
+				41C4338544594E91A77ACA55 /* GeometryEval+Definition.swift */,
 				6B3EE993E87423C24BEBFA76 /* GeometryEval.swift */,
 				14ACC5EFB13DA6EE1EB6B9C9 /* ObjectModel.swift */,
 				0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */,
@@ -329,6 +332,7 @@
 				EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */,
 				264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */,
 				2A8FB524EAD85239CDEEE860 /* FocusedSketchModel.swift in Sources */,
+				CEC5175D79F2496F983AEC44 /* GeometryEval+Definition.swift in Sources */,
 				DBC091DDC4D62647CC41CFA8 /* GeometryEval.swift in Sources */,
 				1B67FCB7C269AB9FCFF7034F /* GeometryStudioApp.swift in Sources */,
 				6270DDCAE806A1A24D837112 /* GridMetrics.swift in Sources */,

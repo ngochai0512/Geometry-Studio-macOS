@@ -457,7 +457,7 @@ final class SketchModel {
             return "Parallel"
         case .angleBisector:
             return "Angle Bisector"
-        case .circle:
+        case .circle, .circleRadius:
             return "Circle"
         case .arcOnCircle, .arcThroughPoints:
             return "Arc"
@@ -486,7 +486,7 @@ final class SketchModel {
             return "circle.fill"
         case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector:
             return "line.diagonal"
-        case .circle:
+        case .circle, .circleRadius:
             return "circle"
         case .arcOnCircle, .arcThroughPoints:
             return "circle.dotted"

@@ -9,4 +9,6 @@ extension Notification.Name {
     static let openRotate = Notification.Name("openRotate")
     static let openDilate = Notification.Name("openDilate")
     static let openTranslate = Notification.Name("openTranslate")
+    static let openCircleRadius = Notification.Name("openCircleRadius")
+    static let openProtocol = Notification.Name("openProtocol")
 }

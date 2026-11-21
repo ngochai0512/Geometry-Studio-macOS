@@ -116,6 +116,9 @@ extension SketchModel {
                     return object.id
                 }
             }
+            if let fill = e.evaluate(object.id).fill, fill.contains(p) {
+                return object.id
+            }
         }
         // Measurement / caption boxes.
         for object in objects.reversed() where object.visible {

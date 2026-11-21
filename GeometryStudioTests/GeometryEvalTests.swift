@@ -150,4 +150,60 @@ struct GeometryEvalTests {
         var eval = GeometryEval(objects: [object], settings: CanvasSettings())
         #expect(eval.point(object.id) == nil)
     }
+
+    @Test("a circle can be built from its centre and a numeric radius")
+    func circleByRadius() {
+        let center = freePoint(Vec2(1, 2))
+        let circle = SketchObject(kind: .circleRadius(center: center.id, radius: 3))
+        var eval = GeometryEval(objects: [center, circle], settings: CanvasSettings())
+
+        guard case .circle(let resolvedCenter, let radius)? = eval.path(circle.id) else {
+            Issue.record("expected a circle")
+            return
+        }
+        #expect(near(resolvedCenter, Vec2(1, 2)))
+        #expect(abs(radius - 3) < 1e-9)
+    }
+
+    @Test("arc fills produce sector and segment regions")
+    func arcFills() {
+        let a = freePoint(Vec2(0, 0))
+        let b = freePoint(Vec2(1, 1))
+        let c = freePoint(Vec2(2, 0))
+
+        var sectorArc = SketchObject(kind: .arcThroughPoints(a: a.id, b: b.id, c: c.id))
+        sectorArc.arcFill = .sector
+        var segmentArc = SketchObject(kind: .arcThroughPoints(a: a.id, b: b.id, c: c.id))
+        segmentArc.arcFill = .segment
+        var eval = GeometryEval(objects: [a, b, c, sectorArc, segmentArc],
+                                settings: CanvasSettings())
+
+        guard case .polygon(let sectorPoints)? = eval.evaluate(sectorArc.id).fill else {
+            Issue.record("expected a sector fill")
+            return
+        }
+        #expect(sectorPoints.count > 2)
+        #expect(near(sectorPoints.first, Vec2(1, 0)))
+
+        guard case .polygon(let segmentPoints)? = eval.evaluate(segmentArc.id).fill else {
+            Issue.record("expected a segment fill")
+            return
+        }
+        #expect(segmentPoints.count > 2)
+        #expect(!segmentPoints.contains { $0.distance(to: Vec2(1, 0)) < 1e-7 })
+    }
+
+    @Test("definitions name the parents of a construction")
+    func definitions() {
+        let a = freePoint(Vec2(0, 0))
+        let b = freePoint(Vec2(4, 2))
+        a.label = "A"
+        b.label = "B"
+        let midpoint = SketchObject(kind: .midpoint(a: a.id, b: b.id))
+        var eval = GeometryEval(objects: [a, b, midpoint], settings: CanvasSettings())
+        let definition = eval.definition(of: midpoint.id)
+        #expect(definition.contains("Midpoint"))
+        #expect(definition.contains("A"))
+        #expect(definition.contains("B"))
+    }
 }

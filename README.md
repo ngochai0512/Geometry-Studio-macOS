@@ -60,7 +60,8 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 
 - **Tools** — select/drag, point, segment, ray, line, circle, polygon, angle marker and text.
 - **Constructions** — midpoint, perpendicular, parallel, angle bisector, intersection, segment,
-  circle by centre + point, polygon interior, point on object and locus.
+  circle by centre + point, circle by centre + radius, arc on a circle, arc through three points,
+  polygon interior, point on object and locus.
 - **Measurements** — distance, length, perimeter, circumference, angle, area, radius, ratio,
   coordinates, abscissa/ordinate, polar distance/direction, arc angle/length, equation,
   slope and calculations.
@@ -70,8 +71,9 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 - **Graph** — grid, axes, snapping and function plots.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
-- **Inspector** — object browser, label, colour, line width, dash, point shape and size,
-  visibility, fill, units, angle unit and decimal precision.
+- **Inspector** — object browser, label, definition, colour, line width, dash, point shape and
+  size, visibility, fill, arc fill (sector or segment), units, angle unit and decimal precision.
+- **Construction protocol** — a sheet listing every construction step in order.
 - **Documents** — a document-based app: new, open, save and save as (`.gsp`, JSON document format),
   autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,
   named undo/redo, automatic recovery of readable objects from a

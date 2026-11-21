@@ -11,12 +11,15 @@ struct ContentView: View {
     @State private var showRotate = false
     @State private var showDilate = false
     @State private var showTranslate = false
+    @State private var showCircleRadius = false
+    @State private var showProtocol = false
     @State private var showFunction = false
     @State private var showCalculation = false
     @State private var rotateAngle: Double = 90
     @State private var dilateFactor: Double = 2
     @State private var translateX: Double = 1
     @State private var translateY: Double = 0
+    @State private var circleRadius: Double = 2
     @State private var functionText = "sin(x)"
     @State private var calculationText = ""
     @State private var scrollMonitor: Any?
@@ -85,6 +88,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openTranslate)) { _ in
             showTranslate = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openCircleRadius)) { _ in
+            showCircleRadius = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openProtocol)) { _ in
+            showProtocol = true
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openFunction)) { _ in
             showFunction = true
         }
@@ -118,6 +127,16 @@ struct ContentView: View {
                            unit: model.settings.lengthUnit.short) { dx, dy in
                 model.translateSelection(dx: dx, dy: dy)
             }
+        }
+        .sheet(isPresented: $showCircleRadius) {
+            CircleRadiusSheet(radius: $circleRadius,
+                              centerName: circleCenterName(),
+                              unit: model.settings.lengthUnit.short) { radius in
+                model.constructCircleRadius(radius)
+            }
+        }
+        .sheet(isPresented: $showProtocol) {
+            ProtocolSheet(steps: model.constructionProtocol())
         }
         .sheet(isPresented: $showFunction) {
             FunctionSheet(text: $functionText) { expression in
@@ -247,12 +266,19 @@ struct ContentView: View {
             Divider()
             Button("Segment") { model.constructSegment() }
             Button("Circle by Center + Point") { model.constructCircle() }
+            Button("Circle by Center + Radius…") {
+                NotificationCenter.default.post(name: .openCircleRadius, object: nil)
+            }
             Button("Arc on Circle") { model.constructArcOnCircle() }
             Button("Arc Through 3 Points") { model.constructArcThroughPoints() }
             Button("Polygon Interior") { model.constructPolygon() }
             Button("Point on Object") { model.constructPointOnPath() }
             Divider()
             Button("Locus") { model.constructLocus() }
+            Divider()
+            Button("Construction Protocol…") {
+                NotificationCenter.default.post(name: .openProtocol, object: nil)
+            }
         } label: {
             Label("Construct", systemImage: "hammer")
         }
@@ -335,6 +361,13 @@ struct ContentView: View {
             }
             return model.evaluated(object.id).point != nil
         }
+    }
+
+    private func circleCenterName() -> String? {
+        guard let id = selectedPoint(), let object = model.objectByID(id) else {
+            return nil
+        }
+        return object.label.isEmpty ? "Point" : object.label
     }
 
     private func firstPoint() -> UUID? {

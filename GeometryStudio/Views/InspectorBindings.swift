@@ -46,7 +46,7 @@ extension InspectorView {
 
     func isRegionObject(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .circle, .polygon:
+        case .circle, .circleRadius, .polygon:
             return true
         default:
             return false
@@ -86,6 +86,8 @@ extension InspectorView {
             return "Angle bisector"
         case .circle:
             return "Circle"
+        case .circleRadius:
+            return "Circle by radius"
         case .arcOnCircle:
             return "Arc on a circle"
         case .arcThroughPoints:
@@ -245,6 +247,17 @@ extension InspectorView {
         )
     }
 
+    var arcFillBinding: Binding<ArcFill> {
+        Binding(
+            get: { model.selectedObjects.first?.arcFill ?? .none },
+            set: { value in
+                applyToSelection("Change Arc Fill") {
+                    $0.arcFill = value
+                }
+            }
+        )
+    }
+
     var colorBinding: Binding<Color> {
         Binding(
             get: {
@@ -261,6 +274,10 @@ extension InspectorView {
 
     var anySelectedIsRegion: Bool {
         model.selectedObjects.contains { isRegionObject($0) }
+    }
+
+    var anySelectedIsArc: Bool {
+        model.selectedObjects.contains { isArcObject($0) }
     }
 
     // MARK: - Mutations

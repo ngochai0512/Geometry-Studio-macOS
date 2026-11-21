@@ -141,12 +141,30 @@ extension SketchModel {
         statusMessage = "Circle created"
     }
 
+    func constructCircleRadius(_ displayRadius: Double) {
+        guard let center = selectedPoints().first else {
+            statusMessage = "Select a center point first"
+            return
+        }
+        let radius = displayRadius * settings.lengthUnit.perUnit
+        guard radius.isFinite, radius > 0 else {
+            statusMessage = "Enter a radius greater than zero"
+            return
+        }
+        checkpoint("Construct Circle by Radius")
+        let id = commit(kind: .circleRadius(center: center, radius: radius), label: "")
+        selection = [id]
+        statusMessage = "Circle created"
+    }
+
     func constructArcOnCircle() {
         guard let circle = selectedObjects.first(where: { object in
-            if case .circle = object.kind {
+            switch object.kind {
+            case .circle, .circleRadius:
                 return true
+            default:
+                return false
             }
-            return false
         }) else {
             statusMessage = "Select a circle and two points on it"
             return
@@ -264,5 +282,20 @@ extension SketchModel {
         let id = commit(kind: .functionPlot(trimmed), label: "")
         selection = [id]
         statusMessage = "Function plotted"
+    }
+
+    // MARK: protocol
+
+    func constructionProtocol() -> [String] {
+        let eval = evaluator()
+        let ordered = objects.enumerated()
+            .sorted { left, right in
+                if left.element.order == right.element.order {
+                    return left.offset < right.offset
+                }
+                return left.element.order < right.element.order
+            }
+            .map { $0.element }
+        return ordered.map { eval.definition(of: $0.id) }
     }
 }

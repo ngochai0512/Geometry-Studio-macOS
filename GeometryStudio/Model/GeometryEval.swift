@@ -3,6 +3,7 @@ import Foundation
 struct EvalResult {
     var point: Vec2?
     var path: EvalPath?
+    var fill: EvalPath?
     var text: String?
     var anchor: Vec2?
     var value: Double?
@@ -18,6 +19,7 @@ struct GeometryEval {
         static let epsilon = 1e-9
         static let degenerate = 1e-12
         static let locusSamples = 96
+        static let arcFillSamples = 96
         static let locusDedupTolerance = 1e-6
         static let angleLabelRadius = 0.72
         static let measuredAngleLabelRadius = 0.95
@@ -133,6 +135,11 @@ struct GeometryEval {
                 result.path = .circle(pc, pc.distance(to: pt))
             }
 
+        case .circleRadius(let center, let radius):
+            if let pc = point(center) {
+                result.path = .circle(pc, radius)
+            }
+
         case .arcOnCircle(let circle, let startPoint, let endPoint):
             if let circlePath = path(circle),
                case .circle(let center, let radius) = circlePath,
@@ -145,6 +152,7 @@ struct GeometryEval {
                 }
                 if sweep < 2 * .pi - Metrics.epsilon {
                     result.path = .arc(center: center, radius: radius, start: start, sweep: sweep)
+                    result.fill = arcFillRegion(result.path, fill: object.arcFill)
                 }
             }
 
@@ -152,6 +160,7 @@ struct GeometryEval {
             if let pa = point(a), let pb = point(b), let pc = point(c),
                let arc = arcThrough(pa, pb, pc) {
                 result.path = arc
+                result.fill = arcFillRegion(arc, fill: object.arcFill)
             }
 
         case .polygon(let vertices):
@@ -277,6 +286,35 @@ struct GeometryEval {
         let throughOffset = positiveAngle(through - start)
         let sweep = throughOffset <= ccwSweep + Metrics.epsilon ? ccwSweep : ccwSweep - 2 * .pi
         return .arc(center: center, radius: radius, start: start, sweep: sweep)
+    }
+
+    /// The filled region cut from an arc's circle. A sector includes the
+    /// centre; a segment closes the sampled arc with its chord.
+    private func arcFillRegion(_ path: EvalPath?, fill: ArcFill) -> EvalPath? {
+        guard fill != .none,
+              let path,
+              case .arc(let center, let radius, let start, let sweep) = path else {
+            return nil
+        }
+        let steps = max(
+            2,
+            Int(abs(sweep) / (2 * .pi) * Double(Metrics.arcFillSamples))
+        )
+        var points: [Vec2] = []
+        points.reserveCapacity(steps + 1)
+        for index in 0...steps {
+            let t = Double(index) / Double(steps)
+            let angle = start + sweep * t
+            points.append(center + Vec2(cos(angle), sin(angle)) * radius)
+        }
+        switch fill {
+        case .none:
+            return nil
+        case .sector:
+            return .polygon([center] + points)
+        case .segment:
+            return .polygon(points)
+        }
     }
 
     private func positiveAngle(_ angle: Double) -> Double {
@@ -518,7 +556,7 @@ struct GeometryEval {
             return object.label.isEmpty ? "P" : object.label
         case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
             return label(of: a) + label(of: b)
-        case .circle(let center, _):
+        case .circle(let center, _), .circleRadius(let center, _):
             return object.label.isEmpty ? "circle \(label(of: center))" : object.label
         case .arcOnCircle(_, let start, let end):
             return arcName(object, labels: joinedLabels([start, end]))

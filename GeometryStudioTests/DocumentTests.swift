@@ -41,9 +41,28 @@ struct DocumentTests {
         #expect(decoded.version == SketchDocument.currentVersion)
     }
 
-    @Test("a sketch snapshot round-trips through its file codec")
-    func fileDocumentRoundTrip() throws {
+    @Test("new object kinds preserve their added data")
+    func newObjectKindsRoundTrip() throws {
         var document = SketchDocument()
+        let center = SketchObject(kind: .freePoint)
+        var circle = SketchObject(kind: .circleRadius(center: center.id, radius: 4))
+        circle.arcFill = .sector
+        document.objects = [center, circle]
+
+        let data = try JSONEncoder().encode(document)
+        let decoded = try JSONDecoder().decode(SketchDocument.self, from: data)
+
+        #expect(decoded.objects.count == 2)
+        guard case .circleRadius(_, let radius)? = decoded.objects.last?.kind else {
+            Issue.record("expected a radius circle")
+            return
+        }
+        #expect(abs(radius - 4) < 1e-12)
+        #expect(decoded.objects.last?.arcFill == .sector)
+    }
+
+    @Test("a sketch snapshot round-trips through its file codec")
+    func fileDocumentRoundTrip() throws {        var document = SketchDocument()
         document.title = "Saved"
         var object = SketchObject(kind: .freePoint)
         object.position = Vec2(-1, 3)

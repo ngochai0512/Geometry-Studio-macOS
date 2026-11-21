@@ -76,6 +76,26 @@ enum TransformKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// How an arc fills the region it cuts from its circle.
+enum ArcFill: String, Codable, CaseIterable, Identifiable {
+    case none
+    case sector
+    case segment
+    var id: String {
+        rawValue
+    }
+    var title: String {
+        switch self {
+        case .none:
+            return "None"
+        case .sector:
+            return "Sector"
+        case .segment:
+            return "Segment"
+        }
+    }
+}
+
 struct TransformSpec: Codable, Hashable {
     var kind: TransformKind
     var reference: UUID?
@@ -120,6 +140,7 @@ enum ObjectKind: Codable, Hashable {
     case parallel(line: UUID, point: UUID)
     case angleBisector(a: UUID, vertex: UUID, c: UUID)
     case circle(center: UUID, through: UUID)
+    case circleRadius(center: UUID, radius: Double)
     case arcOnCircle(circle: UUID, start: UUID, end: UUID)
     case arcThroughPoints(a: UUID, b: UUID, c: UUID)
     case polygon(vertices: [UUID])
@@ -141,6 +162,7 @@ struct SketchObject: Identifiable, Codable, Hashable {
     var showLabel: Bool = true
     var visible: Bool = true
     var style: ObjectStyle = ObjectStyle()
+    var arcFill: ArcFill = .none
     var offset: Vec2 = .zero
     var position: Vec2? = nil
     var order: Int = 0
@@ -158,6 +180,7 @@ struct SketchObject: Identifiable, Codable, Hashable {
         showLabel = try c.decodeIfPresent(Bool.self, forKey: .showLabel) ?? true
         visible = try c.decodeIfPresent(Bool.self, forKey: .visible) ?? true
         style = try c.decodeIfPresent(ObjectStyle.self, forKey: .style) ?? ObjectStyle()
+        arcFill = try c.decodeIfPresent(ArcFill.self, forKey: .arcFill) ?? .none
         offset = try c.decodeIfPresent(Vec2.self, forKey: .offset) ?? .zero
         position = try c.decodeIfPresent(Vec2.self, forKey: .position)
         order = try c.decodeIfPresent(Int.self, forKey: .order) ?? 0
@@ -178,8 +201,8 @@ struct SketchObject: Identifiable, Codable, Hashable {
     var isPathLike: Bool {
         switch kind {
         case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector,
-             .circle, .arcOnCircle, .arcThroughPoints, .polygon, .functionPlot,
-             .transformed, .locus:
+             .circle, .circleRadius, .arcOnCircle, .arcThroughPoints, .polygon,
+             .functionPlot, .transformed, .locus:
             return true
         default:
             return false

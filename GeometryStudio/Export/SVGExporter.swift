@@ -59,11 +59,14 @@ struct SVGExporter {
 
         // Fills sit under the lines, as on the canvas.
         for object in ordered where object.visible {
-            guard let path = evaluator.evaluate(object.id).path,
-                  let fill = fillElement(path, style: object.style) else {
-                continue
+            let result = evaluator.evaluate(object.id)
+            if let fillPath = result.fill,
+               let fill = fillElement(fillPath, style: object.style) {
+                parts.append(fill)
+            } else if let path = result.path,
+                      let fill = fillElement(path, style: object.style) {
+                parts.append(fill)
             }
-            parts.append(fill)
         }
         for object in ordered where object.visible {
             guard let path = evaluator.evaluate(object.id).path,

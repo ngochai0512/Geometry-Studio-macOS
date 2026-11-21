@@ -8,9 +8,9 @@ Anyone adding a new **object family** (arc, mark, vector, table, picture, button
 
 ## Status snapshot
 
-Implemented today: 9 tools, 9 constructions, 11 measurements, 4 transforms, graph with function plots and snapping, inspector (style, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, export to vector PDF, SVG and PNG, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode.
+Implemented today: 9 tools, 13 constructions, 17 measurements, 4 transforms, graph with function plots and snapping, inspector (style, definition, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, export to vector PDF, SVG and PNG, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode, arc fills, circle by radius, and a construction protocol.
 
-Missing outright: clipboard, duplicate, arcs, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, marks.
+Missing outright: clipboard, duplicate, persistent marks, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, coordinate systems.
 
 ## Tier 1 — Foundations (unblocks everything else)
 
@@ -34,22 +34,24 @@ Deferred within Tier 1: window appearance moved to #45, where the canvas theme l
 | # | Feature | Original evidence | Where it lands | Effort | Done |
 | --- | --- | --- | --- | --- | --- |
 | 11 | Arcs: arc on circle, arc through 3 points | `0,44`–`0,47` | four places | M | [x] |
-| 12 | Arc interior, sector and segment fills | `0,48`–`0,53`, `1,17` | four places | M | [ ] |
+| 12 | Arc interior, sector and segment fills | `0,48`–`0,53`, `1,17` | four places | M | [x] |
 | 13 | Arc angle and arc length measurements | `1,100`–`1,103` | `MeasureKind`, `GeometryEval` | S | [x] |
 | 14 | Persistent marks: mirror, center, angle, ratio, vector (replacing modal dialogs) | `1,33`–`1,45` | `ObjectKind` + inspector | M | [ ] |
-| 15 | Circle by center + numeric radius | construct table | `SketchModel+Construction` | S | [ ] |
+| 15 | Circle by center + numeric radius | construct table | `SketchModel+Construction` | S | [x] |
 | 16 | Parameter / slider objects | `0,151` (parametric plots need them) | `ObjectKind` | S | [ ] |
 | 17 | Tangents (point→circle, circle→circle), perpendicular bisector, radical axis | construct table | `GeometryEval`, `SketchModel+Construction` | S/M | [ ] |
 | 18 | Polar distance/direction, abscissa/ordinate, coordinate distance | `1,109`, `1,110` | `MeasureKind` | S | [ ] |
 | 19 | Vector objects, vector sum and difference | `1,40` | `ObjectKind`, canvas arrows | S | [ ] |
 | 20 | Tick marks, angle-marker styles, richer point shapes and sizes | `0,144`–`0,149` | `Geometry/Style.swift`, `CanvasDrawing` | S | [ ] |
-| 21 | Construction protocol: ordered list of every construction step | original list view | new `Views/ProtocolView.swift` | S | [ ] |
-| 22 | Describe / Information tool: click an object, read its definition | `15,18` "Click objects to describe their definitions" | `SketchModel` + inspector | S | [ ] |
+| 21 | Construction protocol: ordered list of every construction step | original list view | `Views/SketchSheets.swift` (ProtocolSheet) | S | [x] |
+| 22 | Describe / Information tool: click an object, read its definition | `15,18` "Click objects to describe their definitions" | `Model/GeometryEval+Definition.swift` + inspector | S | [x] |
 | 23 | Measure-all, and label placement rules | `1,88`–`1,115` | `GeometryEval.measurement` | S | [ ] |
 | 24 | Coordinate systems as objects: multiple axes, polar grid, per-graph units | `0,67` | `ObjectKind` + `CanvasDrawing` | M | [ ] |
 | 25 | Graph extras: derivative and integral shading, tangent at x, root/intersection solver, value table | `0,112`–`0,115` | `Geometry/Expression`, model extensions | M | [ ] |
 
 Item 18 is partially shipped: abscissa, ordinate, polar distance and polar direction are implemented. Coordinate distance waits on coordinate systems (#24) so "coordinate" has a defined axis.
+
+Item 12 ships as two fill modes on the arc object: Sector (centre wedge) and Segment (chord cap). The original's three command strings do not map to three distinct regions here.
 
 ## Tier 3 — The original's signature features
 
