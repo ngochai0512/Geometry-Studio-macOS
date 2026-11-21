@@ -1,5 +1,7 @@
 import Foundation
 
+private typealias Tolerance = EvalPathTolerance
+
 // MARK: - Evaluated path
 
 enum EvalPath {
@@ -12,6 +14,8 @@ enum EvalPath {
     case polyline([Vec2])
     case functionPlot(String)
 
+    private static let cardinalAngles: [Double] = [0, .pi / 2, .pi, 3 * .pi / 2]
+
     var isStraight: Bool {
         switch self {
         case .segment, .ray, .line:
@@ -21,269 +25,145 @@ enum EvalPath {
         }
     }
 
+    /// The supporting line of a straight path. `kind` is one of the
+    /// `StraightKind` values and selects the parameter domain.
     var straight: (a: Vec2, b: Vec2, kind: Int)? {
         switch self {
         case .segment(let a, let b):
-            return (a, b, 0)
+            return (a, b, StraightKind.segment)
         case .ray(let a, let b):
-            return (a, b, 1)
+            return (a, b, StraightKind.ray)
         case .line(let a, let b):
-            return (a, b, 2)
+            return (a, b, StraightKind.line)
         default:
             return nil
         }
     }
 
+    // MARK: - Sampling
+
     func point(at param: Double) -> Vec2? {
         switch self {
         case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
             return a.lerp(to: b, param)
-        case .circle(let c, let r):
-            return c + Vec2(cos(param), sin(param)) * r
-        case .arc(let c, let r, let start, let sweep):
-            let angle = start + sweep * param
-            return c + Vec2(cos(angle), sin(angle)) * r
-        case .polygon(let pts):
-            guard pts.count > 1 else {
-                return pts.first
-            }
-            let total = polygonLength(pts)
-            guard total > 1e-12 else {
-                return pts.first
-            }
-            var remaining = param.truncatingRemainder(dividingBy: 1)
-            if remaining < 0 {
-                remaining += 1
-            }
-            var target = remaining * total
-            for i in 0..<pts.count {
-                let a = pts[i]
-                let b = pts[(i + 1) % pts.count]
-                let l = a.distance(to: b)
-                if target <= l {
-                    return a.lerp(to: b, target / max(l, 1e-12))
-                }
-                target -= l
-            }
-            return pts.first
-        case .polyline(let pts):
-            guard pts.count > 1 else {
-                return pts.first
-            }
-            let total = polygonLength(pts)
-            guard total > 1e-12 else {
-                return pts.first
-            }
-            let target = min(max(param, 0), 1) * total
-            var walked = 0.0
-            for i in 0..<(pts.count - 1) {
-                let a = pts[i]
-                let b = pts[i + 1]
-                let l = a.distance(to: b)
-                if target <= walked + l {
-                    return a.lerp(to: b, (target - walked) / max(l, 1e-12))
-                }
-                walked += l
-            }
-            return pts.last
+        case .circle(let center, let radius):
+            return pointOnCircle(center: center, radius: radius, angle: param)
+        case .arc(let center, let radius, let start, let sweep):
+            return pointOnCircle(center: center, radius: radius, angle: start + sweep * param)
+        case .polygon(let points):
+            return pointOnPolygon(points, at: param)
+        case .polyline(let points):
+            return pointOnPolyline(points, at: param)
         case .functionPlot:
             return nil
         }
     }
 
-    func nearestParam(to p: Vec2) -> Double {
+    private func pointOnCircle(center: Vec2, radius: Double, angle: Double) -> Vec2 {
+        center + Vec2(cos(angle), sin(angle)) * radius
+    }
+
+    private func pointOnPolygon(_ points: [Vec2], at param: Double) -> Vec2? {
+        guard points.count > 1 else {
+            return points.first
+        }
+        let total = polygonLength(points)
+        guard total > Tolerance.zero else {
+            return points.first
+        }
+        var remaining = param.truncatingRemainder(dividingBy: 1)
+        if remaining < 0 {
+            remaining += 1
+        }
+        var target = remaining * total
+        for index in points.indices {
+            let a = points[index]
+            let b = points[(index + 1) % points.count]
+            let length = a.distance(to: b)
+            if target <= length {
+                return a.lerp(to: b, target / max(length, Tolerance.zero))
+            }
+            target -= length
+        }
+        return points.first
+    }
+
+    private func pointOnPolyline(_ points: [Vec2], at param: Double) -> Vec2? {
+        guard points.count > 1 else {
+            return points.first
+        }
+        let total = polygonLength(points)
+        guard total > Tolerance.zero else {
+            return points.first
+        }
+        let target = min(max(param, 0), 1) * total
+        var walked = 0.0
+        for index in 0..<(points.count - 1) {
+            let a = points[index]
+            let b = points[index + 1]
+            let length = a.distance(to: b)
+            if target <= walked + length {
+                return a.lerp(to: b, (target - walked) / max(length, Tolerance.zero))
+            }
+            walked += length
+        }
+        return points.last
+    }
+
+    // MARK: - Distance and parameters
+
+    func nearestParam(to point: Vec2) -> Double {
         switch self {
         case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
-            let d = b - a
-            let denom = d.dot(d)
-            guard denom > 1e-12 else {
+            let direction = b - a
+            let denominator = direction.dot(direction)
+            guard denominator > Tolerance.zero else {
                 return 0
             }
-            var t = (p - a).dot(d) / denom
-            switch self {
-            case .segment:
-                t = min(max(t, 0), 1)
-            case .ray:
-                t = max(t, 0)
-            default:
-                break
+            return clampedStraightParameter((point - a).dot(direction) / denominator)
+        case .circle(let center, _):
+            return normalizedAngle((point - center).angle)
+        case .arc(let center, let radius, let start, let sweep):
+            if let progress = arcProgress(of: (point - center).angle, start: start, sweep: sweep) {
+                return progress
             }
-            return t
-        case .circle(let c, _):
-            var a = (p - c).angle
-            if a < 0 {
-                a += .pi * 2
-            }
-            return a
-        case .arc(let c, _, let start, let sweep):
-            if let t = arcProgress(of: (p - c).angle, start: start, sweep: sweep) {
-                return t
-            }
-            let p0 = point(at: 0) ?? c
-            let p1 = point(at: 1) ?? c
-            return p.distance(to: p0) <= p.distance(to: p1) ? 0 : 1
-        case .polygon(let pts):
-            guard pts.count > 1 else {
-                return 0
-            }
-            let total = polygonLength(pts)
-            guard total > 1e-12 else {
-                return 0
-            }
-            var best = 0.0
-            var bestDist = Double.greatestFiniteMagnitude
-            var walked = 0.0
-            for i in 0..<pts.count {
-                let a = pts[i]
-                let b = pts[(i + 1) % pts.count]
-                let l = a.distance(to: b)
-                let d = b - a
-                let denom = d.dot(d)
-                var t = denom > 1e-12 ? (p - a).dot(d) / denom : 0
-                t = min(max(t, 0), 1)
-                let q = a.lerp(to: b, t)
-                let dist = q.distance(to: p)
-                if dist < bestDist {
-                    bestDist = dist
-                    best = (walked + l * t) / total
-                }
-                walked += l
-            }
-            return best
-        case .polyline(let pts):
-            guard pts.count > 1 else {
-                return 0
-            }
-            let total = polygonLength(pts)
-            guard total > 1e-12 else {
-                return 0
-            }
-            var best = 0.0
-            var bestDist = Double.greatestFiniteMagnitude
-            var walked = 0.0
-            for i in 0..<(pts.count - 1) {
-                let a = pts[i]
-                let b = pts[i + 1]
-                let l = a.distance(to: b)
-                let d = b - a
-                let denom = d.dot(d)
-                var t = denom > 1e-12 ? (p - a).dot(d) / denom : 0
-                t = min(max(t, 0), 1)
-                let q = a.lerp(to: b, t)
-                let dist = q.distance(to: p)
-                if dist < bestDist {
-                    bestDist = dist
-                    best = (walked + l * t) / total
-                }
-                walked += l
-            }
-            return best
+            let startPoint = pointOnCircle(center: center, radius: radius, angle: start)
+            let endPoint = pointOnCircle(center: center, radius: radius, angle: start + sweep)
+            return point.distance(to: startPoint) <= point.distance(to: endPoint) ? 0 : 1
+        case .polygon(let points):
+            return polylineNearestParam(points, closed: true, to: point)
+        case .polyline(let points):
+            return polylineNearestParam(points, closed: false, to: point)
         case .functionPlot:
             return 0
         }
     }
 
-    func distance(to p: Vec2) -> Double {
+    func distance(to point: Vec2) -> Double {
         switch self {
         case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
-            let d = b - a
-            let denom = d.dot(d)
-            if denom < 1e-12 {
-                return p.distance(to: a)
+            let direction = b - a
+            let denominator = direction.dot(direction)
+            if denominator < Tolerance.zero {
+                return point.distance(to: a)
             }
-            var t = (p - a).dot(d) / denom
-            switch self {
-            case .segment:
-                t = min(max(t, 0), 1)
-            case .ray:
-                t = max(t, 0)
-            default:
-                break
+            let parameter = clampedStraightParameter((point - a).dot(direction) / denominator)
+            return point.distance(to: a.lerp(to: b, parameter))
+        case .circle(let center, let radius):
+            return abs(point.distance(to: center) - radius)
+        case .arc(let center, let radius, let start, let sweep):
+            if arcProgress(of: (point - center).angle, start: start, sweep: sweep) != nil {
+                return abs(point.distance(to: center) - radius)
             }
-            return p.distance(to: a.lerp(to: b, t))
-        case .circle(let c, let r):
-            return abs(p.distance(to: c) - r)
-        case .arc(let c, let r, let start, let sweep):
-            if arcProgress(of: (p - c).angle, start: start, sweep: sweep) != nil {
-                return abs(p.distance(to: c) - r)
-            }
-            let p0 = point(at: 0) ?? c
-            let p1 = point(at: 1) ?? c
-            return min(p.distance(to: p0), p.distance(to: p1))
-        case .polygon(let pts):
-            guard pts.count > 1 else {
-                return pts.first?.distance(to: p) ?? .infinity
-            }
-            var best = Double.greatestFiniteMagnitude
-            for i in 0..<pts.count {
-                let seg = EvalPath.segment(pts[i], pts[(i + 1) % pts.count])
-                best = min(best, seg.distance(to: p))
-            }
-            return best
-        case .polyline(let pts):
-            guard pts.count > 1 else {
-                return pts.first?.distance(to: p) ?? .infinity
-            }
-            var best = Double.greatestFiniteMagnitude
-            for i in 0..<(pts.count - 1) {
-                best = min(best, EvalPath.segment(pts[i], pts[i + 1]).distance(to: p))
-            }
-            return best
+            let startPoint = pointOnCircle(center: center, radius: radius, angle: start)
+            let endPoint = pointOnCircle(center: center, radius: radius, angle: start + sweep)
+            return min(point.distance(to: startPoint), point.distance(to: endPoint))
+        case .polygon(let points):
+            return polylineDistance(points, closed: true, to: point)
+        case .polyline(let points):
+            return polylineDistance(points, closed: false, to: point)
         case .functionPlot:
             return .infinity
-        }
-    }
-
-    var boundingBox: WorldRect? {
-        switch self {
-        case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
-            return WorldRect(minX: min(a.x, b.x), minY: min(a.y, b.y),
-                             maxX: max(a.x, b.x), maxY: max(a.y, b.y))
-        case .circle(let c, let r):
-            return WorldRect(minX: c.x - r, minY: c.y - r, maxX: c.x + r, maxY: c.y + r)
-        case .arc(let c, let r, let start, let sweep):
-            var box: WorldRect?
-            func include(_ p: Vec2) {
-                if let current = box {
-                    box = WorldRect(minX: min(current.minX, p.x), minY: min(current.minY, p.y),
-                                    maxX: max(current.maxX, p.x), maxY: max(current.maxY, p.y))
-                } else {
-                    box = WorldRect(minX: p.x, minY: p.y, maxX: p.x, maxY: p.y)
-                }
-            }
-            include(c + Vec2(cos(start), sin(start)) * r)
-            include(c + Vec2(cos(start + sweep), sin(start + sweep)) * r)
-            for angle in [0, Double.pi / 2, Double.pi, 3 * Double.pi / 2]
-            where arcProgress(of: angle, start: start, sweep: sweep) != nil {
-                include(c + Vec2(cos(angle), sin(angle)) * r)
-            }
-            return box
-        case .polygon(let pts):
-            guard let first = pts.first else {
-                return nil
-            }
-            var box = WorldRect(minX: first.x, minY: first.y, maxX: first.x, maxY: first.y)
-            for p in pts {
-                box.minX = min(box.minX, p.x)
-                box.maxX = max(box.maxX, p.x)
-                box.minY = min(box.minY, p.y)
-                box.maxY = max(box.maxY, p.y)
-            }
-            return box
-        case .polyline(let pts):
-            guard let first = pts.first else {
-                return nil
-            }
-            var box = WorldRect(minX: first.x, minY: first.y, maxX: first.x, maxY: first.y)
-            for p in pts {
-                box.minX = min(box.minX, p.x)
-                box.maxX = max(box.maxX, p.x)
-                box.minY = min(box.minY, p.y)
-                box.maxY = max(box.maxY, p.y)
-            }
-            return box
-        case .functionPlot:
-            return nil
         }
     }
 
@@ -291,15 +171,106 @@ enum EvalPath {
         switch self {
         case .segment(let a, let b):
             return a.distance(to: b)
-        case .circle(_, let r):
-            return 2 * .pi * r
-        case .arc(_, let r, _, let sweep):
-            return r * abs(sweep)
-        case .polygon(let pts):
-            return polygonLength(pts)
-        case .polyline(let pts):
-            return polygonLength(pts)
+        case .circle(_, let radius):
+            return 2 * .pi * radius
+        case .arc(_, let radius, _, let sweep):
+            return radius * abs(sweep)
+        case .polygon(let points), .polyline(let points):
+            return polygonLength(points)
         case .ray, .line, .functionPlot:
+            return nil
+        }
+    }
+
+    private func clampedStraightParameter(_ parameter: Double) -> Double {
+        switch self {
+        case .segment:
+            return min(max(parameter, 0), 1)
+        case .ray:
+            return max(parameter, 0)
+        default:
+            return parameter
+        }
+    }
+
+    private func polylineNearestParam(_ points: [Vec2], closed: Bool, to point: Vec2) -> Double {
+        guard points.count > 1 else {
+            return 0
+        }
+        let total = polygonLength(points)
+        guard total > Tolerance.zero else {
+            return 0
+        }
+        var best = 0.0
+        var bestDistance = Double.greatestFiniteMagnitude
+        var walked = 0.0
+        let count = closed ? points.count : points.count - 1
+        for index in 0..<count {
+            let a = points[index]
+            let b = points[(index + 1) % points.count]
+            let length = a.distance(to: b)
+            let direction = b - a
+            let denominator = direction.dot(direction)
+            var parameter = 0.0
+            if denominator > Tolerance.zero {
+                parameter = (point - a).dot(direction) / denominator
+            }
+            parameter = min(max(parameter, 0), 1)
+            let closest = a.lerp(to: b, parameter)
+            let distance = closest.distance(to: point)
+            if distance < bestDistance {
+                bestDistance = distance
+                best = (walked + length * parameter) / total
+            }
+            walked += length
+        }
+        return best
+    }
+
+    private func polylineDistance(_ points: [Vec2], closed: Bool, to point: Vec2) -> Double {
+        guard points.count > 1 else {
+            return points.first?.distance(to: point) ?? .infinity
+        }
+        var best = Double.greatestFiniteMagnitude
+        let count = closed ? points.count : points.count - 1
+        for index in 0..<count {
+            let a = points[index]
+            let b = points[(index + 1) % points.count]
+            best = min(best, EvalPath.segment(a, b).distance(to: point))
+        }
+        return best
+    }
+
+    // MARK: - Bounds and containment
+
+    var boundingBox: WorldRect? {
+        switch self {
+        case .segment(let a, let b), .ray(let a, let b), .line(let a, let b):
+            return WorldRect(points: [a, b])
+        case .circle(let center, let radius):
+            return WorldRect(
+                minX: center.x - radius,
+                minY: center.y - radius,
+                maxX: center.x + radius,
+                maxY: center.y + radius
+            )
+        case .arc(let center, let radius, let start, let sweep):
+            let startPoint = pointOnCircle(center: center, radius: radius, angle: start)
+            var box = WorldRect(
+                minX: startPoint.x,
+                minY: startPoint.y,
+                maxX: startPoint.x,
+                maxY: startPoint.y
+            )
+            box.include(pointOnCircle(center: center, radius: radius, angle: start + sweep))
+            for angle in Self.cardinalAngles
+            where arcProgress(of: angle, start: start, sweep: sweep) != nil {
+                box.include(pointOnCircle(center: center, radius: radius, angle: angle))
+            }
+            return box
+        case .polygon(let points), .polyline(let points):
+            return WorldRect(points: points)
+        case .functionPlot:
             return nil
         }
     }
@@ -310,139 +281,92 @@ enum EvalPath {
     /// part against 0 within 1e-12. That is the winding-number test; a
     /// non-zero winding count means inside.
     func contains(_ p: Vec2) -> Bool {
-        guard case .polygon(let pts) = self, pts.count >= 3 else {
+        guard case .polygon(let points) = self, points.count >= 3 else {
             return false
         }
         var sum = 0.0
-        for i in 0..<pts.count {
-            let a = pts[i] - p
-            let b = pts[(i + 1) % pts.count] - p
+        for index in points.indices {
+            let a = points[index] - p
+            let b = points[(index + 1) % points.count] - p
             sum += atan2(a.cross(b), a.dot(b))
         }
         return abs(sum) > .pi
     }
 
-    func intersections(with other: EvalPath) -> [Vec2] {
-        if let s1 = straight, let s2 = other.straight {
-            return straightIntersections(s1, s2)
-        }
-        if let s = straight, case .circle(let c, let r) = other {
-            return lineCircle(s, c, r)
-        }
-        if case .circle(let c, let r) = self, let s = other.straight {
-            return lineCircle(s, c, r)
-        }
-        if case .circle(let c1, let r1) = self, case .circle(let c2, let r2) = other {
-            return circleCircle(c1, r1, c2, r2)
-        }
-        if case .arc(let c, let r, let start, let sweep) = self {
-            return arcIntersections(center: c, radius: r, start: start, sweep: sweep, with: other)
-        }
-        if case .arc(let c, let r, let start, let sweep) = other {
-            return arcIntersections(center: c, radius: r, start: start, sweep: sweep, with: self)
-        }
-        if case .polygon(let pts) = self {
-            var out: [Vec2] = []
-            for i in 0..<max(pts.count, 1) {
-                let a = pts[i]
-                let b = pts[(i + 1) % pts.count]
-                out.append(contentsOf: EvalPath.segment(a, b).intersections(with: other))
-            }
-            return dedupe(out)
-        }
-        if case .polygon(let pts) = other {
-            var out: [Vec2] = []
-            for i in 0..<max(pts.count, 1) {
-                let a = pts[i]
-                let b = pts[(i + 1) % pts.count]
-                out.append(contentsOf: self.intersections(with: .segment(a, b)))
-            }
-            return dedupe(out)
-        }
-        if case .polyline(let pts) = self {
-            var out: [Vec2] = []
-            for i in 0..<max(pts.count - 1, 0) {
-                out.append(contentsOf: EvalPath.segment(pts[i], pts[i + 1]).intersections(with: other))
-            }
-            return dedupe(out)
-        }
-        if case .polyline(let pts) = other {
-            var out: [Vec2] = []
-            for i in 0..<max(pts.count - 1, 0) {
-                out.append(contentsOf: self.intersections(with: .segment(pts[i], pts[i + 1])))
-            }
-            return dedupe(out)
-        }
-        return []
-    }
+    // MARK: - Arc progress
 
-    private func arcProgress(of angle: Double, start: Double, sweep: Double) -> Double? {
-        let twoPi = 2 * Double.pi
-        guard abs(sweep) > 1e-12 else {
+    func arcProgress(of angle: Double, start: Double, sweep: Double) -> Double? {
+        guard abs(sweep) > Tolerance.zero else {
             return nil
         }
         if sweep > 0 {
-            var delta = (angle - start).truncatingRemainder(dividingBy: twoPi)
-            if delta < 0 {
-                delta += twoPi
-            }
-            guard delta <= sweep + 1e-9 else {
+            let delta = normalizedAngle(angle - start)
+            guard delta <= sweep + Tolerance.boundary else {
                 return nil
             }
             return min(delta / sweep, 1)
         }
-        var delta = (start - angle).truncatingRemainder(dividingBy: twoPi)
-        if delta < 0 {
-            delta += twoPi
-        }
-        guard delta <= -sweep + 1e-9 else {
+        let delta = normalizedAngle(start - angle)
+        guard delta <= -sweep + Tolerance.boundary else {
             return nil
         }
         return min(delta / -sweep, 1)
     }
+}
 
-    private func arcIntersections(center: Vec2, radius: Double,
-                                  start: Double, sweep: Double,
-                                  with other: EvalPath) -> [Vec2] {
-        var hits: [Vec2] = []
-        if let s = other.straight {
-            hits = lineCircle(s, center, radius)
-        } else {
-            switch other {
-            case .circle(let c, let r):
-                hits = circleCircle(center, radius, c, r)
-            case .arc(let c, let r, let otherStart, let otherSweep):
-                hits = circleCircle(center, radius, c, r).filter {
-                    arcProgress(of: ($0 - c).angle, start: otherStart, sweep: otherSweep) != nil
-                }
-            case .polygon(let pts):
-                for i in 0..<max(pts.count, 1) {
-                    let a = pts[i]
-                    let b = pts[(i + 1) % pts.count]
-                    hits.append(contentsOf: EvalPath.segment(a, b).intersections(with: .circle(center, radius)))
-                }
-            case .polyline(let pts):
-                for i in 0..<max(pts.count - 1, 0) {
-                    hits.append(contentsOf: EvalPath.segment(pts[i], pts[i + 1])
-                        .intersections(with: .circle(center, radius)))
-                }
-            case .segment, .ray, .line, .functionPlot:
-                break
-            }
+// MARK: - Shared tolerances and parameter kinds
+
+enum EvalPathTolerance {
+    static let zero = 1e-12
+    static let boundary = 1e-9
+    static let dedupe = 1e-7
+}
+
+enum StraightKind {
+    static let segment = 0
+    static let ray = 1
+    static let line = 2
+}
+
+private func normalizedAngle(_ angle: Double) -> Double {
+    let twoPi = 2 * Double.pi
+    var value = angle.truncatingRemainder(dividingBy: twoPi)
+    if value < 0 {
+        value += twoPi
+    }
+    return value
+}
+
+// MARK: - Bounds helpers
+
+private extension WorldRect {
+    init?(points: [Vec2]) {
+        guard let first = points.first else {
+            return nil
         }
-        return dedupe(hits.filter {
-            arcProgress(of: ($0 - center).angle, start: start, sweep: sweep) != nil
-        })
+        self.init(minX: first.x, minY: first.y, maxX: first.x, maxY: first.y)
+        for point in points.dropFirst() {
+            include(point)
+        }
+    }
+
+    mutating func include(_ point: Vec2) {
+        minX = min(minX, point.x)
+        minY = min(minY, point.y)
+        maxX = max(maxX, point.x)
+        maxY = max(maxY, point.y)
     }
 }
 
-func polygonLength(_ pts: [Vec2]) -> Double {
-    guard pts.count > 1 else {
+// MARK: - Polygon measurements
+
+func polygonLength(_ points: [Vec2]) -> Double {
+    guard points.count > 1 else {
         return 0
     }
     var total = 0.0
-    for i in 0..<pts.count {
-        total += pts[i].distance(to: pts[(i + 1) % pts.count])
+    for index in points.indices {
+        total += points[index].distance(to: points[(index + 1) % points.count])
     }
     return total
 }
@@ -450,132 +374,15 @@ func polygonLength(_ pts: [Vec2]) -> Double {
 /// Absolute polygon area. The shoelace sum is accumulated explicitly so both
 /// winding directions work and the compiler never has to solve a long chain of
 /// collection operators.
-func polygonArea(_ pts: [Vec2]) -> Double {
-    guard pts.count >= 3 else {
+func polygonArea(_ points: [Vec2]) -> Double {
+    guard points.count >= 3 else {
         return 0
     }
     var twiceArea = 0.0
-    for i in 0..<pts.count {
-        let a = pts[i]
-        let b = pts[(i + 1) % pts.count]
+    for index in points.indices {
+        let a = points[index]
+        let b = points[(index + 1) % points.count]
         twiceArea += a.x * b.y - b.x * a.y
     }
     return abs(twiceArea) / 2
-}
-
-private func dedupe(_ pts: [Vec2]) -> [Vec2] {
-    var out: [Vec2] = []
-    for p in pts where !out.contains(where: { $0.distance(to: p) < 1e-7 }) {
-        out.append(p)
-    }
-    return out
-}
-
-private func straightIntersections(_ s1: (a: Vec2, b: Vec2, kind: Int),
-                                   _ s2: (a: Vec2, b: Vec2, kind: Int)) -> [Vec2] {
-    let r = s1.b - s1.a
-    let s = s2.b - s2.a
-    let denom = r.cross(s)
-    if abs(denom) < 1e-12 {
-        return []
-    }
-    let qp = s2.a - s1.a
-    let t = qp.cross(s) / denom
-    let u = qp.cross(r) / denom
-    if s1.kind == 0 && (t < -1e-9 || t > 1 + 1e-9) {
-        return []
-    }
-    if s1.kind == 1 && t < -1e-9 {
-        return []
-    }
-    if s2.kind == 0 && (u < -1e-9 || u > 1 + 1e-9) {
-        return []
-    }
-    if s2.kind == 1 && u < -1e-9 {
-        return []
-    }
-    return [s1.a.lerp(to: s1.b, t)]
-}
-
-private func lineCircle(_ s: (a: Vec2, b: Vec2, kind: Int), _ c: Vec2, _ r: Double) -> [Vec2] {
-    let d = s.b - s.a
-    let f = s.a - c
-    let a = d.dot(d)
-    guard a > 1e-12 else {
-        return []
-    }
-    let b = 2 * f.dot(d)
-    let cc = f.dot(f) - r * r
-    let disc = b * b - 4 * a * cc
-    if disc < -1e-9 {
-        return []
-    }
-    let sq = sqrt(max(disc, 0))
-    var ts = [(-b - sq) / (2 * a), (-b + sq) / (2 * a)]
-    ts.sort()
-    var out: [Vec2] = []
-    for t in ts {
-        if s.kind == 0 && (t < -1e-9 || t > 1 + 1e-9) {
-            continue
-        }
-        if s.kind == 1 && t < -1e-9 {
-            continue
-        }
-        let p = s.a.lerp(to: s.b, t)
-        if !out.contains(where: { $0.distance(to: p) < 1e-7 }) {
-            out.append(p)
-        }
-    }
-    return out
-}
-
-private func circleCircle(_ c1: Vec2, _ r1: Double, _ c2: Vec2, _ r2: Double) -> [Vec2] {
-    let d = c1.distance(to: c2)
-    if d < 1e-12 || d > r1 + r2 + 1e-9 || d < abs(r1 - r2) - 1e-9 {
-        return []
-    }
-    let a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
-    let h2 = r1 * r1 - a * a
-    let h = sqrt(max(h2, 0))
-    let mid = c1 + (c2 - c1).normalized() * a
-    let perp = (c2 - c1).normalized().perpendicular()
-    if h < 1e-9 {
-        return [mid]
-    }
-    return [mid + perp * h, mid - perp * h]
-}
-
-func clipLine(_ a: Vec2, _ b: Vec2, to rect: WorldRect) -> (Vec2, Vec2)? {
-    // Liang–Barsky, used to draw infinite lines and rays inside the viewport.
-    var t0 = 0.0
-    var t1 = 1.0
-    let dx = b.x - a.x
-    let dy = b.y - a.y
-    let p = [-dx, dx, -dy, dy]
-    let q = [a.x - rect.minX, rect.maxX - a.x, a.y - rect.minY, rect.maxY - a.y]
-    for i in 0..<4 {
-        if abs(p[i]) < 1e-12 {
-            if q[i] < 0 {
-                return nil
-            }
-        } else {
-            let r = q[i] / p[i]
-            if p[i] < 0 {
-                if r > t1 {
-                    return nil
-                }
-                if r > t0 {
-                    t0 = r
-                }
-            } else {
-                if r < t0 {
-                    return nil
-                }
-                if r < t1 {
-                    t1 = r
-                }
-            }
-        }
-    }
-    return (a.lerp(to: b, t0), a.lerp(to: b, t1))
 }

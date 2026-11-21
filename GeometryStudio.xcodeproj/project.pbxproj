@@ -42,6 +42,8 @@
 		AE145A66C363197F6771192B /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0175EEB4CA34D2001C398FC /* InspectorView.swift */; };
 		B5EB5244755B10A628200F4A /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90511DD8EE80C641A87A0547 /* AboutView.swift */; };
 		BD57E62A90232E51EF78544C /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 351FBEF1D414BA5044D76F8B /* main.swift */; };
+		0F3BCE695F254A40BAEE1088 /* EvalPath+Clipping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B319B396AD4EF0A0FC8A40 /* EvalPath+Clipping.swift */; };
+		B00174C03DB040F0995822BE /* EvalPath+Intersections.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B0BEE34310465AA17E40F3 /* EvalPath+Intersections.swift */; };
 		CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987F7F66DD38C75F1D729436 /* EvalPath.swift */; };
 		CDBC2D996978D6D899969106 /* SketchFileDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2586BCC62BC2A4EAEEC4D4 /* SketchFileDocument.swift */; };
 		DAB47DB594C47302FC93AD93 /* SketchExportFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D74F851B5B433EF3608964 /* SketchExportFormat.swift */; };
@@ -81,7 +83,9 @@
 		8CE812B7A2607107B1662098 /* Units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Units.swift; sourceTree = "<group>"; };
 		90511DD8EE80C641A87A0547 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		974C9AAAADD178B2F891A6EF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		79B319B396AD4EF0A0FC8A40 /* EvalPath+Clipping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EvalPath+Clipping.swift"; sourceTree = "<group>"; };
 		987F7F66DD38C75F1D729436 /* EvalPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvalPath.swift; sourceTree = "<group>"; };
+		B9B0BEE34310465AA17E40F3 /* EvalPath+Intersections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EvalPath+Intersections.swift"; sourceTree = "<group>"; };
 		AB58632CC8F51EBE9099D9C2 /* Expression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expression.swift; sourceTree = "<group>"; };
 		AC37130557CCCAC5266E3412 /* CanvasGestures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasGestures.swift; sourceTree = "<group>"; };
 		B2C88C96DAAA8F36C4AA4F10 /* Document.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Document.swift; sourceTree = "<group>"; };
@@ -132,6 +136,8 @@
 		499E0CAC2D88C6BF7E6107F8 /* Geometry */ = {
 			isa = PBXGroup;
 			children = (
+				79B319B396AD4EF0A0FC8A40 /* EvalPath+Clipping.swift */,
+				B9B0BEE34310465AA17E40F3 /* EvalPath+Intersections.swift */,
 				987F7F66DD38C75F1D729436 /* EvalPath.swift */,
 				AB58632CC8F51EBE9099D9C2 /* Expression.swift */,
 				B46E1027D2B0CF4DD9D1991D /* GridMetrics.swift */,
@@ -311,6 +317,8 @@
 				EE60F31F6E7148993377E610 /* ContentView.swift in Sources */,
 				913070FC776E0178999C03EB /* Document.swift in Sources */,
 				09D7D28CF245043920D3663F /* DocumentWorkspace.swift in Sources */,
+				0F3BCE695F254A40BAEE1088 /* EvalPath+Clipping.swift in Sources */,
+				B00174C03DB040F0995822BE /* EvalPath+Intersections.swift in Sources */,
 				CC3F3E6C105E526879419822 /* EvalPath.swift in Sources */,
 				EE13E1ED7554EDE50EC7E093 /* Expression.swift in Sources */,
 				264FCFB2E9A00E0383A51461 /* FlowChips.swift in Sources */,
