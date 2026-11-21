@@ -36,6 +36,8 @@
 		9AE5BD39B082AE1C8C59DDA3 /* SketchModel+Construction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FEF0D062D574EBCC1500345 /* SketchModel+Construction.swift */; };
 		9EE8CEE82FC0465DA11AD86A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 727F065C238FED4F7D4752EF /* Assets.xcassets */; };
 		A152B0518F680FBA18DF900E /* SketchModel+Editing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B15CD6C7FAC2704EBF783C8 /* SketchModel+Editing.swift */; };
+		47B607F4AA2C4112984B331C /* SVGExporter+Objects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F94A0B2A1CB41FE8217B993 /* SVGExporter+Objects.swift */; };
+		5E3573BE22C3438FA0FFDD66 /* SVGExporter+Grid.swift in Sources */ = {isa = PBXBuildFile; fileRef = F766FDE276BF49149499DAEA /* SVGExporter+Grid.swift */; };
 		A283C8DF039B521AB0050C76 /* SVGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69D583C66ABBA2429C33221 /* SVGExporter.swift */; };
 		A67DCB97BAFB82E9E7EC13AE /* SketchModel+Transforms.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76807891B2874426D4693D2 /* SketchModel+Transforms.swift */; };
 		AAF47E7FEE2CDFC480520747 /* Screenshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F29B45506E99E9917D36 /* Screenshot.swift */; };
@@ -91,7 +93,9 @@
 		B2C88C96DAAA8F36C4AA4F10 /* Document.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Document.swift; sourceTree = "<group>"; };
 		B46E1027D2B0CF4DD9D1991D /* GridMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridMetrics.swift; sourceTree = "<group>"; };
 		B4D74F851B5B433EF3608964 /* SketchExportFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchExportFormat.swift; sourceTree = "<group>"; };
+		7F94A0B2A1CB41FE8217B993 /* SVGExporter+Objects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SVGExporter+Objects.swift"; sourceTree = "<group>"; };
 		B69D583C66ABBA2429C33221 /* SVGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter.swift; sourceTree = "<group>"; };
+		F766FDE276BF49149499DAEA /* SVGExporter+Grid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SVGExporter+Grid.swift"; sourceTree = "<group>"; };
 		BB3B9C0CCE21D721C2ABA371 /* SketchModel+Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Geometry.swift"; sourceTree = "<group>"; };
 		BBAA105E6D63BA07B7E61AAB /* GeometryStudioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryStudioApp.swift; sourceTree = "<group>"; };
 		BCA967A89B8DDAC13140B973 /* SketchModel+Measurement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SketchModel+Measurement.swift"; sourceTree = "<group>"; };
@@ -170,6 +174,8 @@
 				5A138890201ED3147E98C533 /* SketchExporter.swift */,
 				B4D74F851B5B433EF3608964 /* SketchExportFormat.swift */,
 				EF1D2AEAE312574E314909C5 /* SketchRenderOutput.swift */,
+				F766FDE276BF49149499DAEA /* SVGExporter+Grid.swift */,
+				7F94A0B2A1CB41FE8217B993 /* SVGExporter+Objects.swift */,
 				B69D583C66ABBA2429C33221 /* SVGExporter.swift */,
 			);
 			path = Export;
@@ -331,6 +337,8 @@
 				AE145A66C363197F6771192B /* InspectorView.swift in Sources */,
 				FA3DF62EF19D9A0ACF5375B6 /* Notifications.swift in Sources */,
 				52C2520C9243975422883406 /* ObjectModel.swift in Sources */,
+				5E3573BE22C3438FA0FFDD66 /* SVGExporter+Grid.swift in Sources */,
+				47B607F4AA2C4112984B331C /* SVGExporter+Objects.swift in Sources */,
 				A283C8DF039B521AB0050C76 /* SVGExporter.swift in Sources */,
 				AAF47E7FEE2CDFC480520747 /* Screenshot.swift in Sources */,
 				33F4FF25F20332C380C5FCBE /* SettingsView.swift in Sources */,
