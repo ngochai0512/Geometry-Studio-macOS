@@ -8,6 +8,24 @@ extension SketchCanvas {
     func dragGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                if model.tool == .pan {
+                    if !isPanning {
+                        isPanning = true
+                        NSCursor.closedHand.set()
+                    }
+                    if dragStartScreen == nil {
+                        dragStartScreen = value.startLocation
+                        panStartCenter = model.settings.center
+                    }
+                    let dx = value.location.x - value.startLocation.x
+                    let dy = value.location.y - value.startLocation.y
+                    model.settings.center = panStartCenter - Vec2(
+                        dx / model.settings.scale,
+                        -dy / model.settings.scale
+                    )
+                    return
+                }
+
                 let world = model.worldPoint(value.startLocation, size: size)
                 let current = model.worldPoint(value.location, size: size)
                 if dragStartScreen == nil {
@@ -75,7 +93,16 @@ extension SketchCanvas {
             }
             .onEnded { value in
                 defer {
+                    if isPanning {
+                        isPanning = false
+                        if model.tool == .pan, model.isPointerOverCanvas {
+                            NSCursor.openHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
+                    }
                     dragStartScreen = nil
+                    panStartCenter = .zero
                     dragPointID = nil
                     dragLabelID = nil
                     dragLabelIsCaption = false
@@ -83,6 +110,9 @@ extension SketchCanvas {
                     didMove = false
                     marqueeStart = nil
                     marqueeCurrent = nil
+                }
+                if model.tool == .pan {
+                    return
                 }
                 let start = model.worldPoint(value.startLocation, size: size)
                 let end = model.worldPoint(value.location, size: size)

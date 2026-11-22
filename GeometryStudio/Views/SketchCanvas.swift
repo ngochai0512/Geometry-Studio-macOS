@@ -8,6 +8,8 @@ struct SketchCanvas: View {
     var printing: Bool = false
 
     @State var dragStartScreen: CGPoint?
+    @State var panStartCenter: Vec2 = .zero
+    @State var isPanning = false
     @State var dragPointID: UUID?
     @State var dragLabelID: UUID?
     @State var dragLabelBaseOffset: Vec2 = .zero
@@ -68,10 +70,28 @@ struct SketchCanvas: View {
                 case .active(let point):
                     model.isPointerOverCanvas = true
                     model.hoverWorld = model.worldPoint(point, size: geo.size)
+                    if model.tool == .pan, !isPanning {
+                        NSCursor.openHand.set()
+                    }
                 case .ended:
                     model.isPointerOverCanvas = false
                     model.hoverWorld = nil
+                    if !isPanning {
+                        NSCursor.arrow.set()
+                    }
                 }
+            }
+            .onChange(of: model.tool) { _, tool in
+                if tool == .pan {
+                    if model.isPointerOverCanvas, !isPanning {
+                        NSCursor.openHand.set()
+                    }
+                } else if !isPanning {
+                    NSCursor.arrow.set()
+                }
+            }
+            .onDisappear {
+                NSCursor.arrow.set()
             }
             .onAppear {
                 if model.objects.isEmpty && model.settings.scale == SketchMetrics.pixelsPerCentimetre {

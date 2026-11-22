@@ -8,7 +8,7 @@ Anyone adding a new **object family** (arc, mark, vector, table, picture, button
 
 ## Status snapshot
 
-Implemented today: 9 tools, 13 constructions, 17 measurements, 4 transforms, graph with function plots and snapping, inspector (style, definition, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, export to vector PDF, SVG and PNG, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode, arc fills, circle by radius, and a construction protocol.
+Implemented today: 10 tools, 13 constructions, 17 measurements, 4 transforms, graph with function plots and snapping, inspector (style, definition, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep), versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, export to vector PDF, SVG and PNG, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode, arc fills, circle by radius, a hand/pan tool, and a construction protocol.
 
 Missing outright: clipboard, duplicate, persistent marks, tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text, coordinate systems.
 

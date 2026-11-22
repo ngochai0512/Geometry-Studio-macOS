@@ -58,7 +58,7 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 
 ## Core features
 
-- **Tools** — select/drag, point, segment, ray, line, circle, polygon, angle marker and text.
+- **Tools** — select/drag, hand/pan, point, segment, ray, line, circle, polygon, angle marker and text.
 - **Constructions** — midpoint, perpendicular, parallel, angle bisector, intersection, segment,
   circle by centre + point, circle by centre + radius, arc on a circle, arc through three points,
   polygon interior, point on object and locus.

@@ -66,6 +66,9 @@ extension SketchModel {
                 clearSelection()
             }
 
+        case .pan:
+            break
+
         case .point:
             if let existing = existingPoint(near: p, tolerance: tolerance) {
                 select(existing)

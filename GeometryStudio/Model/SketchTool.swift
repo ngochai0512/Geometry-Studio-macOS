@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SketchTool: String, CaseIterable, Identifiable {
     case select
+    case pan
     case point
     case segment
     case ray
@@ -17,6 +18,8 @@ enum SketchTool: String, CaseIterable, Identifiable {
         switch self {
         case .select:
             return "Select"
+        case .pan:
+            return "Pan"
         case .point:
             return "Point"
         case .segment:
@@ -39,6 +42,8 @@ enum SketchTool: String, CaseIterable, Identifiable {
         switch self {
         case .select:
             return "cursorarrow"
+        case .pan:
+            return "hand.raised"
         case .point:
             return "dot.square"
         case .segment:
@@ -61,6 +66,8 @@ enum SketchTool: String, CaseIterable, Identifiable {
         switch self {
         case .select:
             return "v"
+        case .pan:
+            return "h"
         case .point:
             return "p"
         case .segment:
@@ -83,6 +90,8 @@ enum SketchTool: String, CaseIterable, Identifiable {
         switch self {
         case .select:
             return "Click to select. Drag a point to move it. Shift-click adds to the selection."
+        case .pan:
+            return "Drag the canvas to move the view. Scroll or pinch to zoom."
         case .point:
             return "Click empty space for a free point, or click a line or circle to attach a point to it."
         case .segment:
