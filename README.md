@@ -58,7 +58,7 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 
 ## Core features
 
-- **Tools** — select/drag, hand/pan, point, segment, ray, line, circle, polygon, angle marker and text.
+- **Tools** — click to select, hold to drag, hand/pan, point, segment, ray, line, circle, polygon, angle marker and text.
 - **Constructions** — midpoint, perpendicular, parallel, angle bisector, intersection, segment,
   circle by centre + point, circle by centre + radius, arc on a circle, arc through three points,
   polygon interior, point on object and locus.
@@ -68,7 +68,7 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
   0–5 decimal places, as the original's Units preferences offer.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
-- **Graph** — grid, axes, snapping and function plots.
+- **Graph** — orthogonal (standard or dense), triangular and polar grids, axes, snapping with haptic feedback, and function plots.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
 - **Inspector** — object browser, label, definition, colour, line width, dash, point shape and

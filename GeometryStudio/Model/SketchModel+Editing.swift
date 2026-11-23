@@ -165,12 +165,7 @@ extension SketchModel {
         }
         switch objects[i].kind {
         case .freePoint:
-            if settings.snap {
-                let u = max(settings.lengthUnit.perUnit, 1e-6)
-                objects[i].position = Vec2((p.x / u).rounded() * u, (p.y / u).rounded() * u)
-            } else {
-                objects[i].position = p
-            }
+            objects[i].position = snapped(p)
         case .pointOnPath(let parent, let oldParam):
             var e = evaluator()
             guard let path = e.path(parent) else {

@@ -32,16 +32,17 @@ extension SketchCanvas {
                     dragStartScreen = value.startLocation
                     dragCheckpointed = false
                     didMove = false
+                    holdReached = false
+                    holdSelectionDone = false
+                    pressStartedAt = Date()
+                    lastSnapWorld = nil
 
                     if model.tool == .select {
                         let tol = 9 / model.settings.scale
                         if let hit = model.hitTest(world, tolerance: tol), let object = model.objectByID(hit) {
+                            pressHitID = hit
                             if object.isPointLike || isTransformedPoint(object) {
-                                if let draggable = model.beginDrag(at: world, tolerance: tol) {
-                                    dragPointID = draggable
-                                } else {
-                                    model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
-                                }
+                                dragPointID = model.beginDrag(at: world, tolerance: tol)
                             } else if isLabelLike(object) {
                                 dragLabelID = hit
                                 dragLabelBaseOffset = object.offset
@@ -51,13 +52,9 @@ extension SketchCanvas {
                                 } else {
                                     dragLabelIsCaption = false
                                 }
-                                model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
-                            } else {
-                                model.select(hit, additive: NSEvent.modifierFlags.contains(.shift))
-                                marqueeStart = value.startLocation
-                                marqueeCurrent = value.startLocation
                             }
                         } else {
+                            pressHitID = nil
                             marqueeStart = value.startLocation
                             marqueeCurrent = value.startLocation
                         }
@@ -68,11 +65,36 @@ extension SketchCanvas {
                     didMove = true
                 }
 
+                if model.tool == .select {
+                    if !holdReached, Date().timeIntervalSince(pressStartedAt) >= holdToDragDelay {
+                        holdReached = true
+                        if !holdSelectionDone, let id = dragPointID ?? dragLabelID ?? pressHitID {
+                            model.select(id, additive: NSEvent.modifierFlags.contains(.shift))
+                            holdSelectionDone = true
+                        }
+                        if dragPointID == nil && dragLabelID == nil {
+                            marqueeStart = value.startLocation
+                            marqueeCurrent = value.location
+                        }
+                    }
+                    guard holdReached || pressHitID == nil else {
+                        return
+                    }
+                }
+
                 if let id = dragPointID, didMove {
                     if !dragCheckpointed {
                         let label = model.objectByID(id)?.label ?? ""
                         model.checkpoint(label.isEmpty ? "Move Point" : "Move \(label)")
                         dragCheckpointed = true
+                    }
+                    if model.settings.snap, let object = model.objectByID(id),
+                       case .freePoint = object.kind {
+                        let snapped = model.snapped(current)
+                        if lastSnapWorld != snapped {
+                            lastSnapWorld = snapped
+                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                        }
                     }
                     model.dragPoint(id, to: current)
                 } else if let id = dragLabelID, didMove {
@@ -87,7 +109,7 @@ extension SketchCanvas {
                     } else {
                         model.setLabelOffset(id, dragLabelBaseOffset + total)
                     }
-                } else if marqueeStart != nil {
+                } else if marqueeStart != nil, didMove {
                     marqueeCurrent = value.location
                 }
             }
@@ -108,6 +130,11 @@ extension SketchCanvas {
                     dragLabelIsCaption = false
                     dragCheckpointed = false
                     didMove = false
+                    pressHitID = nil
+                    pressStartedAt = .distantPast
+                    holdReached = false
+                    holdSelectionDone = false
+                    lastSnapWorld = nil
                     marqueeStart = nil
                     marqueeCurrent = nil
                 }
@@ -119,16 +146,26 @@ extension SketchCanvas {
                 let tol = 9 / model.settings.scale
 
                 if model.tool == .select {
-                    if dragPointID == nil && dragLabelID == nil {
-                        if didMove, let ms = marqueeStart, let mc = marqueeCurrent {
-                            marqueeSelect(from: ms, to: mc, size: size)
-                        } else {
-                            model.clickCanvas(at: start,
-                                              tolerance: tol,
-                                              additive: NSEvent.modifierFlags.contains(.shift))
-                        }
+                    if holdReached, dragPointID != nil || dragLabelID != nil {
+                        return
+                    }
+                    if didMove, let ms = marqueeStart, let mc = marqueeCurrent {
+                        marqueeSelect(from: ms, to: mc, size: size)
+                        return
+                    }
+                    let shift = NSEvent.modifierFlags.contains(.shift)
+                    if let hit = pressHitID {
+                        model.select(hit, additive: shift)
+                    } else {
+                        model.clearSelection()
                     }
                     return
+                }
+
+                if model.settings.snap,
+                   [.point, .segment, .ray, .line, .circle, .polygon, .angle].contains(model.tool),
+                   model.snapped(start) != start {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
                 }
 
                 if didMove {

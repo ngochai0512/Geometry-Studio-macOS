@@ -46,9 +46,13 @@ extension SketchModel {
             objects.append(object)
             return object.id
         }
+        let target = snapped(p)
+        if let existing = existingPoint(near: target, tolerance: max(tolerance, 0.05)) {
+            return existing
+        }
         checkpoint("Add Point")
         var object = SketchObject(kind: .freePoint)
-        object.position = p
+        object.position = target
         object.label = nextPointLabel()
         object.order = (objects.map(\.order).max() ?? 0) + 1
         objects.append(object)

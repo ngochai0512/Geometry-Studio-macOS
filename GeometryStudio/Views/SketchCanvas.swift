@@ -17,10 +17,20 @@ struct SketchCanvas: View {
     @State var dragLabelIsCaption = false
     @State var dragCheckpointed = false
     @State var didMove = false
+    @State var pressHitID: UUID?
+    @State var pressStartedAt: Date = .distantPast
+    @State var holdReached = false
+    @State var holdSelectionDone = false
+    @State var lastSnapWorld: Vec2?
     @State var marqueeStart: CGPoint?
     @State var marqueeCurrent: CGPoint?
     @State var magnifyBase: Double?
     @State var lastClickAt: Date = .distantPast
+
+    /// A click selects; the pointer must rest this long before a drag moves
+    /// anything. The delay keeps click-selection from turning into an
+    /// accidental micro-drag.
+    let holdToDragDelay: TimeInterval = 0.16
 
     var ink: Color {
         RGBA.ink.color
@@ -94,8 +104,14 @@ struct SketchCanvas: View {
                 NSCursor.arrow.set()
             }
             .onAppear {
+                model.canvasSize = geo.size
                 if model.objects.isEmpty && model.settings.scale == SketchMetrics.pixelsPerCentimetre {
                     model.setZoom(SketchMetrics.pixelsPerCentimetre)
+                }
+            }
+            .onChange(of: geo.size) { _, newSize in
+                if model.canvasSize != newSize {
+                    model.canvasSize = newSize
                 }
             }
             .accessibilityLabel("Geometry canvas")

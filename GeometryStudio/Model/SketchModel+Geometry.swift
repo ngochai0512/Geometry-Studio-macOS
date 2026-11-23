@@ -30,6 +30,55 @@ extension SketchModel {
                          maxX: max(tl.x, br.x), maxY: max(tl.y, br.y))
     }
 
+    /// The grid family's world-space cell size at the current zoom.
+    func gridStep() -> Double {
+        let minimumSpacing = settings.gridType == .orthogonalDense ? 24.0 : 50.0
+        return GridMetrics.step(scale: settings.scale,
+                                perUnit: settings.lengthUnit.perUnit,
+                                minimumSpacing: minimumSpacing)
+    }
+
+    /// The nearest lattice point for the current grid type. Returns the input
+    /// unchanged when snapping is off, so callers can use it unconditionally.
+    func snapped(_ point: Vec2) -> Vec2 {
+        guard settings.snap else {
+            return point
+        }
+        let step = gridStep()
+        guard step > 0, step.isFinite else {
+            return point
+        }
+        switch settings.gridType {
+        case .orthogonal, .orthogonalDense:
+            return Vec2((point.x / step).rounded() * step,
+                        (point.y / step).rounded() * step)
+        case .triangular:
+            let height = step * sqrt(3) / 2
+            guard height > 0, height.isFinite else {
+                return point
+            }
+            let baseRow = Int((point.y / height).rounded())
+            var best = point
+            var bestDistance = Double.greatestFiniteMagnitude
+            for row in (baseRow - 1)...(baseRow + 1) {
+                let offset = ((row % 2) + 2) % 2 == 0 ? 0 : step / 2
+                let x = ((point.x - offset) / step).rounded() * step + offset
+                let candidate = Vec2(x, Double(row) * height)
+                let distance = candidate.distance(to: point)
+                if distance < bestDistance {
+                    best = candidate
+                    bestDistance = distance
+                }
+            }
+            return best
+        case .polar:
+            let radius = (point.length / step).rounded() * step
+            let spoke = Double.pi / 12
+            let angle = (atan2(point.y, point.x) / spoke).rounded() * spoke
+            return Vec2(cos(angle) * radius, sin(angle) * radius)
+        }
+    }
+
     func zoom(by factor: Double) {
         settings.scale = min(max(settings.scale * factor, 12), 420)
     }
