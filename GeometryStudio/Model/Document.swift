@@ -66,7 +66,15 @@ struct CanvasSettings: Codable, Hashable {
         angleUnit = try c.decodeIfPresent(AngleUnit.self, forKey: .angleUnit) ?? .degrees
         precision = try c.decodeIfPresent(Int.self, forKey: .precision) ?? 2
         scale = try c.decodeIfPresent(Double.self, forKey: .scale) ?? SketchMetrics.pixelsPerCentimetre
+        if !scale.isFinite || scale <= 0 {
+            scale = SketchMetrics.pixelsPerCentimetre
+        } else {
+            scale = min(max(scale, 12), 420)
+        }
         center = try c.decodeIfPresent(Vec2.self, forKey: .center) ?? Vec2(0, 0)
+        if !center.x.isFinite || !center.y.isFinite {
+            center = Vec2(0, 0)
+        }
     }
 }
 

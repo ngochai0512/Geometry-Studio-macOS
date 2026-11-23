@@ -28,6 +28,7 @@ extension SketchModel {
 
     func toggleAnimation() {
         if animationPointID != nil {
+            stopAnimationClock()
             animationPointID = nil
             statusMessage = "Animation paused"
             return
@@ -38,6 +39,7 @@ extension SketchModel {
         }
         animationDirection = 1
         animationPointID = id
+        startAnimationClock()
         statusMessage = "Animating \(objectByID(id)?.label ?? "point") — choose Animate again to pause"
     }
 
@@ -49,6 +51,8 @@ extension SketchModel {
               let i = index(of: id),
               case .pointOnPath(let parent, let param) = objects[i].kind,
               let path = e.path(parent) else {
+            stopAnimationClock()
+            animationPointID = nil
             return
         }
         var next = param

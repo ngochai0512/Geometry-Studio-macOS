@@ -46,6 +46,10 @@ extension SketchModel {
             }
         }
         objects.removeAll { doomed.contains($0.id) }
+        if let animated = animationPointID, doomed.contains(animated) {
+            stopAnimationClock()
+            animationPointID = nil
+        }
         pruneMarks(removing: doomed)
         selection = []
         draft = []

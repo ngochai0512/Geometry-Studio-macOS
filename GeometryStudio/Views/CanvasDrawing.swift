@@ -103,6 +103,11 @@ extension SketchCanvas {
         guard model.settings.grid || model.settings.axes else {
             return
         }
+        guard rect.minX.isFinite, rect.maxX.isFinite,
+              rect.minY.isFinite, rect.maxY.isFinite,
+              rect.maxX > rect.minX, rect.maxY > rect.minY else {
+            return
+        }
         let settings = model.settings
         let step = GridMetrics.step(
             scale: settings.scale,
@@ -622,6 +627,9 @@ extension SketchCanvas {
         let scale = model.settings.scale
         let unit = model.settings.lengthUnit
         let oneUnit = scale * unit.perUnit
+        guard oneUnit > 0, oneUnit.isFinite else {
+            return
+        }
         let target = oneUnit
         var length = target
         while length < 46 {

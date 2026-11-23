@@ -44,6 +44,8 @@ struct SketchCanvas: View {
 
     /// The Canvas closure draws outside the body's observation scope, so read
     /// the state it depends on here to keep redraws tied to model changes.
+    /// Hover is only a drawing input while a draft is being placed; otherwise
+    /// it belongs to the status bar and must not redraw the whole canvas.
     private var observedDrawingState: (
         SketchDocument,
         [UUID],
@@ -53,8 +55,9 @@ struct SketchCanvas: View {
         [UUID: [Vec2]],
         SketchTool
     ) {
-        (model.document, model.selection, model.draft, model.hoverWorld,
-         model.tracedIDs, model.tracePaths, model.tool)
+        let hover = model.draft.isEmpty ? nil : model.hoverWorld
+        return (model.document, model.selection, model.draft, hover,
+                model.tracedIDs, model.tracePaths, model.tool)
     }
 
     var body: some View {
@@ -78,14 +81,23 @@ struct SketchCanvas: View {
             .onContinuousHover { phase in
                 switch phase {
                 case .active(let point):
-                    model.isPointerOverCanvas = true
-                    model.hoverWorld = model.worldPoint(point, size: geo.size)
+                    if !model.isPointerOverCanvas {
+                        model.isPointerOverCanvas = true
+                    }
+                    let world = model.worldPoint(point, size: geo.size)
+                    if model.hoverWorld != world {
+                        model.hoverWorld = world
+                    }
                     if model.tool == .pan, !isPanning {
                         NSCursor.openHand.set()
                     }
                 case .ended:
-                    model.isPointerOverCanvas = false
-                    model.hoverWorld = nil
+                    if model.isPointerOverCanvas {
+                        model.isPointerOverCanvas = false
+                    }
+                    if model.hoverWorld != nil {
+                        model.hoverWorld = nil
+                    }
                     if !isPanning {
                         NSCursor.arrow.set()
                     }
