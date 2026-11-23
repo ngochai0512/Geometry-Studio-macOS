@@ -38,6 +38,58 @@ struct GeometryEvalTests {
         #expect(near(eval.point(image.id), Vec2(0, 2)))
     }
 
+    @Test("a marked rotation angle is read live")
+    func markedRotation() {
+        let center = freePoint(Vec2(0, 0))
+        let first = freePoint(Vec2(1, 0))
+        let second = freePoint(Vec2(0, 1))
+        let target = freePoint(Vec2(2, 0))
+        let spec = TransformSpec(
+            kind: .rotate,
+            reference: center.id,
+            angle: 10,
+            angleMark: AngleMark(a: first.id, vertex: center.id, c: second.id)
+        )
+        let image = SketchObject(kind: .transformed(source: target.id, spec: spec))
+
+        var eval = GeometryEval(objects: [target, image, center, first, second],
+                                settings: CanvasSettings())
+        #expect(near(eval.point(image.id), Vec2(0, 2)))
+
+        var moved = second
+        moved.position = Vec2(0, -1)
+        var reevaluated = GeometryEval(objects: [target, image, center, first, moved],
+                                       settings: CanvasSettings())
+        #expect(near(reevaluated.point(image.id), Vec2(0, -2)))
+    }
+
+    @Test("a marked dilation ratio is read live")
+    func markedDilation() {
+        let center = freePoint(Vec2(0, 0))
+        let a = freePoint(Vec2(2, 0))
+        let b = freePoint(Vec2(0, 1))
+        let target = freePoint(Vec2(1, 1))
+        let first = SketchObject(kind: .segment(a: center.id, b: a.id))
+        let second = SketchObject(kind: .segment(a: center.id, b: b.id))
+        let spec = TransformSpec(
+            kind: .dilate,
+            reference: center.id,
+            factor: 0.5,
+            ratioMark: RatioMark(first: first.id, second: second.id)
+        )
+        let image = SketchObject(kind: .transformed(source: target.id, spec: spec))
+
+        var eval = GeometryEval(objects: [target, image, center, a, b, first, second],
+                                settings: CanvasSettings())
+        #expect(near(eval.point(image.id), Vec2(2, 2)))
+
+        var movedB = b
+        movedB.position = Vec2(0, 2)
+        var reevaluated = GeometryEval(objects: [target, image, center, a, movedB, first, second],
+                                       settings: CanvasSettings())
+        #expect(near(reevaluated.point(image.id), Vec2(1, 1)))
+    }
+
     @Test("point on a segment at half its parameter is the midpoint")
     func pointOnPath() {
         let a = freePoint(Vec2(0, 0))

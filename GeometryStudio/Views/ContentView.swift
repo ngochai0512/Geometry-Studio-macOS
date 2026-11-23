@@ -8,17 +8,10 @@ struct ContentView: View {
     @State private var textAnchor: Vec2 = .zero
     @State private var showTextSheet = false
     @State private var textDraft = ""
-    @State private var showRotate = false
-    @State private var showDilate = false
-    @State private var showTranslate = false
     @State private var showCircleRadius = false
     @State private var showProtocol = false
     @State private var showFunction = false
     @State private var showCalculation = false
-    @State private var rotateAngle: Double = 90
-    @State private var dilateFactor: Double = 2
-    @State private var translateX: Double = 1
-    @State private var translateY: Double = 0
     @State private var circleRadius: Double = 2
     @State private var functionText = "sin(x)"
     @State private var calculationText = ""
@@ -79,15 +72,6 @@ struct ContentView: View {
                 model.advanceAnimation()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openRotate)) { _ in
-            showRotate = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openDilate)) { _ in
-            showDilate = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openTranslate)) { _ in
-            showTranslate = true
-        }
         .onReceive(NotificationCenter.default.publisher(for: .openCircleRadius)) { _ in
             showCircleRadius = true
         }
@@ -106,26 +90,6 @@ struct ContentView: View {
                 model.checkpoint("Add Text")
                 let id = model.add(kind: .caption(text), position: textAnchor, silent: true)
                 model.selection = [id]
-            }
-        }
-        .sheet(isPresented: $showRotate) {
-            RotateSheet(angle: $rotateAngle, centerName: rotateCenterName()) { degrees in
-                if let center = selectedPoint() ?? firstPoint() {
-                    model.rotateSelection(center: center, degrees: degrees)
-                }
-            }
-        }
-        .sheet(isPresented: $showDilate) {
-            DilateSheet(factor: $dilateFactor, centerName: dilateCenterName()) { factor in
-                if let center = selectedPoint() ?? firstPoint() {
-                    model.dilateSelection(center: center, factor: factor)
-                }
-            }
-        }
-        .sheet(isPresented: $showTranslate) {
-            TranslateSheet(dx: $translateX, dy: $translateY,
-                           unit: model.settings.lengthUnit.short) { dx, dy in
-                model.translateSelection(dx: dx, dy: dy)
             }
         }
         .sheet(isPresented: $showCircleRadius) {
@@ -368,33 +332,6 @@ struct ContentView: View {
             return nil
         }
         return object.label.isEmpty ? "Point" : object.label
-    }
-
-    private func firstPoint() -> UUID? {
-        model.objects.first { object in
-            guard object.visible else {
-                return false
-            }
-            return model.evaluated(object.id).point != nil
-        }?.id
-    }
-
-    /// The rotate sheet names an unlabelled centre "Point"; dilate shows the
-    /// label verbatim, as the inline forms did.
-    private func rotateCenterName() -> String? {
-        guard let id = selectedPoint() ?? firstPoint(),
-              let object = model.objectByID(id) else {
-            return nil
-        }
-        return object.label.isEmpty ? "Point" : object.label
-    }
-
-    private func dilateCenterName() -> String? {
-        guard let id = selectedPoint() ?? firstPoint(),
-              let object = model.objectByID(id) else {
-            return nil
-        }
-        return object.label
     }
 }
 

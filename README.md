@@ -67,7 +67,7 @@ window as a PNG and exits. The app-bundle binary accepts the same flag.
   slope and calculations.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
   0–5 decimal places, as the original's Units preferences offer.
-- **Transforms** — reflect, rotate, dilate and translate. Images keep their source and update.
+- **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
 - **Graph** — grid, axes, snapping and function plots.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.

@@ -95,10 +95,18 @@ extension InspectorView {
                 .selectionDisabled()
 
                 Menu {
-                    Button("Reflect Across Selected Line") { model.reflectSelection() }
-                    Button("Rotate…") { NotificationCenter.default.post(name: .openRotate, object: nil) }
-                    Button("Dilate…") { NotificationCenter.default.post(name: .openDilate, object: nil) }
-                    Button("Translate…") { NotificationCenter.default.post(name: .openTranslate, object: nil) }
+                    Button("Reflect") { model.reflectSelection() }
+                    Button("Rotate") { model.rotateSelection() }
+                    Button("Dilate") { model.dilateSelection() }
+                    Button("Translate") { model.translateSelection() }
+                    Divider()
+                    Button("Mark Mirror") { model.markMirror() }
+                    Button("Mark Center") { model.markCenter() }
+                    Button("Mark Angle") { model.markAngle() }
+                    Button("Mark Ratio") { model.markRatio() }
+                    Button("Mark Vector") { model.markVector() }
+                    Divider()
+                    Button("Clear Marks") { model.clearMarks() }
                 } label: {
                     Label("Transform Selection", systemImage: "arrow.triangle.2.circlepath")
                 }
@@ -205,6 +213,40 @@ extension InspectorView {
                 }
             }
         }
+    }
+
+    var marksSection: some View {
+        Section("Marks") {
+            LabeledContent("Mirror", value: model.markName(model.marks.mirror))
+            LabeledContent("Center", value: model.markName(model.marks.center))
+            LabeledContent("Angle", value: angleMarkName)
+            LabeledContent("Ratio", value: ratioMarkName)
+            LabeledContent("Vector", value: vectorMarkName)
+            Button("Clear Marks") { model.clearMarks() }
+                .disabled(model.marks.isEmpty)
+                .selectionDisabled()
+        }
+    }
+
+    private var angleMarkName: String {
+        guard let mark = model.marks.angle else {
+            return "—"
+        }
+        return "\(model.markName(mark.a)) \(model.markName(mark.vertex)) \(model.markName(mark.c))"
+    }
+
+    private var ratioMarkName: String {
+        guard let mark = model.marks.ratio else {
+            return "—"
+        }
+        return "\(model.markName(mark.first)) / \(model.markName(mark.second))"
+    }
+
+    private var vectorMarkName: String {
+        guard let mark = model.marks.vector else {
+            return "—"
+        }
+        return "\(model.markName(mark.from)) → \(model.markName(mark.to))"
     }
 
     var canvasSection: some View {

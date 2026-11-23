@@ -615,7 +615,8 @@ struct GeometryEval {
             guard let reference = spec.reference, let center = self.point(reference) else {
                 return nil
             }
-            return center + (point - center).rotated(by: spec.angle * .pi / 180)
+            let degrees = liveAngleDegrees(for: spec) ?? spec.angle
+            return center + (point - center).rotated(by: degrees * .pi / 180)
 
         case .translate:
             if let a = spec.reference,
@@ -630,8 +631,37 @@ struct GeometryEval {
             guard let reference = spec.reference, let center = self.point(reference) else {
                 return nil
             }
-            return center + (point - center) * spec.factor
+            let factor = liveRatio(for: spec) ?? spec.factor
+            return center + (point - center) * factor
         }
+    }
+
+    /// The signed angle from the first side to the second side, in degrees.
+    /// A missing mark falls back to the transform's snapshot.
+    private mutating func liveAngleDegrees(for spec: TransformSpec) -> Double? {
+        guard let mark = spec.angleMark,
+              let a = point(mark.a),
+              let vertex = point(mark.vertex),
+              let c = point(mark.c) else {
+            return nil
+        }
+        let u = a - vertex
+        let v = c - vertex
+        return atan2(u.cross(v), u.dot(v)) * 180 / .pi
+    }
+
+    /// The ratio of the two marked path lengths. A missing path falls back to
+    /// the transform's snapshot factor.
+    private mutating func liveRatio(for spec: TransformSpec) -> Double? {
+        guard let mark = spec.ratioMark,
+              let firstPath = path(mark.first),
+              let secondPath = path(mark.second),
+              let first = firstPath.length(settings: settings),
+              let second = secondPath.length(settings: settings),
+              second > Metrics.degenerate else {
+            return nil
+        }
+        return first / second
     }
 
     private mutating func transform(_ shape: EvalPath, by spec: TransformSpec) -> EvalPath? {

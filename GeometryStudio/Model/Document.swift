@@ -51,6 +51,7 @@ struct SketchDocument: Codable, Equatable {
     var version: Int = SketchDocument.currentVersion
     var objects: [SketchObject] = []
     var settings: CanvasSettings = CanvasSettings()
+    var marks: TransformMarks = TransformMarks()
     var title: String = "Untitled Sketch"
 
     init() {}
@@ -64,6 +65,7 @@ struct SketchDocument: Codable, Equatable {
         version = storedVersion
         objects = try c.decodeIfPresent([SketchObject].self, forKey: .objects) ?? []
         settings = try c.decodeIfPresent(CanvasSettings.self, forKey: .settings) ?? CanvasSettings()
+        marks = try c.decodeIfPresent(TransformMarks.self, forKey: .marks) ?? TransformMarks()
         title = try c.decodeIfPresent(String.self, forKey: .title) ?? "Untitled Sketch"
         try migrateToCurrent()
     }

@@ -46,6 +46,7 @@ extension SketchModel {
             }
         }
         objects.removeAll { doomed.contains($0.id) }
+        pruneMarks(removing: doomed)
         selection = []
         draft = []
         statusMessage = "Deleted \(doomed.count) object\(doomed.count == 1 ? "" : "s")"
@@ -88,6 +89,12 @@ extension SketchModel {
             }
             if let r = spec.secondReference {
                 out.append(r)
+            }
+            if let mark = spec.angleMark {
+                out.append(contentsOf: [mark.a, mark.vertex, mark.c])
+            }
+            if let mark = spec.ratioMark {
+                out.append(contentsOf: [mark.first, mark.second])
             }
             return out
         case .locus(let driver, let target):

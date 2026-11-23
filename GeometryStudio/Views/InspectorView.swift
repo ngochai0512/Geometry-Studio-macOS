@@ -44,6 +44,7 @@ struct InspectorView: View {
                 List(selection: objectSelection) {
                     sketchSection
                     canvasSection
+                    marksSection
                     constructSection
                 }
                 .listStyle(.sidebar)

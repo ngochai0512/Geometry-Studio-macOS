@@ -36,7 +36,7 @@ Deferred within Tier 1: window appearance moved to #45, where the canvas theme l
 | 11 | Arcs: arc on circle, arc through 3 points | `0,44`–`0,47` | four places | M | [x] |
 | 12 | Arc interior, sector and segment fills | `0,48`–`0,53`, `1,17` | four places | M | [x] |
 | 13 | Arc angle and arc length measurements | `1,100`–`1,103` | `MeasureKind`, `GeometryEval` | S | [x] |
-| 14 | Persistent marks: mirror, center, angle, ratio, vector (replacing modal dialogs) | `1,33`–`1,45` | `ObjectKind` + inspector | M | [ ] |
+| 14 | Persistent marks: mirror, center, angle, ratio, vector (replacing modal dialogs) | `1,33`–`1,45` | `ObjectKind` + inspector | M | [x] |
 | 15 | Circle by center + numeric radius | construct table | `SketchModel+Construction` | S | [x] |
 | 16 | Parameter / slider objects | `0,151` (parametric plots need them) | `ObjectKind` | S | [ ] |
 | 17 | Tangents (point→circle, circle→circle), perpendicular bisector, radical axis | construct table | `GeometryEval`, `SketchModel+Construction` | S/M | [ ] |

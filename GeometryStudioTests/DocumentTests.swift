@@ -41,6 +41,32 @@ struct DocumentTests {
         #expect(decoded.version == SketchDocument.currentVersion)
     }
 
+    @Test("transform marks round-trip and older files default to none")
+    func transformMarksRoundTrip() throws {
+        var document = SketchDocument()
+        let a = SketchObject(kind: .freePoint)
+        let b = SketchObject(kind: .freePoint)
+        let c = SketchObject(kind: .freePoint)
+        document.objects = [a, b, c]
+        document.marks.mirror = a.id
+        document.marks.center = b.id
+        document.marks.angle = AngleMark(a: a.id, vertex: b.id, c: c.id)
+        document.marks.ratio = RatioMark(first: a.id, second: b.id)
+        document.marks.vector = VectorMark(from: a.id, to: c.id)
+
+        let data = try JSONEncoder().encode(document)
+        let decoded = try JSONDecoder().decode(SketchDocument.self, from: data)
+
+        #expect(decoded.marks == document.marks)
+
+        var root = try #require(jsonObject(from: data))
+        root.removeValue(forKey: "marks")
+        let legacy = try JSONSerialization.data(withJSONObject: root)
+        let old = try JSONDecoder().decode(SketchDocument.self, from: legacy)
+
+        #expect(old.marks.isEmpty)
+    }
+
     @Test("new object kinds preserve their added data")
     func newObjectKindsRoundTrip() throws {
         var document = SketchDocument()

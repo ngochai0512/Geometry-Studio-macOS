@@ -133,14 +133,27 @@ struct SketchCommands: Commands {
         }
 
         CommandMenu("Transform") {
-            Button("Reflect Across Selected Line") { model?.reflectSelection() }
+            Button("Mark Mirror") { model?.markMirror() }
+                .disabled(model == nil)
+            Button("Mark Center") { model?.markCenter() }
+                .disabled(model == nil)
+            Button("Mark Angle") { model?.markAngle() }
+                .disabled(model == nil)
+            Button("Mark Ratio") { model?.markRatio() }
+                .disabled(model == nil)
+            Button("Mark Vector") { model?.markVector() }
                 .disabled(model == nil)
             Divider()
-            Button("Rotate…") { NotificationCenter.default.post(name: .openRotate, object: nil) }
+            Button("Reflect") { model?.reflectSelection() }
                 .disabled(model == nil)
-            Button("Dilate…") { NotificationCenter.default.post(name: .openDilate, object: nil) }
+            Button("Rotate") { model?.rotateSelection() }
                 .disabled(model == nil)
-            Button("Translate…") { NotificationCenter.default.post(name: .openTranslate, object: nil) }
+            Button("Dilate") { model?.dilateSelection() }
+                .disabled(model == nil)
+            Button("Translate") { model?.translateSelection() }
+                .disabled(model == nil)
+            Divider()
+            Button("Clear Marks") { model?.clearMarks() }
                 .disabled(model == nil)
         }
 

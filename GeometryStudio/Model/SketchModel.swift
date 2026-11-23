@@ -82,6 +82,14 @@ final class SketchModel {
             document.settings = newValue
         }
     }
+    var marks: TransformMarks {
+        get {
+            document.marks
+        }
+        set {
+            document.marks = newValue
+        }
+    }
 
     var selectedObjects: [SketchObject] {
         selection.compactMap { id in objects.first(where: { $0.id == id }) }
