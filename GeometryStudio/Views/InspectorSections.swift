@@ -48,11 +48,6 @@ extension InspectorView {
                         .font(.system(.callout, design: .rounded, weight: .medium))
                         .textSelection(.enabled)
                 }
-
-                Toggle("Show label", isOn: showLabelBinding(id))
-                    .font(.subheadline)
-                Toggle("Visible", isOn: visibleBinding(id))
-                    .font(.subheadline)
             } else if model.selection.count > 1 {
                 Text("\(model.selection.count) objects selected")
                     .font(.callout.weight(.medium))
@@ -253,6 +248,15 @@ extension InspectorView {
         Section("Canvas") {
             Group {
                 Toggle("Grid", isOn: $model.settings.grid)
+                LabeledContent("Grid style") {
+                    Picker("Grid style", selection: $model.settings.gridType) {
+                        ForEach(GridType.allCases) { type in
+                            Text(type.title).tag(type)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
                 Toggle("Axes", isOn: $model.settings.axes)
                 Toggle("Snap points to grid", isOn: $model.settings.snap)
                 Toggle("Show labels", isOn: $model.settings.showLabels)
@@ -284,7 +288,7 @@ extension InspectorView {
                     .pickerStyle(.segmented)
                 }
                 HStack(spacing: 8) {
-                    Button("Fit") { model.fitCanvas(size: CGSize(width: 900, height: 700)) }
+                    Button("Fit") { model.fitCanvas(size: model.canvasSize) }
                     Button("100%") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
                     Button("Reset") {
                         model.settings.center = .zero

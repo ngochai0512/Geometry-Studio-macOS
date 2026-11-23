@@ -146,32 +146,6 @@ extension InspectorView {
         )
     }
 
-    func showLabelBinding(_ id: UUID) -> Binding<Bool> {
-        Binding(
-            get: { model.objectByID(id)?.showLabel ?? true },
-            set: { value in
-                guard let i = model.index(of: id) else {
-                    return
-                }
-                model.checkpoint(value ? "Show Label" : "Hide Label")
-                model.objects[i].showLabel = value
-            }
-        )
-    }
-
-    func visibleBinding(_ id: UUID) -> Binding<Bool> {
-        Binding(
-            get: { model.objectByID(id)?.visible ?? true },
-            set: { value in
-                guard let i = model.index(of: id) else {
-                    return
-                }
-                model.checkpoint(value ? "Show Object" : "Hide Object")
-                model.objects[i].visible = value
-            }
-        )
-    }
-
     // MARK: - Selection binding
 
     /// The object list selects through a set; the model keeps click order so
