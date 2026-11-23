@@ -262,6 +262,7 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 ## 11. Commits & PRs
 
 - Nothing here happens until the user asks. Prepare the change, leave it uncommitted, and offer the message (section 2).
+- Suggesting is not committing. When the user says 'suggest commit message', it means suggesting.
 - Conventional style: `type(scope): imperative summary` — e.g. `feat(locus): sample the driver path into a traced target`.
 - Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 - Body (when non-trivial): what moved, why, verification line. Pure refactors state "no behavior change" explicitly.
