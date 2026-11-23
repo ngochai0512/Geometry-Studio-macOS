@@ -165,7 +165,7 @@ struct ContentView: View {
                 Button("150%") { model.setZoom(93) }
                 Button("200%") { model.setZoom(124) }
                 Divider()
-                Button("Fit Sketch") { model.fitCanvas(size: lastCanvasSize) }
+                Button("Fit Sketch") { model.fitCanvas(size: model.canvasSize) }
                 Button("Actual Size") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
             } label: {
                 Text("\(Int(model.settings.scale / SketchMetrics.pixelsPerCentimetre * 100))%")
@@ -214,7 +214,6 @@ struct ContentView: View {
         )
     }
 
-    @State private var lastCanvasSize = CGSize(width: 900, height: 720)
     private let animationClock = Timer
         .publish(every: 1.0 / 60.0, on: .main, in: .common)
         .autoconnect()

@@ -200,7 +200,9 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
             Divider()
             Button("Fit Sketch") {
-                model?.fitCanvas(size: CGSize(width: 980, height: 740))
+                if let model {
+                    model.fitCanvas(size: model.canvasSize)
+                }
             }
             .disabled(model == nil)
             Button(model?.inspectorVisible == true ? "Hide Inspector" : "Show Inspector") {

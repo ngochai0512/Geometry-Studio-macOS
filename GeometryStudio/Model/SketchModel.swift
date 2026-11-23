@@ -10,6 +10,9 @@ final class SketchModel {
     var draft: [UUID] = []
     var hoverWorld: Vec2?
     var isPointerOverCanvas = false
+    /// The canvas's last laid-out size, so Fit and the inspector use the real
+    /// window instead of a guessed frame.
+    var canvasSize = CGSize(width: 900, height: 720)
     var inspectorVisible = true
     var statusMessage: String = ""
     var showAbout = false
