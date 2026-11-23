@@ -84,8 +84,9 @@ app-bundle binary does not carry it.
   panel and preview; Page Setup controls paper size, orientation and margins.
 - **Export** — File > Export writes a vector PDF, an SVG or a 2× PNG, fitted to a 3:2 canvas
   and drawn on a white page.
-- **Preferences** — default length unit, angle unit, precision, grid, axes, snapping and labels
-  for new sketches.
+- **Preferences** — General, Units, Canvas, Update and About panes, covering start at login,
+  GPU rendering, and the default length unit, angle unit, precision, grid, axes, snapping and
+  labels for new sketches.
 - **New documents** — a new sketch starts blank, with only the grid and axes from your
   preferences.
 

@@ -1,42 +1,74 @@
 import AppKit
+import Observation
+import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
+    private enum Tab: Hashable {
+        case general
+        case units
+        case canvas
+        case update
+        case about
+    }
+
     @Environment(\.newDocument) private var newDocument
     @State private var settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+    @State private var launchAtLogin = LaunchAtLogin()
+    @State private var tab: Tab = .general
 
     var body: some View {
         VStack(spacing: 0) {
-            TabView {
+            TabView(selection: $tab) {
+                generalTab
+                    .tabItem {
+                        Label("General", systemImage: "gearshape")
+                    }
+                    .tag(Tab.general)
                 unitsTab
                     .tabItem {
                         Label("Units", systemImage: "ruler")
                     }
+                    .tag(Tab.units)
                 canvasTab
                     .tabItem {
                         Label("Canvas", systemImage: "squareshape.split.2x2")
                     }
+                    .tag(Tab.canvas)
+                updateTab
+                    .tabItem {
+                        Label("Update", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .tag(Tab.update)
+                aboutTab
+                    .tabItem {
+                        Label("About", systemImage: "info.circle")
+                    }
+                    .tag(Tab.about)
             }
 
-            Divider()
+            if showsSketchActions {
+                Divider()
 
-            HStack(spacing: 10) {
-                Button("Restore Defaults") {
-                    settings = CanvasSettings()
-                    persist(settings)
+                HStack(spacing: 10) {
+                    Button("Restore Defaults") {
+                        settings = CanvasSettings()
+                        persist(settings)
+                    }
+                    Spacer()
+                    Button("Create New Sketch") {
+                        persist(settings)
+                        newDocument(contentType: .geometryStudioSketch)
+                    }
                 }
-                Spacer()
-                Button("Create New Sketch") {
-                    persist(settings)
-                    newDocument(contentType: .geometryStudioSketch)
-                }
+                .padding(12)
             }
-            .padding(12)
         }
         .frame(width: 480, height: 500)
         .onAppear {
             settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+            launchAtLogin.refresh()
         }
         .onChange(of: settings) { _, newValue in
             persist(newValue)
@@ -44,6 +76,42 @@ struct SettingsView: View {
         .onDisappear {
             persist(settings)
         }
+    }
+
+    private var generalTab: some View {
+        Form {
+            Section {
+                Toggle("Start at login", isOn: launchAtLoginBinding)
+
+                if launchAtLogin.needsApproval {
+                    Text("Approve Geometry Studio in System Settings > General > Login Items.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let message = launchAtLogin.errorMessage {
+                    Text(message)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Startup")
+            }
+
+            Section {
+                Toggle("GPU rendering", isOn: $settings.useMetalRenderer)
+                    .disabled(!MetalCanvas.isSupported)
+                    .help(MetalCanvas.isSupported
+                          ? "Draw sketch geometry with Metal"
+                          : "Metal is not available on this Mac")
+            } header: {
+                Text("Rendering")
+            } footer: {
+                Text("These settings apply to the active sketch and become the defaults for new sketches.")
+            }
+        }
+        .formStyle(.grouped)
+        .padding(12)
     }
 
     private var unitsTab: some View {
@@ -105,11 +173,6 @@ struct SettingsView: View {
                     .pickerStyle(.menu)
                 }
                 Toggle("Bold grid", isOn: $settings.gridBold)
-                Toggle("GPU rendering", isOn: $settings.useMetalRenderer)
-                    .disabled(!MetalCanvas.isSupported)
-                    .help(MetalCanvas.isSupported
-                          ? "Draw sketch geometry with Metal"
-                          : "Metal is not available on this Mac")
             } header: {
                 Text("Grid")
             }
@@ -144,6 +207,49 @@ struct SettingsView: View {
         .padding(12)
     }
 
+    private var updateTab: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text("Updates")
+                .font(.headline)
+            Text("This build does not check for updates yet.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var aboutTab: some View {
+        ScrollView {
+            AboutContent()
+                .padding(26)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// The sketch footer only makes sense while editing canvas preferences;
+    /// the Update and About panes have nothing to restore or create.
+    private var showsSketchActions: Bool {
+        switch tab {
+        case .general, .units, .canvas:
+            return true
+        case .update, .about:
+            return false
+        }
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { launchAtLogin.isEnabled },
+            set: { launchAtLogin.setEnabled($0) }
+        )
+    }
+
     /// Choosing a style while the grid is hidden would look like a no-op, so
     /// selecting one also makes the grid visible.
     private var gridTypeBinding: Binding<GridType> {
@@ -175,6 +281,57 @@ struct SettingsView: View {
                                                 Double(ns.alphaComponent))
             }
         )
+    }
+}
+
+/// Mirrors the main app's login item. The system owns the state, so the
+/// toggle re-reads it instead of storing a duplicate preference.
+@Observable
+private final class LaunchAtLogin {
+    var isEnabled = false
+    var needsApproval = false
+    var errorMessage: String?
+
+    init() {
+        refresh()
+    }
+
+    func refresh() {
+        switch SMAppService.mainApp.status {
+        case .enabled:
+            isEnabled = true
+            needsApproval = false
+        case .requiresApproval:
+            isEnabled = false
+            needsApproval = true
+        default:
+            isEnabled = false
+            needsApproval = false
+        }
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        errorMessage = nil
+        // Registering again while the system waits for approval would not
+        // change the state; the notice below already says what to do.
+        if enabled, SMAppService.mainApp.status == .requiresApproval {
+            refresh()
+            return
+        }
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            // The toggle keeps the system's real state; the message explains
+            // why it sprang back without exposing technical error text.
+            errorMessage = enabled
+                ? "Could not add Geometry Studio to your login items. Move the app to Applications and try again."
+                : "Could not remove Geometry Studio from your login items."
+        }
+        refresh()
     }
 }
 
