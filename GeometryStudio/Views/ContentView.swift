@@ -4,7 +4,6 @@ import Combine
 
 struct ContentView: View {
     @Bindable var model: SketchModel
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.controlActiveState) private var controlActiveState
 
     @State private var textAnchor: Vec2 = .zero
@@ -205,13 +204,6 @@ struct ContentView: View {
             }
             .toggleStyle(.button)
             .help("Show or hide the inspector")
-
-            Button {
-                openSettings()
-            } label: {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .help("Settings")
         }
     }
 
