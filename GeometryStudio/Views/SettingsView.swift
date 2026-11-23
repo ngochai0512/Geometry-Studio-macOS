@@ -1,88 +1,105 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
-    @AppStorage(AppPreferences.Keys.lengthUnit) private var lengthUnit: LengthUnit = .inches
-    @AppStorage(AppPreferences.Keys.angleUnit) private var angleUnit: AngleUnit = .degrees
-    @AppStorage(AppPreferences.Keys.precision) private var precision: Int = 2
-    @AppStorage(AppPreferences.Keys.grid) private var grid = true
-    @AppStorage(AppPreferences.Keys.gridType) private var gridType: GridType = .orthogonal
-    @AppStorage(AppPreferences.Keys.axes) private var axes = true
-    @AppStorage(AppPreferences.Keys.snap) private var snap = false
-    @AppStorage(AppPreferences.Keys.showLabels) private var showLabels = true
+    @Environment(\.newDocument) private var newDocument
+    @State private var settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
 
     var body: some View {
-        TabView {
-            Tab("Units", systemImage: "ruler") {
-                unitsTab
-            }
-            Tab("New Sketches", systemImage: "doc.badge.plus") {
-                newSketchTab
-            }
-        }
-        .frame(width: 460, height: 360)
-    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                GroupBox("Units") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Picker("Length unit", selection: $settings.lengthUnit) {
+                            ForEach(LengthUnit.allCases) { unit in
+                                Text(unit.name).tag(unit)
+                            }
+                        }
+                        .pickerStyle(.menu)
 
-    private var unitsTab: some View {
-        Form {
-            Picker("Length unit", selection: $lengthUnit) {
-                ForEach(LengthUnit.allCases) { unit in
-                    Text(unit.name).tag(unit)
-                }
-            }
-            Picker("Angle unit", selection: $angleUnit) {
-                ForEach(AngleUnit.allCases) { unit in
-                    Text(unit.name).tag(unit)
-                }
-            }
-            Picker("Decimal places", selection: $precision) {
-                ForEach(0...5, id: \.self) { places in
-                    Text("\(places)").tag(places)
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .padding(.top, 10)
-    }
+                        Picker("Angle unit", selection: $settings.angleUnit) {
+                            ForEach(AngleUnit.allCases) { unit in
+                                Text(unit.name).tag(unit)
+                            }
+                        }
+                        .pickerStyle(.menu)
 
-    private var newSketchTab: some View {
-        Form {
-            Section {
-                Toggle("Show grid", isOn: $grid)
-                Picker("Grid style", selection: $gridType) {
-                    ForEach(GridType.allCases) { type in
-                        Text(type.title).tag(type)
+                        Picker("Decimal places", selection: $settings.precision) {
+                            ForEach(0...5, id: \.self) { places in
+                                Text("\(places)").tag(places)
+                            }
+                        }
+                        .pickerStyle(.menu)
                     }
+                    .padding(8)
                 }
-                Toggle("Show axes", isOn: $axes)
-                Toggle("Snap points to grid", isOn: $snap)
-                Toggle("Show labels", isOn: $showLabels)
-            } header: {
-                Text("Canvas")
-            }
 
-            Section {
-                Text("These defaults apply when you create a new sketch. An open sketch keeps its own units, precision and canvas settings.")
+                GroupBox("Canvas") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle("Show grid", isOn: $settings.grid)
+
+                        Picker("Grid style", selection: gridTypeBinding) {
+                            ForEach(GridType.allCases) { type in
+                                Text(type.title).tag(type)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        Toggle("Show axes", isOn: $settings.axes)
+                        Toggle("Snap points to grid", isOn: $settings.snap)
+                        Toggle("Show labels", isOn: $settings.showLabels)
+                    }
+                    .padding(8)
+                }
+
+                Text("These settings apply to the active sketch and become the defaults for new sketches.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Restore Defaults") {
-                    restoreDefaults()
+
+                HStack(spacing: 10) {
+                    Button("Restore Defaults") {
+                        settings = CanvasSettings()
+                        persist(settings)
+                    }
+                    Button("Create New Sketch") {
+                        persist(settings)
+                        newDocument(contentType: .geometryStudioSketch)
+                    }
                 }
             }
+            .padding(20)
         }
-        .formStyle(.grouped)
-        .padding(.top, 10)
+        .frame(width: 460, height: 520)
+        .onAppear {
+            settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+        }
+        .onChange(of: settings) { _, newValue in
+            persist(newValue)
+        }
+        .onDisappear {
+            persist(settings)
+        }
     }
 
-    private func restoreDefaults() {
-        lengthUnit = .inches
-        angleUnit = .degrees
-        precision = 2
-        grid = true
-        gridType = .orthogonal
-        axes = true
-        snap = false
-        showLabels = true
+    /// Choosing a style while the grid is hidden would look like a no-op, so
+    /// selecting one also makes the grid visible.
+    private var gridTypeBinding: Binding<GridType> {
+        Binding(
+            get: { settings.gridType },
+            set: { newValue in
+                var updated = settings
+                updated.gridType = newValue
+                updated.grid = true
+                settings = updated
+                persist(updated)
+            }
+        )
+    }
+
+    private func persist(_ value: CanvasSettings) {
+        AppPreferences.save(value)
+        ActiveSketch.model?.applyCanvasDefaults(value)
     }
 }
 

@@ -45,4 +45,17 @@ enum AppPreferences {
         }
         return settings
     }
+
+    /// Writes the new-sketch defaults. Scale and centre are intentionally not
+    /// stored: every new document starts at the standard zoom and origin.
+    static func save(_ settings: CanvasSettings, to defaults: UserDefaults = .standard) {
+        defaults.set(settings.lengthUnit.rawValue, forKey: Keys.lengthUnit)
+        defaults.set(settings.angleUnit.rawValue, forKey: Keys.angleUnit)
+        defaults.set(settings.precision, forKey: Keys.precision)
+        defaults.set(settings.grid, forKey: Keys.grid)
+        defaults.set(settings.gridType.rawValue, forKey: Keys.gridType)
+        defaults.set(settings.axes, forKey: Keys.axes)
+        defaults.set(settings.snap, forKey: Keys.snap)
+        defaults.set(settings.showLabels, forKey: Keys.showLabels)
+    }
 }

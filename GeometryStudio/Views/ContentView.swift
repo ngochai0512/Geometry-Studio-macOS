@@ -4,6 +4,8 @@ import Combine
 
 struct ContentView: View {
     @Bindable var model: SketchModel
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.controlActiveState) private var controlActiveState
 
     @State private var textAnchor: Vec2 = .zero
     @State private var showTextSheet = false
@@ -58,20 +60,26 @@ struct ContentView: View {
             model.draft = []
             model.statusMessage = newValue.hint
         }
+        .onChange(of: controlActiveState) { _, state in
+            if state != .inactive {
+                ActiveSketch.model = model
+            }
+        }
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear(perform: installScrollMonitor)
+        .onAppear {
+            ActiveSketch.model = model
+        }
         .onDisappear {
             if let monitor = scrollMonitor {
                 NSEvent.removeMonitor(monitor)
             }
             scrollMonitor = nil
-        }
-        .onExitCommand { model.cancelDraft() }
-        .onReceive(animationClock) { _ in
-            if model.animationPointID != nil {
-                model.advanceAnimation()
+            if ActiveSketch.model === model {
+                ActiveSketch.model = nil
             }
         }
+        .onExitCommand { model.cancelDraft() }
         .onReceive(NotificationCenter.default.publisher(for: .openCircleRadius)) { _ in
             showCircleRadius = true
         }
@@ -197,6 +205,13 @@ struct ContentView: View {
             }
             .toggleStyle(.button)
             .help("Show or hide the inspector")
+
+            Button {
+                openSettings()
+            } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .help("Settings")
         }
     }
 
@@ -213,10 +228,6 @@ struct ContentView: View {
             }
         )
     }
-
-    private let animationClock = Timer
-        .publish(every: 1.0 / 60.0, on: .main, in: .common)
-        .autoconnect()
 
     private var constructMenu: some View {
         Menu {

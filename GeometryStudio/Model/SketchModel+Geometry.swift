@@ -91,6 +91,21 @@ extension SketchModel {
         settings.center = settings.center - Vec2(dx / settings.scale, -dy / settings.scale)
     }
 
+    /// Applies the shared canvas defaults to this sketch without touching the
+    /// document's zoom or pan. Used by the Settings sheet.
+    func applyCanvasDefaults(_ new: CanvasSettings) {
+        var current = settings
+        current.grid = new.grid
+        current.gridType = new.gridType
+        current.axes = new.axes
+        current.snap = new.snap
+        current.showLabels = new.showLabels
+        current.lengthUnit = new.lengthUnit
+        current.angleUnit = new.angleUnit
+        current.precision = new.precision
+        settings = current
+    }
+
     func fitCanvas(size: CGSize) {
         var e = evaluator()
         var pts: [Vec2] = []

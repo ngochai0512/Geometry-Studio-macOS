@@ -1,6 +1,12 @@
 import Observation
 import SwiftUI
 
+/// The sketch in the key document window. Settings is a separate scene, so it
+/// uses this weak reference to apply changes to the active document.
+enum ActiveSketch {
+    static weak var model: SketchModel?
+}
+
 @Observable
 final class SketchModel {
     // MARK: state
@@ -20,6 +26,8 @@ final class SketchModel {
     var animationPointID: UUID?
     var tracedIDs: Set<UUID> = []
     var tracePaths: [UUID: [Vec2]] = [:]
+    @ObservationIgnored
+    private var animationTimer: Timer?
     @ObservationIgnored
     var animationDirection: Double = 1
 
@@ -62,6 +70,30 @@ final class SketchModel {
 
     init(document: SketchDocument = SketchDocument()) {
         self.document = document
+    }
+
+    deinit {
+        animationTimer?.invalidate()
+    }
+
+    // MARK: animation clock
+
+    /// The clock only exists while an animation is running. An always-on
+    /// timer kept the window redrawing at 60 Hz even when nothing moved.
+    func startAnimationClock() {
+        animationTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.advanceAnimation()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        animationTimer = timer
+    }
+
+    func stopAnimationClock() {
+        animationTimer?.invalidate()
+        animationTimer = nil
     }
 
     struct Snapshot {
@@ -158,6 +190,8 @@ final class SketchModel {
     /// Swaps in content that changed outside the editor, such as Revert To
     /// Saved or browsing versions. History belongs to the document, so it resets.
     func adopt(_ newDocument: SketchDocument) {
+        stopAnimationClock()
+        animationPointID = nil
         document = newDocument
         selection = []
         draft = []
@@ -280,6 +314,7 @@ final class SketchModel {
         }
         lastCoalescingKey = nil
         lastCheckpointAt = Date()
+        scheduleUndoRefresh()
     }
 
     /// Applies a snapshot and registers its inverse. `NSUndoManager` routes
@@ -300,6 +335,7 @@ final class SketchModel {
             undoManager.setActionName(action)
             statusMessage = undoManager.isUndoing ? "Undo \(action)" : "Redo \(action)"
         }
+        scheduleUndoRefresh()
     }
 
     /// A document swap or recovery must not continue coalescing into the
@@ -319,6 +355,7 @@ final class SketchModel {
             }
         }
         resetTransientEditingState()
+        scheduleUndoRefresh()
     }
 
     func undo() {
@@ -346,7 +383,6 @@ final class SketchModel {
             NotificationCenter.default.removeObserver(observer)
         }
         let names: [Notification.Name] = [
-            .NSUndoManagerCheckpoint,
             .NSUndoManagerDidUndoChange,
             .NSUndoManagerDidRedoChange
         ]
