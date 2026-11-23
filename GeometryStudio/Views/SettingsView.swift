@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -33,7 +34,7 @@ struct SettingsView: View {
             }
             .padding(12)
         }
-        .frame(width: 480, height: 460)
+        .frame(width: 480, height: 500)
         .onAppear {
             settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
         }
@@ -47,31 +48,32 @@ struct SettingsView: View {
 
     private var unitsTab: some View {
         Form {
-            Picker("Length unit", selection: $settings.lengthUnit) {
-                ForEach(LengthUnit.allCases) { unit in
-                    Text(unit.name).tag(unit)
+            Section {
+                Picker("Length unit", selection: $settings.lengthUnit) {
+                    ForEach(LengthUnit.allCases) { unit in
+                        Text(unit.name).tag(unit)
+                    }
                 }
-            }
-            .pickerStyle(.menu)
+                .pickerStyle(.menu)
 
-            Picker("Angle unit", selection: $settings.angleUnit) {
-                ForEach(AngleUnit.allCases) { unit in
-                    Text(unit.name).tag(unit)
+                Picker("Angle unit", selection: $settings.angleUnit) {
+                    ForEach(AngleUnit.allCases) { unit in
+                        Text(unit.name).tag(unit)
+                    }
                 }
-            }
-            .pickerStyle(.menu)
+                .pickerStyle(.menu)
 
-            Picker("Decimal places", selection: $settings.precision) {
-                ForEach(0...5, id: \.self) { places in
-                    Text("\(places)").tag(places)
+                Picker("Decimal places", selection: $settings.precision) {
+                    ForEach(0...5, id: \.self) { places in
+                        Text("\(places)").tag(places)
+                    }
                 }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Unit System")
+            } footer: {
+                Text("These settings apply to the active sketch and become the defaults for new sketches.")
             }
-            .pickerStyle(.menu)
-
-            Text("These settings apply to the active sketch and become the defaults for new sketches.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .formStyle(.grouped)
         .padding(12)
@@ -79,23 +81,59 @@ struct SettingsView: View {
 
     private var canvasTab: some View {
         Form {
-            Toggle("Show grid", isOn: $settings.grid)
-
-            Picker("Grid style", selection: gridTypeBinding) {
-                ForEach(GridType.allCases) { type in
-                    Text(type.title).tag(type)
+            Section {
+                Toggle("Show grid", isOn: $settings.grid)
+                Picker("Grid style", selection: gridTypeBinding) {
+                    ForEach(GridType.allCases) { type in
+                        Text(type.title).tag(type)
+                    }
                 }
+                .pickerStyle(.menu)
+                LabeledContent("Grid color") {
+                    Picker("Grid color", selection: $settings.gridColor) {
+                        ForEach(RGBA.gridPalette, id: \.0) { name, color in
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(color.color)
+                                    .frame(width: 10, height: 10)
+                                Text(name)
+                            }
+                            .tag(color)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                Toggle("Bold grid", isOn: $settings.gridBold)
+            } header: {
+                Text("Grid")
             }
-            .pickerStyle(.menu)
 
-            Toggle("Show axes", isOn: $settings.axes)
-            Toggle("Snap points to grid", isOn: $settings.snap)
-            Toggle("Show labels", isOn: $settings.showLabels)
+            Section {
+                Toggle("Show axes", isOn: $settings.axes)
+                Toggle("Axes numbers", isOn: $settings.axesLabels)
+                LabeledContent("Label style") {
+                    Picker("Label style", selection: $settings.axesLabelStyle) {
+                        ForEach(AxisLabelStyle.presets, id: \.self) { style in
+                            Text(style.title).tag(style)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+            } header: {
+                Text("Axes")
+            }
 
-            Text("These settings apply to the active sketch and become the defaults for new sketches.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Section {
+                ColorPicker("Canvas background", selection: backgroundColorBinding)
+                Toggle("Snap points to grid", isOn: $settings.snap)
+                Toggle("Show labels", isOn: $settings.showLabels)
+            } header: {
+                Text("Canvas")
+            } footer: {
+                Text("These settings apply to the active sketch and become the defaults for new sketches.")
+            }
         }
         .formStyle(.grouped)
         .padding(12)
@@ -119,6 +157,19 @@ struct SettingsView: View {
     private func persist(_ value: CanvasSettings) {
         AppPreferences.save(value)
         ActiveSketch.model?.applyCanvasDefaults(value)
+    }
+
+    private var backgroundColorBinding: Binding<Color> {
+        Binding(
+            get: { settings.backgroundColor.color },
+            set: { newValue in
+                let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .white
+                settings.backgroundColor = RGBA(Double(ns.redComponent),
+                                                Double(ns.greenComponent),
+                                                Double(ns.blueComponent),
+                                                Double(ns.alphaComponent))
+            }
+        )
     }
 }
 
