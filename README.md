@@ -71,6 +71,7 @@ app-bundle binary does not carry it.
   0–5 decimal places, as the original's Units preferences offer.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
 - **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
+- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
 - **Inspector** — object browser, label, definition, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C8D2E3F4A5B6971088776655 /* MetalCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7C1D2E3F4A5968877665544 /* MetalCanvas.swift */; };
 		09D7D28CF245043920D3663F /* DocumentWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092913E650562116FE738CB /* DocumentWorkspace.swift */; };
 		14EE8E59899A6B4CEE8DAA15 /* SketchModel+Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8DD4BF90DBAC1E2A2E2089 /* SketchModel+Animation.swift */; };
 		1B61E4208705088E2DEDAD6E /* CanvasGestures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC37130557CCCAC5266E3412 /* CanvasGestures.swift */; };
@@ -62,6 +63,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B7C1D2E3F4A5968877665544 /* MetalCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalCanvas.swift; sourceTree = "<group>"; };
 		07A9B014A8086F4250A78466 /* FocusedSketchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedSketchModel.swift; sourceTree = "<group>"; };
 		08A28D11FAD1ACA69B2FD090 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0921F29B45506E99E9917D36 /* Screenshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screenshot.swift; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 		ACFD166EE2E67A3122422D36 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				B7C1D2E3F4A5968877665544 /* MetalCanvas.swift */,
 				90511DD8EE80C641A87A0547 /* AboutView.swift */,
 				3AB14D85786FCD642A47D949 /* CanvasDrawing.swift */,
 				AC37130557CCCAC5266E3412 /* CanvasGestures.swift */,
@@ -319,6 +322,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8D2E3F4A5B6971088776655 /* MetalCanvas.swift in Sources */,
 				B5EB5244755B10A628200F4A /* AboutView.swift in Sources */,
 				33218E02121C46D250A02473 /* AppPreferences.swift in Sources */,
 				76008DD6BEB15A98EB96EF30 /* CanvasDrawing.swift in Sources */,

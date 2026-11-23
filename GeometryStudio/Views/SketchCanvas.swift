@@ -42,6 +42,10 @@ struct SketchCanvas: View {
         Color.accentColor
     }
 
+    private var usesMetal: Bool {
+        !printing && model.settings.useMetalRenderer && MetalCanvas.isSupported
+    }
+
     /// The Canvas closure draws outside the body's observation scope, so read
     /// the state it depends on here to keep redraws tied to model changes.
     /// Hover is only a drawing input while a draft is being placed; otherwise
@@ -63,8 +67,28 @@ struct SketchCanvas: View {
     var body: some View {
         let _ = observedDrawingState
         GeometryReader { geo in
-            Canvas { context, size in
-                draw(context: &context, size: size)
+            Group {
+                if usesMetal {
+                    ZStack {
+                        Canvas { context, size in
+                            drawBackground(context: &context, size: size)
+                        }
+                        .allowsHitTesting(false)
+
+                        MetalCanvas(model: model)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .allowsHitTesting(false)
+
+                        Canvas { context, size in
+                            drawForeground(context: &context, size: size)
+                        }
+                        .allowsHitTesting(false)
+                    }
+                } else {
+                    Canvas { context, size in
+                        draw(context: &context, size: size)
+                    }
+                }
             }
             .background {
                 if printing {

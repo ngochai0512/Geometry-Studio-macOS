@@ -398,6 +398,11 @@ extension InspectorView {
                     .pickerStyle(.menu)
                 }
                 Toggle("Bold grid", isOn: $model.settings.gridBold)
+                Toggle("GPU rendering", isOn: $model.settings.useMetalRenderer)
+                    .disabled(!MetalCanvas.isSupported)
+                    .help(MetalCanvas.isSupported
+                          ? "Draw sketch geometry with Metal"
+                          : "Metal is not available on this Mac")
                 LabeledContent("Background") {
                     ColorPicker("Background", selection: canvasBackgroundBinding)
                         .labelsHidden()

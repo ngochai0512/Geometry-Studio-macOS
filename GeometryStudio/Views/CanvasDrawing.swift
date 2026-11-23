@@ -48,13 +48,37 @@ extension SketchCanvas {
         drawTexts(context: &context, size: size, evaluator: &e)
         drawParameters(context: &context, size: size)
         drawScaleBar(context: &context, size: size)
+        drawMarquee(context: &context, size: size)
+    }
 
-        if let ms = marqueeStart, let mc = marqueeCurrent {
-            let r = CGRect(x: min(ms.x, mc.x), y: min(ms.y, mc.y),
-                           width: abs(mc.x - ms.x), height: abs(mc.y - ms.y))
-            context.fill(Path(roundedRect: r, cornerRadius: 2), with: .color(accent.opacity(0.08)))
-            context.stroke(Path(roundedRect: r, cornerRadius: 2), with: .color(accent.opacity(0.7)), lineWidth: 1)
+    /// CPU layer under the Metal geometry: grid, coordinate systems and axes.
+    func drawBackground(context: inout GraphicsContext, size: CGSize) {
+        let rect = model.visibleRect(size: size)
+        drawGrid(context: &context, size: size, rect: rect)
+        drawCoordinateSystems(context: &context, size: size)
+    }
+
+    /// CPU layer above the Metal geometry: points, labels, draft and chrome.
+    func drawForeground(context: inout GraphicsContext, size: CGSize) {
+        var e = model.evaluator()
+        drawDraft(context: &context, size: size)
+        drawVectors(context: &context, size: size, evaluator: &e)
+        drawAngles(context: &context, size: size, evaluator: &e)
+        drawPoints(context: &context, size: size, evaluator: &e)
+        drawTexts(context: &context, size: size, evaluator: &e)
+        drawParameters(context: &context, size: size)
+        drawScaleBar(context: &context, size: size)
+        drawMarquee(context: &context, size: size)
+    }
+
+    private func drawMarquee(context: inout GraphicsContext, size: CGSize) {
+        guard let ms = marqueeStart, let mc = marqueeCurrent else {
+            return
         }
+        let rect = CGRect(x: min(ms.x, mc.x), y: min(ms.y, mc.y),
+                          width: abs(mc.x - ms.x), height: abs(mc.y - ms.y))
+        context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(accent.opacity(0.08)))
+        context.stroke(Path(roundedRect: rect, cornerRadius: 2), with: .color(accent.opacity(0.7)), lineWidth: 1)
     }
 
     private func drawFill(_ path: EvalPath, style: ObjectStyle,

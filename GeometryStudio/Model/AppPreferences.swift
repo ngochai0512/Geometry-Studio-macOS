@@ -12,6 +12,7 @@ enum AppPreferences {
         static let gridColor = "newSketch.gridColor"
         static let gridBold = "newSketch.gridBold"
         static let backgroundColor = "newSketch.backgroundColor"
+        static let useMetalRenderer = "newSketch.useMetalRenderer"
         static let axes = "newSketch.axes"
         static let axesLabels = "newSketch.axesLabels"
         static let axesLabelBold = "newSketch.axesLabelBold"
@@ -52,6 +53,9 @@ enum AppPreferences {
            let color = try? JSONDecoder().decode(RGBA.self, from: data) {
             settings.backgroundColor = color
         }
+        if defaults.object(forKey: Keys.useMetalRenderer) != nil {
+            settings.useMetalRenderer = defaults.bool(forKey: Keys.useMetalRenderer)
+        }
         if defaults.object(forKey: Keys.axes) != nil {
             settings.axes = defaults.bool(forKey: Keys.axes)
         }
@@ -89,6 +93,7 @@ enum AppPreferences {
         if let data = try? JSONEncoder().encode(settings.backgroundColor) {
             defaults.set(data, forKey: Keys.backgroundColor)
         }
+        defaults.set(settings.useMetalRenderer, forKey: Keys.useMetalRenderer)
         defaults.set(settings.axes, forKey: Keys.axes)
         defaults.set(settings.axesLabels, forKey: Keys.axesLabels)
         defaults.set(settings.axesLabelStyle.bold, forKey: Keys.axesLabelBold)

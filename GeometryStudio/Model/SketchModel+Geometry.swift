@@ -100,6 +100,7 @@ extension SketchModel {
         current.gridColor = new.gridColor
         current.gridBold = new.gridBold
         current.backgroundColor = new.backgroundColor
+        current.useMetalRenderer = new.useMetalRenderer
         current.axes = new.axes
         current.axesLabels = new.axesLabels
         current.axesLabelStyle = new.axesLabelStyle

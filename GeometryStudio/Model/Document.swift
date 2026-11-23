@@ -44,6 +44,7 @@ struct CanvasSettings: Codable, Hashable {
     var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
     var gridBold: Bool = false
     var backgroundColor: RGBA = RGBA(1, 1, 1)
+    var useMetalRenderer: Bool = false
     var axes: Bool = true
     var axesLabels: Bool = true
     var axesLabelStyle: AxisLabelStyle = AxisLabelStyle()
@@ -67,6 +68,7 @@ struct CanvasSettings: Codable, Hashable {
         gridColor = try c.decodeIfPresent(RGBA.self, forKey: .gridColor) ?? RGBA(hex: 0x1C1C1F)
         gridBold = try c.decodeIfPresent(Bool.self, forKey: .gridBold) ?? false
         backgroundColor = try c.decodeIfPresent(RGBA.self, forKey: .backgroundColor) ?? RGBA(1, 1, 1)
+        useMetalRenderer = try c.decodeIfPresent(Bool.self, forKey: .useMetalRenderer) ?? false
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true
         axesLabels = try c.decodeIfPresent(Bool.self, forKey: .axesLabels) ?? true
         axesLabelStyle = try c.decodeIfPresent(AxisLabelStyle.self, forKey: .axesLabelStyle)

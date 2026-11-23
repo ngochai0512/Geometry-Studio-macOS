@@ -105,6 +105,11 @@ struct SettingsView: View {
                     .pickerStyle(.menu)
                 }
                 Toggle("Bold grid", isOn: $settings.gridBold)
+                Toggle("GPU rendering", isOn: $settings.useMetalRenderer)
+                    .disabled(!MetalCanvas.isSupported)
+                    .help(MetalCanvas.isSupported
+                          ? "Draw sketch geometry with Metal"
+                          : "Metal is not available on this Mac")
             } header: {
                 Text("Grid")
             }

@@ -32,6 +32,7 @@ struct DocumentTests {
         document.settings.gridColor = RGBA(hex: 0xE6E6EB)
         document.settings.gridBold = true
         document.settings.backgroundColor = RGBA(0.1, 0.2, 0.3, 0.5)
+        document.settings.useMetalRenderer = true
         document.settings.axesLabels = false
         let labelStyle = AxisLabelStyle(bold: false, serif: true)
         document.settings.axesLabelStyle = labelStyle
@@ -49,6 +50,7 @@ struct DocumentTests {
         #expect(decoded.settings.gridColor == RGBA(hex: 0xE6E6EB))
         #expect(decoded.settings.gridBold)
         #expect(decoded.settings.backgroundColor == RGBA(0.1, 0.2, 0.3, 0.5))
+        #expect(decoded.settings.useMetalRenderer)
         #expect(!decoded.settings.axesLabels)
         #expect(decoded.settings.axesLabelStyle == labelStyle)
         #expect(decoded.version == SketchDocument.currentVersion)
@@ -198,6 +200,7 @@ struct DocumentTests {
         #expect(decoded.settings.gridColor == RGBA(hex: 0x1C1C1F))
         #expect(!decoded.settings.gridBold)
         #expect(decoded.settings.backgroundColor == RGBA(1, 1, 1))
+        #expect(!decoded.settings.useMetalRenderer)
         #expect(decoded.settings.axesLabels)
         #expect(decoded.settings.axesLabelStyle == AxisLabelStyle())
         #expect(decoded.settings.scale == SketchMetrics.pixelsPerCentimetre)
