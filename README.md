@@ -50,11 +50,12 @@ see `RELEASING.md` for the secrets and the release steps.
 ## Screenshot mode
 
 ```sh
-./.build/release/GeometryStudio --screenshot /tmp/geometry-studio.png
+./.build/debug/GeometryStudio --screenshot /tmp/geometry-studio.png
 ```
 
-This opens a borderless window without activating the app, draws for 120 frames, writes the
-window as a PNG and exits. The app-bundle binary accepts the same flag.
+This debug-only path opens a borderless window without activating the app, draws for 120 frames,
+writes the window as a PNG and exits. Release builds compile the screenshot runner out, so the
+app-bundle binary does not carry it.
 
 ## Core features
 

@@ -62,7 +62,8 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
   swift build -c release
   swift test
   swift run GeometryStudio
-  ./.build/release/GeometryStudio --screenshot /tmp/geometry-studio.png
+  ./.build/debug/GeometryStudio --screenshot /tmp/geometry-studio.png
+  # The screenshot runner is compiled into debug builds only.
 
   # App bundle: Info.plist, exported gsp type, icon. Regenerate only after a
   # deliberate project.yml change: this command overwrites Xcode's in-place
@@ -76,7 +77,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 
 - Tests cover the pure-value core: `swift test` runs the `GeometryStudioTests` suite. They use no windows, timers, files or network — keep them that way.
 - If a build fails because a nested sandbox blocks SwiftPM's manifest or the compiler's macro plugin server, stop and report it. Do not add sandbox-bypass flags such as `--disable-sandbox` (section 2).
-- Automated visual checks use `--screenshot`. It must keep working without activating the app or stealing focus; a normal `swift run` does activate it, so don't leave one running in a background job.
+- Automated visual checks use `--screenshot` in a debug build. It must keep working without activating the app or stealing focus; a normal `swift run` does activate it, so don't leave one running in a background job.
 - After any change: rebuild and confirm zero new warnings. The warning bar is zero — today's warning is tomorrow's build error.
 - When behavior is in question, `MECHANICS.md` wins over "how other geometry apps do it". Do not quietly substitute a standard convention for a documented observation.
 - If a check fails, investigate the failure itself — don't "fix" it by weakening the check, unless it is provably wrong (then say so explicitly).
@@ -110,7 +111,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 - Persistence: property names in `SketchDocument`, `SketchObject`, `CanvasSettings`, `ObjectStyle` are the on-disk keys. Renaming one silently discards user data. Add a new property **with a default** instead; the decoder runs without a version field to migrate against.
 - Coordinate space: model coordinates are world points where 100% zoom is 72 points per inch. Screen↔world conversion lives in `SketchModel+Geometry`; don't bake zoom or pan into stored geometry.
 - `Geometry/Style.swift` imports SwiftUI and AppKit only for the `color`/`nsColor` bridges on `RGBA`; `Geometry/Vec2.swift` imports CoreGraphics for `cg`. Keep new math types in `Geometry/` free of view types so the core stays testable without a window.
-- `--screenshot` is a contract used by automated checks. Keep the flag, the frame count, and the no-activation behavior working.
+- `--screenshot` is a debug-build contract used by automated checks; release builds compile the runner out. Keep the flag, the frame count, and the no-activation behavior working.
 - No dead code, no commented-out code, no "temporary" hacks without a one-line note saying when they go away. Delete rather than comment out.
 
 ## 4. Dependencies
@@ -238,7 +239,7 @@ Before reporting a change as finished, confirm all of the following:
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `project.yml` still generates into a scratch directory, and the checked-in app target builds with zero new warnings.
 - [ ] `swift test` passes (53 tests, 8 suites) — or the report says which suite could not run and why.
-- [ ] The screenshot path still runs: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
+- [ ] The screenshot path still runs in a debug build: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
 - [ ] New object kinds are wired through all four places in section 3.

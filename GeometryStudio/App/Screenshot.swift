@@ -1,3 +1,4 @@
+#if DEBUG
 import AppKit
 import SwiftUI
 
@@ -128,3 +129,4 @@ enum ScreenshotRunner {
         return total == 0 || Double(nonWhite) / Double(total) < 0.004
     }
 }
+#endif
