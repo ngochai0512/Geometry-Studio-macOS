@@ -270,6 +270,166 @@ extension SketchModel {
         return object.id
     }
 
+    // MARK: parameters, constructors, vectors and coordinate systems
+
+    func addParameter() {
+        let name = nextParameterName()
+        checkpoint("Add Parameter")
+        var object = SketchObject(kind: .parameter(value: 1, minimum: 0, maximum: 10))
+        object.label = name
+        object.position = hoverWorld ?? settings.center
+        object.order = (objects.map(\.order).max() ?? 0) + 1
+        object.showLabel = true
+        objects.append(object)
+        selection = [object.id]
+        statusMessage = "Parameter \(name) created"
+    }
+
+    private func nextParameterName() -> String {
+        let used = Set(objects.compactMap { object -> String? in
+            guard case .parameter = object.kind else {
+                return nil
+            }
+            return object.label
+        })
+        for letter in "abcdefghijklmnopqrstuvwxyz" {
+            let name = String(letter)
+            if !used.contains(name) {
+                return name
+            }
+        }
+        var index = 1
+        while true {
+            let name = "p\(index)"
+            if !used.contains(name) {
+                return name
+            }
+            index += 1
+        }
+    }
+
+    func constructPerpendicularBisector() {
+        let points = selectedPoints()
+        guard points.count >= 2 else {
+            statusMessage = "Select two points"
+            return
+        }
+        checkpoint("Construct Perpendicular Bisector")
+        let id = commit(kind: .construction(.perpendicularBisector(a: points[0], b: points[1])),
+                        label: "")
+        selection = [id]
+        statusMessage = "Perpendicular bisector created"
+    }
+
+    func constructTangents() {
+        var e = evaluator()
+        var circles: [UUID] = []
+        for object in selectedObjects {
+            if case .circle = e.path(object.id) {
+                circles.append(object.id)
+            }
+        }
+        let points = selectedPoints()
+        if circles.count >= 2 {
+            checkpoint("Construct Common Tangents")
+            var created: [UUID] = []
+            for index in 0..<4 {
+                created.append(commit(
+                    kind: .construction(.tangentCircleToCircle(a: circles[0], b: circles[1], index: index)),
+                    label: ""
+                ))
+            }
+            var eval = evaluator()
+            let valid = created.filter { eval.path($0) != nil }
+            if valid.count != created.count {
+                objects.removeAll { created.contains($0.id) && !valid.contains($0.id) }
+            }
+            selection = valid
+            statusMessage = "\(valid.count) common tangent\(valid.count == 1 ? "" : "s") created"
+            return
+        }
+        if let point = points.first, let circle = circles.first {
+            checkpoint("Construct Tangents")
+            var created: [UUID] = []
+            for index in 0..<2 {
+                created.append(commit(
+                    kind: .construction(.tangentPointToCircle(point: point, circle: circle, index: index)),
+                    label: ""
+                ))
+            }
+            var eval = evaluator()
+            let valid = created.filter { eval.path($0) != nil }
+            if valid.count != created.count {
+                objects.removeAll { created.contains($0.id) && !valid.contains($0.id) }
+            }
+            selection = valid
+            statusMessage = "\(valid.count) tangent\(valid.count == 1 ? "" : "s") created"
+            return
+        }
+        statusMessage = "Select a point and a circle, or two circles"
+    }
+
+    func constructRadicalAxis() {
+        var e = evaluator()
+        var circles: [UUID] = []
+        for object in selectedObjects {
+            if case .circle = e.path(object.id) {
+                circles.append(object.id)
+            }
+        }
+        guard circles.count >= 2 else {
+            statusMessage = "Select two circles"
+            return
+        }
+        checkpoint("Construct Radical Axis")
+        let id = commit(kind: .construction(.radicalAxis(a: circles[0], b: circles[1])), label: "")
+        selection = [id]
+        statusMessage = "Radical axis created"
+    }
+
+    func constructVector() {
+        let points = selectedPoints()
+        guard points.count >= 2 else {
+            statusMessage = "Select a tail and a head point"
+            return
+        }
+        checkpoint("Construct Vector")
+        let id = commit(kind: .vector(.fromPoints(from: points[0], to: points[1])), label: "")
+        selection = [id]
+        statusMessage = "Vector created"
+    }
+
+    func constructVectorSum(subtract: Bool) {
+        let vectors = selectedObjects.filter { object in
+            if case .vector = object.kind {
+                return true
+            }
+            return false
+        }
+        guard vectors.count >= 2 else {
+            statusMessage = "Select two vectors"
+            return
+        }
+        checkpoint(subtract ? "Construct Vector Difference" : "Construct Vector Sum")
+        let id = commit(kind: .vector(.sum(a: vectors[0].id, b: vectors[1].id, subtract: subtract)),
+                        label: "")
+        selection = [id]
+        statusMessage = subtract ? "Vector difference created" : "Vector sum created"
+    }
+
+    func constructCoordinateSystem(_ kind: CoordinateKind) {
+        checkpoint("Add Coordinate System")
+        let origin = selectedPoints().first
+            ?? ensureSilentPoint(at: hoverWorld ?? settings.center)
+        let step = GridMetrics.step(scale: settings.scale,
+                                    perUnit: settings.lengthUnit.perUnit)
+        let id = commit(kind: .coordinateSystem(kind: kind, origin: origin,
+                                                step: step, unit: settings.lengthUnit),
+                        label: "")
+        selection = [id]
+        statusMessage = "\(kind.title) coordinate system created"
+    }
+
     // MARK: graph
 
     func addFunctionPlot(expression: String) {
@@ -282,6 +442,166 @@ extension SketchModel {
         let id = commit(kind: .functionPlot(trimmed), label: "")
         selection = [id]
         statusMessage = "Function plotted"
+    }
+
+    private func currentFunctionExpression() -> String? {
+        for object in selectedObjects {
+            if case .functionPlot(let expression) = object.kind {
+                return expression
+            }
+        }
+        for object in objects where object.visible {
+            if case .functionPlot(let expression) = object.kind {
+                return expression
+            }
+        }
+        return nil
+    }
+
+    func addDerivativePlot() {
+        guard let source = currentFunctionExpression() else {
+            statusMessage = "Select or plot a function first"
+            return
+        }
+        checkpoint("Plot Derivative")
+        let id = commit(kind: .graph(.derivative(source)), label: "")
+        selection = [id]
+        statusMessage = "Derivative plotted"
+    }
+
+    func addIntegralPlot(from: Double = -5, to: Double = 5) {
+        guard let source = currentFunctionExpression() else {
+            statusMessage = "Select or plot a function first"
+            return
+        }
+        guard from.isFinite, to.isFinite, abs(to - from) > 1e-6 else {
+            statusMessage = "Choose a valid interval"
+            return
+        }
+        checkpoint("Shade Integral")
+        let id = commit(kind: .graph(.integral(source, from: from, to: to)), label: "")
+        selection = [id]
+        statusMessage = "Integral shaded"
+    }
+
+    func addTangentAt(_ x: Double? = nil) {
+        guard let source = currentFunctionExpression() else {
+            statusMessage = "Select or plot a function first"
+            return
+        }
+        let selectedX = selectedPoints().first.flatMap { objectByID($0)?.position?.x }
+        let at = x ?? selectedX ?? 0
+        guard at.isFinite else {
+            statusMessage = "Choose a valid x"
+            return
+        }
+        checkpoint("Plot Tangent")
+        let id = commit(kind: .graph(.tangent(source, x: at)), label: "")
+        selection = [id]
+        statusMessage = "Tangent plotted"
+    }
+
+    func addValueTable(from: Double = -5, to: Double = 5, step: Double = 1) {
+        guard let source = currentFunctionExpression() else {
+            statusMessage = "Select or plot a function first"
+            return
+        }
+        guard step.isFinite, abs(step) > 1e-6 else {
+            statusMessage = "Choose a valid step"
+            return
+        }
+        checkpoint("Add Value Table")
+        let id = commit(kind: .graph(.table(source, from: from, to: to, step: step)), label: "")
+        selection = [id]
+        statusMessage = "Value table created"
+    }
+
+    func findFunctionRoots() {
+        guard let source = currentFunctionExpression() else {
+            statusMessage = "Select or plot a function first"
+            return
+        }
+        let roots = numericalRoots(source, from: -20, to: 20)
+        guard !roots.isEmpty else {
+            statusMessage = "No roots found in the visible range"
+            return
+        }
+        checkpoint("Find Roots")
+        let created = roots.map { ensureSilentPoint(at: Vec2($0, 0)) }
+        selection = created
+        statusMessage = "\(created.count) root\(created.count == 1 ? "" : "s") found"
+    }
+
+    func findFunctionIntersections() {
+        let expressions = selectedObjects.compactMap { object -> String? in
+            if case .functionPlot(let expression) = object.kind {
+                return expression
+            }
+            return nil
+        }
+        guard expressions.count >= 2 else {
+            statusMessage = "Select two function plots"
+            return
+        }
+        let difference = "((\(expressions[0])) - (\(expressions[1])))"
+        let roots = numericalRoots(difference, from: -20, to: 20)
+        guard !roots.isEmpty else {
+            statusMessage = "No intersections found in the visible range"
+            return
+        }
+        checkpoint("Find Intersections")
+        let created = roots.map { x in
+            ensureSilentPoint(at: Vec2(x, functionValue(expressions[0], at: x) ?? 0))
+        }
+        selection = created
+        statusMessage = "\(created.count) intersection\(created.count == 1 ? "" : "s") found"
+    }
+
+    private func functionValue(_ source: String, at x: Double) -> Double? {
+        guard var parser = Expression(source) else {
+            return nil
+        }
+        parser.setAngleUnit(settings.angleUnit)
+        return parser.evaluate(x: x)
+    }
+
+    private func numericalRoots(_ source: String, from: Double, to: Double) -> [Double] {
+        let step = 0.1
+        var roots: [Double] = []
+        var x = from
+        var previous = functionValue(source, at: x)
+        while x < to {
+            let next = x + step
+            let value = functionValue(source, at: next)
+            if let a = previous, let b = value {
+                if abs(a) < 1e-9 {
+                    roots.append(x)
+                }
+                if a * b < 0 {
+                    var low = x
+                    var high = next
+                    for _ in 0..<40 {
+                        let middle = (low + high) / 2
+                        guard let middleValue = functionValue(source, at: middle) else {
+                            break
+                        }
+                        if (a < 0 && middleValue < 0) || (a > 0 && middleValue > 0) {
+                            low = middle
+                        } else {
+                            high = middle
+                        }
+                    }
+                    roots.append((low + high) / 2)
+                }
+            }
+            previous = value
+            x = next
+        }
+        var unique: [Double] = []
+        for root in roots where !unique.contains(where: { abs($0 - root) < 1e-4 }) {
+            unique.append(root)
+        }
+        return unique
     }
 
     // MARK: protocol

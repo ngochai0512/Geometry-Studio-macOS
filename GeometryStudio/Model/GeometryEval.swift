@@ -9,6 +9,8 @@ struct EvalResult {
     var value: Double?
     var anglePoints: (Vec2, Vec2, Vec2)?
     var angleValue: Double?
+    /// A directed vector drawn from `from` to `to`, used for the arrowhead.
+    var arrow: (from: Vec2, to: Vec2)?
 }
 
 struct GeometryEval {
@@ -199,8 +201,229 @@ struct GeometryEval {
             if let curve = locusCurve(driver: driver, target: target) {
                 result.path = .polyline(curve)
             }
+
+        case .parameter(let value, _, _):
+            result.value = value
+            let name = object.label.isEmpty ? "x" : object.label
+            result.text = "\(name) = \(formatNumber(value, precision: settings.precision))"
+            result.anchor = object.position ?? .zero
+
+        case .construction(let kind):
+            result = constructionResult(kind)
+
+        case .vector(let kind):
+            result = vectorResult(kind)
+
+        case .coordinateSystem:
+            if case .coordinateSystem(_, let origin, _, _) = object.kind {
+                result.anchor = point(origin)
+            }
+
+        case .graph(let feature):
+            result = graphResult(feature, object: object)
         }
         return result
+    }
+
+    private mutating func constructionResult(_ kind: ConstructionKind) -> EvalResult {
+        var result = EvalResult()
+        switch kind {
+        case .perpendicularBisector(let a, let b):
+            guard let pa = point(a), let pb = point(b) else {
+                return result
+            }
+            let middle = pa.lerp(to: pb, 0.5)
+            let direction = (pb - pa).perpendicular().normalized()
+            guard direction.length > Metrics.epsilon else {
+                return result
+            }
+            result.path = .line(middle, middle + direction)
+
+        case .tangentPointToCircle(let pointID, let circleID, let index):
+            guard let p = point(pointID),
+                  case .circle(let center, let radius)? = path(circleID) else {
+                return result
+            }
+            let lines = tangentLines(from: p, center: center, radius: radius)
+            if index >= 0, index < lines.count {
+                result.path = lines[index]
+            }
+
+        case .tangentCircleToCircle(let a, let b, let index):
+            guard case .circle(let c1, let r1)? = path(a),
+                  case .circle(let c2, let r2)? = path(b) else {
+                return result
+            }
+            let lines = commonTangents(c1: c1, r1: r1, c2: c2, r2: r2)
+            if index >= 0, index < lines.count {
+                result.path = lines[index]
+            }
+
+        case .radicalAxis(let a, let b):
+            guard case .circle(let c1, let r1)? = path(a),
+                  case .circle(let c2, let r2)? = path(b) else {
+                return result
+            }
+            let axis = c2 - c1
+            let d2 = axis.dot(axis)
+            guard d2 > Metrics.epsilon else {
+                return result
+            }
+            let rhs = (c2.dot(c2) - c1.dot(c1) - r2 * r2 + r1 * r1) / 2
+            let origin = axis * (rhs / d2)
+            let direction = axis.perpendicular().normalized()
+            result.path = .line(origin, origin + direction)
+        }
+        return result
+    }
+
+    private func tangentLines(from p: Vec2, center: Vec2, radius: Double) -> [EvalPath] {
+        let v = p - center
+        let d2 = v.dot(v)
+        guard radius > Metrics.epsilon, d2 > radius * radius + Metrics.epsilon else {
+            return []
+        }
+        let base = center + v * (radius * radius / d2)
+        let offset = v.perpendicular() * (radius * sqrt(d2 - radius * radius) / d2)
+        return [.line(p, base + offset), .line(p, base - offset)]
+    }
+
+    /// The four common tangents of two circles, external first.
+    private func commonTangents(c1: Vec2, r1: Double, c2: Vec2, r2: Double) -> [EvalPath] {
+        let delta = c2 - c1
+        let d = delta.length
+        guard d > Metrics.epsilon else {
+            return []
+        }
+        let direction = delta.normalized()
+        let normal = direction.perpendicular()
+        var lines: [EvalPath] = []
+        for offset in [r2 - r1, -(r1 + r2)] {
+            let ratio = offset / d
+            guard abs(ratio) <= 1 + Metrics.epsilon else {
+                continue
+            }
+            let side = sqrt(max(0, 1 - ratio * ratio))
+            for sign in [1.0, -1.0] {
+                let n = direction * ratio + normal * (side * sign)
+                let c = r1 - n.dot(c1)
+                let origin = n * (-c)
+                let tangent = n.perpendicular().normalized()
+                lines.append(.line(origin, origin + tangent))
+            }
+        }
+        return lines
+    }
+
+    private mutating func vectorResult(_ kind: VectorKind) -> EvalResult {
+        var result = EvalResult()
+        switch kind {
+        case .fromPoints(let from, let to):
+            guard let a = point(from), let b = point(to) else {
+                return result
+            }
+            result.path = .segment(a, b)
+            result.arrow = (from: a, to: b)
+
+        case .sum(let a, let b, let subtract):
+            guard let first = evaluate(a).arrow, let second = evaluate(b).arrow else {
+                return result
+            }
+            let firstVector = first.to - first.from
+            let secondVector = second.to - second.from
+            let sum = subtract ? firstVector - secondVector : firstVector + secondVector
+            let start = first.from
+            let end = start + sum
+            result.path = .segment(start, end)
+            result.arrow = (from: start, to: end)
+        }
+        return result
+    }
+
+    private mutating func graphResult(_ feature: GraphFeature, object: SketchObject) -> EvalResult {
+        var result = EvalResult()
+        switch feature {
+        case .derivative(let source):
+            let points = sampleFunction(source, from: -10, to: 10, samples: 200, derivative: true)
+            if points.count > 1 {
+                result.path = .polyline(points)
+            }
+
+        case .integral(let source, let from, let to):
+            let points = sampleFunction(source, from: min(from, to), to: max(from, to),
+                                        samples: 160, derivative: false)
+            if points.count > 1 {
+                var polygon = [Vec2(points[0].x, 0)]
+                polygon.append(contentsOf: points)
+                polygon.append(Vec2(points[points.count - 1].x, 0))
+                result.fill = .polygon(polygon)
+                result.path = .polyline(points)
+            }
+
+        case .tangent(let source, let x):
+            guard let y = expressionValue(source, x: x) else {
+                return result
+            }
+            let h = 1e-4
+            let left = expressionValue(source, x: x - h) ?? y
+            let right = expressionValue(source, x: x + h) ?? y
+            let slope = (right - left) / (2 * h)
+            result.path = .line(Vec2(x, y), Vec2(x + 1, y + slope))
+            result.anchor = Vec2(x, y)
+            result.text = "tangent at \(formatNumber(x, precision: settings.precision))"
+
+        case .table(let source, let from, let to, let step):
+            guard abs(step) > Metrics.epsilon else {
+                return result
+            }
+            let lower = min(from, to)
+            let upper = max(from, to)
+            var lines = ["x\tf(x)"]
+            var x = lower
+            var rows = 0
+            while x <= upper + 1e-9 && rows < 200 {
+                let text = expressionValue(source, x: x)
+                    .map { formatNumber($0, precision: settings.precision) } ?? "—"
+                lines.append("\(formatNumber(x, precision: settings.precision))\t\(text)")
+                x += abs(step)
+                rows += 1
+            }
+            result.text = lines.joined(separator: "\n")
+            result.anchor = object.position ?? Vec2(lower, 0)
+        }
+        return result
+    }
+
+    private func expressionValue(_ source: String, x: Double) -> Double? {
+        guard var expression = Expression(source) else {
+            return nil
+        }
+        expression.setAngleUnit(settings.angleUnit)
+        return expression.evaluate(x: x)
+    }
+
+    private func sampleFunction(_ source: String, from: Double, to: Double,
+                                samples: Int, derivative: Bool) -> [Vec2] {
+        guard var expression = Expression(source) else {
+            return []
+        }
+        expression.setAngleUnit(settings.angleUnit)
+        let count = max(2, samples)
+        var points: [Vec2] = []
+        for index in 0...count {
+            let x = from + (to - from) * Double(index) / Double(count)
+            if derivative {
+                let h = 1e-4
+                guard let left = expression.evaluate(x: x - h),
+                      let right = expression.evaluate(x: x + h) else {
+                    continue
+                }
+                points.append(Vec2(x, (right - left) / (2 * h)))
+            } else if let y = expression.evaluate(x: x) {
+                points.append(Vec2(x, y))
+            }
+        }
+        return points
     }
 
     private mutating func angleResult(
@@ -517,6 +740,28 @@ struct GeometryEval {
                 result.text = "θ \(name(of: first)) = \(formatAngle(direction))"
                 result.anchor = p + Vec2(0.55, -0.4)
             }
+        case .coordinateDistance:
+            if refs.count >= 2, let a = point(refs[0]), let b = point(refs[1]) {
+                var first = a
+                var second = b
+                var unit = settings.lengthUnit
+                if refs.count >= 3,
+                   let object = objects[refs[2]],
+                   case .coordinateSystem(_, let originID, _, let systemUnit) = object.kind,
+                   let origin = point(originID) {
+                    first = a - origin
+                    second = b - origin
+                    unit = systemUnit
+                }
+                let dx = second.x - first.x
+                let dy = second.y - first.y
+                let perUnit = max(unit.perUnit, 1e-6)
+                result.value = hypot(b.x - a.x, b.y - a.y)
+                result.text = "Δx \(name(of: refs[0]))\(name(of: refs[1])) = "
+                    + "\(formatNumber(dx / perUnit, precision: settings.precision)) \(unit.short), "
+                    + "Δy = \(formatNumber(dy / perUnit, precision: settings.precision)) \(unit.short)"
+                result.anchor = a.lerp(to: b, 0.5) + Vec2(0, 0.28)
+            }
         case .equation:
             if let first = refs.first, let evaluated = path(first) {
                 result.text = equationText(for: evaluated, name: name(of: first))
@@ -592,6 +837,9 @@ struct GeometryEval {
                 if let value = result.value, !object.label.isEmpty {
                     variables[object.label.replacingOccurrences(of: " ", with: "_")] = value
                 }
+            }
+            if case .parameter(let value, _, _) = object.kind, !object.label.isEmpty {
+                variables[object.label.replacingOccurrences(of: " ", with: "_")] = value
             }
         }
         return variables

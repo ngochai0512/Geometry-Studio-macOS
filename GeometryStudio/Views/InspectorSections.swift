@@ -48,6 +48,16 @@ extension InspectorView {
                         .font(.system(.callout, design: .rounded, weight: .medium))
                         .textSelection(.enabled)
                 }
+
+                if case .parameter(_, let minimum, let maximum) = object.kind {
+                    parameterControls(id, minimum: minimum, maximum: maximum)
+                }
+                if case .coordinateSystem(_, _, _, let unit) = object.kind {
+                    coordinateControls(id, unit: unit)
+                }
+                if case .graph(let feature) = object.kind {
+                    graphControls(id, feature: feature)
+                }
             } else if model.selection.count > 1 {
                 Text("\(model.selection.count) objects selected")
                     .font(.callout.weight(.medium))
@@ -60,6 +70,98 @@ extension InspectorView {
                 Text("Pick an object on the canvas, or choose Sketch to browse every object.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func parameterControls(_ id: UUID, minimum: Double, maximum: Double) -> some View {
+        LabeledContent("Value") {
+            Slider(value: parameterValueBinding(id),
+                   in: min(minimum, maximum)...max(minimum, maximum))
+        }
+        LabeledContent("Range") {
+            HStack(spacing: 6) {
+                TextField("Min", value: parameterMinimumBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+                Text("to")
+                    .foregroundStyle(.secondary)
+                TextField("Max", value: parameterMaximumBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func coordinateControls(_ id: UUID, unit: LengthUnit) -> some View {
+        LabeledContent("Type") {
+            Picker("Type", selection: coordinateKindBinding(id)) {
+                ForEach(CoordinateKind.allCases) { kind in
+                    Text(kind.title).tag(kind)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+        }
+        LabeledContent("Unit") {
+            Picker("Unit", selection: coordinateUnitBinding(id)) {
+                ForEach(LengthUnit.allCases) { unit in
+                    Text(unit.name).tag(unit)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+        }
+        LabeledContent("Step") {
+            HStack(spacing: 6) {
+                TextField("Step", value: coordinateStepBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+                Text(unit.short)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func graphControls(_ id: UUID, feature: GraphFeature) -> some View {
+        switch feature {
+        case .derivative:
+            EmptyView()
+        case .integral:
+            LabeledContent("From") {
+                TextField("From", value: graphFromBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+            }
+            LabeledContent("To") {
+                TextField("To", value: graphToBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+            }
+        case .tangent:
+            LabeledContent("At x") {
+                TextField("x", value: graphTangentXBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+            }
+        case .table:
+            LabeledContent("From") {
+                TextField("From", value: graphFromBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+            }
+            LabeledContent("To") {
+                TextField("To", value: graphToBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
+            }
+            LabeledContent("Step") {
+                TextField("Step", value: graphStepBinding(id), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 64)
             }
         }
     }
@@ -174,6 +276,29 @@ extension InspectorView {
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
+                }
+                if anySelectedIsSegment {
+                    LabeledContent("Ticks") {
+                        Picker("Ticks", selection: tickCountBinding) {
+                            Text("None").tag(0)
+                            Text("One").tag(1)
+                            Text("Two").tag(2)
+                            Text("Three").tag(3)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                    }
+                }
+                if anySelectedIsAngle {
+                    LabeledContent("Marker") {
+                        Picker("Marker", selection: angleMarkerBinding) {
+                            ForEach(AngleMarkerStyle.allCases) { style in
+                                Text(style.title).tag(style)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                    }
                 }
                 if anySelectedIsRegion || anySelectedIsArc {
                     LabeledContent("Fill") {
@@ -319,6 +444,15 @@ extension InspectorView {
                 constructButton("Arc Through 3", "circle.dashed") { model.constructArcThroughPoints() }
                 constructButton("Polygon", "pentagon") { model.constructPolygon() }
                 constructButton("Point on Object", "smallcircle.filled.circle") { model.constructPointOnPath() }
+                constructButton("Perp Bisector", "line.diagonal") { model.constructPerpendicularBisector() }
+                constructButton("Tangents", "line.diagonal.arrow") { model.constructTangents() }
+                constructButton("Radical Axis", "line.diagonal") { model.constructRadicalAxis() }
+                constructButton("Vector", "arrow.right") { model.constructVector() }
+                constructButton("Vector Sum", "arrow.triangle.merge") { model.constructVectorSum(subtract: false) }
+                constructButton("Vector Diff", "arrow.triangle.branch") { model.constructVectorSum(subtract: true) }
+                constructButton("Parameter", "slider.horizontal.3") { model.addParameter() }
+                constructButton("Cartesian", "grid") { model.constructCoordinateSystem(.cartesian) }
+                constructButton("Polar", "circle.grid.cross") { model.constructCoordinateSystem(.polar) }
             }
             .selectionDisabled()
 
@@ -339,6 +473,13 @@ extension InspectorView {
             ("Lines", model.objects.filter { isLineObject($0) }),
             ("Arcs", model.objects.filter { isArcObject($0) }),
             ("Circles & Regions", model.objects.filter { isRegionObject($0) }),
+            ("Vectors & Constructions", model.objects.filter {
+                isVectorObject($0) || isConstructionObject($0)
+            }),
+            ("Graph", model.objects.filter {
+                isGraphObject($0) || isCoordinateObject($0)
+            }),
+            ("Parameters", model.objects.filter { isParameterObject($0) }),
             ("Measures & Text", model.objects.filter { isMeasureObject($0) })
         ]
     }

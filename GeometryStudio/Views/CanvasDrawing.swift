@@ -8,6 +8,7 @@ extension SketchCanvas {
     func draw(context: inout GraphicsContext, size: CGSize) {
         let rect = model.visibleRect(size: size)
         drawGrid(context: &context, size: size, rect: rect)
+        drawCoordinateSystems(context: &context, size: size)
         drawTraces(context: &context, size: size)
 
         var e = model.evaluator()
@@ -41,9 +42,11 @@ extension SketchCanvas {
         }
 
         drawDraft(context: &context, size: size)
+        drawVectors(context: &context, size: size, evaluator: &e)
         drawAngles(context: &context, size: size, evaluator: &e)
         drawPoints(context: &context, size: size, evaluator: &e)
         drawTexts(context: &context, size: size, evaluator: &e)
+        drawParameters(context: &context, size: size)
         drawScaleBar(context: &context, size: size)
 
         if let ms = marqueeStart, let mc = marqueeCurrent {
@@ -326,6 +329,10 @@ extension SketchCanvas {
             p.move(to: model.screenPoint(a, size: size))
             p.addLine(to: model.screenPoint(b, size: size))
             context.stroke(p, with: .color(color.opacity(glow ? 0.22 : 1)), style: strokeStyle)
+            if !glow, style.tickCount > 0 {
+                drawTickMarks(a, b, count: style.tickCount, color: color,
+                              context: &context, size: size)
+            }
 
         case .ray(let a, let b):
             let d = (b - a).normalized()
@@ -446,6 +453,186 @@ extension SketchCanvas {
                                           lineCap: .round, lineJoin: .round))
     }
 
+    private func drawCoordinateSystems(context: inout GraphicsContext, size: CGSize) {
+        var e = model.evaluator()
+        for object in model.objects where object.visible {
+            guard case .coordinateSystem(let kind, let originID, let step, let unit) = object.kind,
+                  let origin = e.point(originID), step > 0, step.isFinite else {
+                continue
+            }
+            let stepPixels = step * model.settings.scale
+            guard stepPixels >= 8, stepPixels < 4_000 else {
+                continue
+            }
+            let color = object.style.color.color
+            let center = model.screenPoint(origin, size: size)
+            var path = Path()
+
+            switch kind {
+            case .cartesian:
+                let horizontal = Int(size.width / CGFloat(stepPixels)) + 2
+                let vertical = Int(size.height / CGFloat(stepPixels)) + 2
+                for index in -horizontal...horizontal {
+                    let x = center.x + CGFloat(index) * CGFloat(stepPixels)
+                    guard x >= 0, x <= size.width else {
+                        continue
+                    }
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: size.height))
+                }
+                for index in -vertical...vertical {
+                    let y = center.y + CGFloat(index) * CGFloat(stepPixels)
+                    guard y >= 0, y <= size.height else {
+                        continue
+                    }
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: size.width, y: y))
+                }
+
+            case .polar:
+                let maxRadius = hypot(size.width, size.height)
+                let rings = min(60, Int(maxRadius / CGFloat(stepPixels)) + 1)
+                if rings > 0 {
+                    for ring in 1...rings {
+                        let radius = CGFloat(ring) * CGFloat(stepPixels)
+                        path.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius,
+                                                   width: radius * 2, height: radius * 2))
+                    }
+                }
+                for index in 0..<24 {
+                    let angle = Double(index) * .pi / 12
+                    path.move(to: center)
+                    path.addLine(to: CGPoint(x: center.x + CGFloat(cos(angle)) * maxRadius,
+                                             y: center.y - CGFloat(sin(angle)) * maxRadius))
+                }
+            }
+
+            context.stroke(path, with: .color(color.opacity(0.08)), lineWidth: 0.7)
+
+            var axes = Path()
+            axes.move(to: CGPoint(x: 0, y: center.y))
+            axes.addLine(to: CGPoint(x: size.width, y: center.y))
+            axes.move(to: CGPoint(x: center.x, y: 0))
+            axes.addLine(to: CGPoint(x: center.x, y: size.height))
+            context.stroke(axes, with: .color(color.opacity(0.45)), lineWidth: 1)
+
+            guard kind == .cartesian else {
+                continue
+            }
+            let perUnit = max(unit.perUnit, 1e-6)
+            let every = max(1, Int((55 / stepPixels).rounded(.up)))
+            let horizontal = Int(size.width / CGFloat(stepPixels)) + 2
+            let vertical = Int(size.height / CGFloat(stepPixels)) + 2
+            let labelFont = Font.system(.caption2, design: .rounded)
+            for index in stride(from: -horizontal, through: horizontal, by: every) where index != 0 {
+                let x = center.x + CGFloat(index) * CGFloat(stepPixels)
+                guard x >= 10, x <= size.width - 10 else {
+                    continue
+                }
+                let text = Text(GridMetrics.cleanNumber(Double(index) * step / perUnit))
+                    .font(labelFont)
+                    .foregroundStyle(color.opacity(0.7))
+                context.draw(text, at: CGPoint(x: x, y: min(max(center.y + 12, 10), size.height - 10)),
+                             anchor: .top)
+            }
+            for index in stride(from: -vertical, through: vertical, by: every) where index != 0 {
+                let y = center.y + CGFloat(index) * CGFloat(stepPixels)
+                guard y >= 10, y <= size.height - 10 else {
+                    continue
+                }
+                let text = Text(GridMetrics.cleanNumber(Double(index) * step / perUnit))
+                    .font(labelFont)
+                    .foregroundStyle(color.opacity(0.7))
+                context.draw(text, at: CGPoint(x: min(max(center.x - 8, 10), size.width - 10), y: y),
+                             anchor: .trailing)
+            }
+        }
+    }
+
+    private func drawVectors(context: inout GraphicsContext, size: CGSize,
+                             evaluator: inout GeometryEval) {
+        for object in model.objects where object.visible {
+            guard let arrow = evaluator.evaluate(object.id).arrow else {
+                continue
+            }
+            let from = model.screenPoint(arrow.from, size: size)
+            let to = model.screenPoint(arrow.to, size: size)
+            let angle = atan2(Double(to.y - from.y), Double(to.x - from.x))
+            let length = hypot(Double(to.x - from.x), Double(to.y - from.y))
+            guard length > 1 else {
+                continue
+            }
+            let head = 8.0
+            var path = Path()
+            path.move(to: to)
+            path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle - 0.4) * head),
+                                     y: to.y - CGFloat(sin(angle - 0.4) * head)))
+            path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle + 0.4) * head),
+                                     y: to.y - CGFloat(sin(angle + 0.4) * head)))
+            path.closeSubpath()
+            context.fill(path, with: .color(object.style.color.color))
+        }
+    }
+
+    private func drawParameters(context: inout GraphicsContext, size: CGSize) {
+        let precision = max(0, min(model.settings.precision, 6))
+        for object in model.objects where object.visible {
+            guard case .parameter(let value, let minimum, let maximum) = object.kind else {
+                continue
+            }
+            let position = model.screenPoint(object.position ?? .zero, size: size)
+            let name = object.label.isEmpty ? "x" : object.label
+            let valueText = String(format: "%.\(precision)f", value)
+            let text = Text("\(name) = \(valueText)")
+                .font(.system(.callout, design: .rounded, weight: .semibold))
+                .foregroundStyle(object.style.color.color)
+            let width: CGFloat = 128
+            let height: CGFloat = 38
+            let rect = CGRect(x: position.x - width / 2, y: position.y - height / 2,
+                              width: width, height: height)
+            context.fill(Path(roundedRect: rect, cornerRadius: 7),
+                         with: .color(Color.white.opacity(0.92)))
+            context.stroke(Path(roundedRect: rect, cornerRadius: 7),
+                           with: .color(model.isSelected(object.id) ? accent : ink.opacity(0.15)),
+                           lineWidth: model.isSelected(object.id) ? 1.5 : 0.8)
+            context.draw(text, at: CGPoint(x: rect.minX + 9, y: rect.minY + 7), anchor: .topLeading)
+
+            let track = CGRect(x: rect.minX + 9, y: rect.maxY - 10,
+                               width: rect.width - 18, height: 3)
+            context.fill(Path(roundedRect: track, cornerRadius: 1.5),
+                         with: .color(ink.opacity(0.15)))
+            let span = max(maximum - minimum, 1e-9)
+            let fraction = min(max((value - minimum) / span, 0), 1)
+            let knob = track.minX + track.width * CGFloat(fraction)
+            context.fill(Path(ellipseIn: CGRect(x: knob - 4, y: track.midY - 4,
+                                                width: 8, height: 8)),
+                         with: .color(accent))
+        }
+    }
+
+    private func drawTickMarks(_ a: Vec2, _ b: Vec2, count: Int, color: Color,
+                               context: inout GraphicsContext, size: CGSize) {
+        let start = model.screenPoint(a, size: size)
+        let end = model.screenPoint(b, size: size)
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let length = hypot(dx, dy)
+        guard length > 1 else {
+            return
+        }
+        let ux = dx / length
+        let uy = dy / length
+        let half = min(5, max(3, length / 12))
+        var ticks = Path()
+        for index in 0..<max(0, min(count, 3)) {
+            let t = Double(index + 1) / Double(count + 1)
+            let center = CGPoint(x: start.x + dx * t, y: start.y + dy * t)
+            ticks.move(to: CGPoint(x: center.x - uy * half, y: center.y + ux * half))
+            ticks.addLine(to: CGPoint(x: center.x + uy * half, y: center.y - ux * half))
+        }
+        context.stroke(ticks, with: .color(color), lineWidth: 1.2)
+    }
+
     private func drawAngles(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
         let ordered = model.objects.sorted { $0.order < $1.order }
         for object in ordered where object.visible {
@@ -461,23 +648,45 @@ extension SketchCanvas {
             while delta < -.pi {
                 delta += .pi * 2
             }
-            let radius = 0.62
-            var arc = Path()
-            for i in 0...30 {
-                let t = Double(i) / 30.0
-                let angle = start + delta * t
-                let point = v + Vec2(cos(angle), sin(angle)) * radius
-                let screen = model.screenPoint(point, size: size)
-                if i == 0 {
-                    arc.move(to: screen)
-                } else {
-                    arc.addLine(to: screen)
-                }
-            }
             let selected = model.isSelected(object.id)
             let color = selected ? accent : object.style.color.color
-            context.stroke(arc, with: .color(color.opacity(0.9)),
-                           style: StrokeStyle(lineWidth: selected ? 2 : 1.3, lineCap: .round))
+            switch object.style.angleMarker {
+            case .none:
+                continue
+
+            case .rightAngle:
+                let markerSize = 0.22
+                let first = v + Vec2(cos(start), sin(start)) * markerSize
+                let second = v + Vec2(cos(start + delta), sin(start + delta)) * markerSize
+                let corner = first + second - v
+                var square = Path()
+                square.move(to: model.screenPoint(v, size: size))
+                square.addLine(to: model.screenPoint(first, size: size))
+                square.addLine(to: model.screenPoint(corner, size: size))
+                square.addLine(to: model.screenPoint(second, size: size))
+                square.closeSubpath()
+                context.stroke(square, with: .color(color.opacity(0.9)),
+                               style: StrokeStyle(lineWidth: selected ? 2 : 1.3, lineCap: .round))
+
+            case .arc, .doubleArc:
+                let radii: [Double] = object.style.angleMarker == .doubleArc ? [0.62, 0.74] : [0.62]
+                for radius in radii {
+                    var arc = Path()
+                    for i in 0...30 {
+                        let t = Double(i) / 30.0
+                        let angle = start + delta * t
+                        let point = v + Vec2(cos(angle), sin(angle)) * radius
+                        let screen = model.screenPoint(point, size: size)
+                        if i == 0 {
+                            arc.move(to: screen)
+                        } else {
+                            arc.addLine(to: screen)
+                        }
+                    }
+                    context.stroke(arc, with: .color(color.opacity(0.9)),
+                                   style: StrokeStyle(lineWidth: selected ? 2 : 1.3, lineCap: .round))
+                }
+            }
         }
     }
 
@@ -522,6 +731,21 @@ extension SketchCanvas {
                 cross.move(to: CGPoint(x: s.x + r / 2, y: s.y - r / 2))
                 cross.addLine(to: CGPoint(x: s.x - r / 2, y: s.y + r / 2))
                 context.stroke(cross, with: .color(color), lineWidth: 1.5)
+            case .diamond:
+                var diamond = Path()
+                diamond.move(to: CGPoint(x: s.x, y: s.y - r * 0.7))
+                diamond.addLine(to: CGPoint(x: s.x + r * 0.7, y: s.y))
+                diamond.addLine(to: CGPoint(x: s.x, y: s.y + r * 0.7))
+                diamond.addLine(to: CGPoint(x: s.x - r * 0.7, y: s.y))
+                diamond.closeSubpath()
+                context.fill(diamond, with: .color(color))
+            case .triangle:
+                var triangle = Path()
+                triangle.move(to: CGPoint(x: s.x, y: s.y - r * 0.75))
+                triangle.addLine(to: CGPoint(x: s.x + r * 0.7, y: s.y + r * 0.55))
+                triangle.addLine(to: CGPoint(x: s.x - r * 0.7, y: s.y + r * 0.55))
+                triangle.closeSubpath()
+                context.fill(triangle, with: .color(color))
             }
 
             if object.showLabel && model.settings.showLabels && !object.label.isEmpty {
@@ -535,7 +759,11 @@ extension SketchCanvas {
 
     private func drawTexts(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
         let ordered = model.objects.sorted { $0.order < $1.order }
+        var occupied: [CGRect] = []
         for object in ordered where object.visible {
+            if case .parameter = object.kind {
+                continue
+            }
             let r = evaluator.evaluate(object.id)
             guard let text = r.text, let anchor = r.anchor else {
                 continue
@@ -565,7 +793,18 @@ extension SketchCanvas {
             let w = measured.width + padX * 2
             let h = measured.height + padY * 2
             let sp = model.screenPoint(anchor, size: size)
-            let rect = CGRect(x: sp.x, y: sp.y - h, width: w, height: h)
+            var rect = CGRect(x: sp.x, y: sp.y - h, width: w, height: h)
+
+            // Keep measure cards from covering each other. Twelve nudges is
+            // enough for a dense sketch and keeps the loop bounded.
+            var attempts = 0
+            while attempts < 12, occupied.contains(where: {
+                $0.insetBy(dx: -4, dy: -2).intersects(rect)
+            }) {
+                rect.origin.y += h + 4
+                attempts += 1
+            }
+            occupied.append(rect)
 
             if !isCaption {
                 context.fill(Path(roundedRect: rect, cornerRadius: 6),

@@ -240,6 +240,18 @@ struct ContentView: View {
             Button("Polygon Interior") { model.constructPolygon() }
             Button("Point on Object") { model.constructPointOnPath() }
             Divider()
+            Button("Perpendicular Bisector") { model.constructPerpendicularBisector() }
+            Button("Tangents") { model.constructTangents() }
+            Button("Radical Axis") { model.constructRadicalAxis() }
+            Button("Vector") { model.constructVector() }
+            Button("Vector Sum") { model.constructVectorSum(subtract: false) }
+            Button("Vector Difference") { model.constructVectorSum(subtract: true) }
+            Button("Parameter") { model.addParameter() }
+            Menu("Coordinate System") {
+                Button("Cartesian") { model.constructCoordinateSystem(.cartesian) }
+                Button("Polar") { model.constructCoordinateSystem(.polar) }
+            }
+            Divider()
             Button("Locus") { model.constructLocus() }
             Divider()
             Button("Construction Protocol…") {
@@ -269,8 +281,18 @@ struct ContentView: View {
             Button("Ordinate") { model.measure(.ordinate) }
             Button("Polar Distance") { model.measure(.polarDistance) }
             Button("Polar Direction") { model.measure(.polarDirection) }
+            Button("Coordinate Distance") { model.measure(.coordinateDistance) }
             Button("Equation") { model.measure(.equation) }
             Button("Slope") { model.measure(.slope) }
+            Divider()
+            Button("Measure All") { model.measureAll() }
+            Divider()
+            Button("Plot Derivative") { model.addDerivativePlot() }
+            Button("Shade Integral") { model.addIntegralPlot() }
+            Button("Tangent at x") { model.addTangentAt() }
+            Button("Value Table") { model.addValueTable() }
+            Button("Find Roots") { model.findFunctionRoots() }
+            Button("Find Intersections") { model.findFunctionIntersections() }
             Divider()
             Button("Calculate…") {
                 calculationText = ""

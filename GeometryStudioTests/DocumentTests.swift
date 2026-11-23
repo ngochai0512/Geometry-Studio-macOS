@@ -69,6 +69,25 @@ struct DocumentTests {
         #expect(old.marks.isEmpty)
     }
 
+    @Test("new Tier 2 object kinds round-trip")
+    func tierTwoKindsRoundTrip() throws {
+        var document = SketchDocument()
+        let a = SketchObject(kind: .freePoint)
+        let b = SketchObject(kind: .freePoint)
+        let parameter = SketchObject(kind: .parameter(value: 2.5, minimum: 0, maximum: 10))
+        let bisector = SketchObject(kind: .construction(.perpendicularBisector(a: a.id, b: b.id)))
+        let vector = SketchObject(kind: .vector(.fromPoints(from: a.id, to: b.id)))
+        let system = SketchObject(kind: .coordinateSystem(kind: .polar, origin: a.id,
+                                                           step: 2.54, unit: .inches))
+        let graph = SketchObject(kind: .graph(.derivative("x^2")))
+        document.objects = [a, b, parameter, bisector, vector, system, graph]
+
+        let data = try JSONEncoder().encode(document)
+        let decoded = try JSONDecoder().decode(SketchDocument.self, from: data)
+
+        #expect(decoded.objects == document.objects)
+    }
+
     @Test("new object kinds preserve their added data")
     func newObjectKindsRoundTrip() throws {
         var document = SketchDocument()

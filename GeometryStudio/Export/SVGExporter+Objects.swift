@@ -27,7 +27,31 @@ extension SVGExporter {
         let stroke = strokeAttributes(style)
         switch path {
         case .segment(let a, let b):
-            return lineElement(a, b, attributes: stroke)
+            var parts = [lineElement(a, b, attributes: stroke)]
+            if style.tickCount > 0 {
+                let start = screen(a)
+                let end = screen(b)
+                let dx = end.x - start.x
+                let dy = end.y - start.y
+                let length = hypot(dx, dy)
+                if length > 1 {
+                    let ux = dx / length
+                    let uy = dy / length
+                    let half = min(5, max(3, length / 12))
+                    var d = ""
+                    for index in 0..<max(0, min(style.tickCount, 3)) {
+                        let t = Double(index + 1) / Double(style.tickCount + 1)
+                        let cx = start.x + dx * t
+                        let cy = start.y + dy * t
+                        d += "M \(num(cx - uy * half)) \(num(cy + ux * half)) "
+                        d += "L \(num(cx + uy * half)) \(num(cy - ux * half)) "
+                    }
+                    parts.append(element("path", [("d", d), ("fill", "none"),
+                                                  ("stroke", hex(style.color)),
+                                                  ("stroke-width", "1.2")]))
+                }
+            }
+            return parts.joined(separator: "\n")
         case .ray(let a, let b):
             let direction = (b - a).normalized()
             let end = a + direction * max(visibleRect.width, visibleRect.height) * 3
@@ -110,16 +134,36 @@ extension SVGExporter {
         while delta < -.pi {
             delta += .pi * 2
         }
-        let radius = SVGMetrics.angleRadius
-        var points: [Vec2] = []
-        for i in 0...SVGMetrics.angleSamples {
-            let t = Double(i) / Double(SVGMetrics.angleSamples)
-            let angle = start + delta * t
-            points.append(vertex + Vec2(cos(angle), sin(angle)) * radius)
+        let marker = object.style.angleMarker
+        switch marker {
+        case .none:
+            return nil
+        case .rightAngle:
+            let markerSize = 0.22
+            let first = vertex + Vec2(cos(start), sin(start)) * markerSize
+            let second = vertex + Vec2(cos(start + delta), sin(start + delta)) * markerSize
+            let corner = first + second - vertex
+            return element("polyline", [("points", pointList([vertex, first, corner, second, vertex])),
+                                        ("fill", "none"),
+                                        ("stroke-opacity", "0.9")]
+                           + strokeAttributes(object.style, width: SVGMetrics.angleLineWidth))
+        case .arc, .doubleArc:
+            let radii = marker == .doubleArc
+                ? [SVGMetrics.angleRadius, SVGMetrics.angleRadius + 0.12]
+                : [SVGMetrics.angleRadius]
+            return radii.map { radius in
+                var points: [Vec2] = []
+                for i in 0...SVGMetrics.angleSamples {
+                    let t = Double(i) / Double(SVGMetrics.angleSamples)
+                    let angle = start + delta * t
+                    points.append(vertex + Vec2(cos(angle), sin(angle)) * radius)
+                }
+                return element("polyline", [("points", pointList(points)), ("fill", "none"),
+                                            ("stroke-opacity", "0.9")]
+                               + strokeAttributes(object.style, width: SVGMetrics.angleLineWidth))
+            }
+            .joined(separator: "\n")
         }
-        return element("polyline", [("points", pointList(points)), ("fill", "none"),
-                                    ("stroke-opacity", "0.9")]
-                       + strokeAttributes(object.style, width: SVGMetrics.angleLineWidth))
     }
 
     func pointElements(_ object: SketchObject, at position: Vec2) -> [String] {
@@ -172,6 +216,17 @@ extension SVGExporter {
                 + "L \(num(p.x - half)) \(num(p.y + half))"
             return element("path", [("d", d), ("fill", "none"), ("stroke", color),
                                     ("stroke-width", "1.5"), ("stroke-linecap", "round")])
+        case .diamond:
+            let d = "M \(num(p.x)) \(num(p.y - radius * 0.7)) "
+                + "L \(num(p.x + radius * 0.7)) \(num(p.y)) "
+                + "L \(num(p.x)) \(num(p.y + radius * 0.7)) "
+                + "L \(num(p.x - radius * 0.7)) \(num(p.y)) Z"
+            return element("path", [("d", d), ("fill", color)])
+        case .triangle:
+            let d = "M \(num(p.x)) \(num(p.y - radius * 0.75)) "
+                + "L \(num(p.x + radius * 0.7)) \(num(p.y + radius * 0.55)) "
+                + "L \(num(p.x - radius * 0.7)) \(num(p.y + radius * 0.55)) Z"
+            return element("path", [("d", d), ("fill", color)])
         }
     }
 

@@ -90,6 +90,109 @@ struct GeometryEvalTests {
         #expect(near(reevaluated.point(image.id), Vec2(1, 1)))
     }
 
+    @Test("perpendicular bisector is the perpendicular through the midpoint")
+    func perpendicularBisector() {
+        let a = freePoint(Vec2(0, 0))
+        let b = freePoint(Vec2(2, 0))
+        let line = SketchObject(kind: .construction(.perpendicularBisector(a: a.id, b: b.id)))
+        var eval = GeometryEval(objects: [a, b, line], settings: CanvasSettings())
+        #expect((eval.path(line.id)?.distance(to: Vec2(1, 5)) ?? 1) < 1e-7)
+    }
+
+    @Test("a tangent from a point touches the circle")
+    func tangentFromPoint() {
+        let center = freePoint(Vec2(0, 0))
+        let through = freePoint(Vec2(1, 0))
+        let circle = SketchObject(kind: .circle(center: center.id, through: through.id))
+        let point = freePoint(Vec2(2, 0))
+        let tangent = SketchObject(kind: .construction(
+            .tangentPointToCircle(point: point.id, circle: circle.id, index: 0)
+        ))
+        var eval = GeometryEval(objects: [center, through, circle, point, tangent],
+                                settings: CanvasSettings())
+        #expect((eval.path(tangent.id)?.distance(to: Vec2(0.5, sqrt(0.75))) ?? 1) < 1e-7)
+    }
+
+    @Test("the radical axis of equal circles is their perpendicular bisector")
+    func radicalAxis() {
+        let c1 = freePoint(Vec2(0, 0))
+        let p1 = freePoint(Vec2(1, 0))
+        let circle1 = SketchObject(kind: .circle(center: c1.id, through: p1.id))
+        let c2 = freePoint(Vec2(2, 0))
+        let p2 = freePoint(Vec2(3, 0))
+        let circle2 = SketchObject(kind: .circle(center: c2.id, through: p2.id))
+        let axis = SketchObject(kind: .construction(.radicalAxis(a: circle1.id, b: circle2.id)))
+        var eval = GeometryEval(objects: [c1, p1, circle1, c2, p2, circle2, axis],
+                                settings: CanvasSettings())
+        #expect((eval.path(axis.id)?.distance(to: Vec2(1, 4)) ?? 1) < 1e-7)
+    }
+
+    @Test("vector sums add their displacements")
+    func vectorSum() {
+        let origin = freePoint(Vec2(0, 0))
+        let right = freePoint(Vec2(1, 0))
+        let up = freePoint(Vec2(0, 1))
+        let first = SketchObject(kind: .vector(.fromPoints(from: origin.id, to: right.id)))
+        let second = SketchObject(kind: .vector(.fromPoints(from: origin.id, to: up.id)))
+        let sum = SketchObject(kind: .vector(.sum(a: first.id, b: second.id, subtract: false)))
+        var eval = GeometryEval(objects: [origin, right, up, first, second, sum],
+                                settings: CanvasSettings())
+        let arrow = eval.evaluate(sum.id).arrow
+        #expect(near(arrow?.to, Vec2(1, 1)))
+    }
+
+    @Test("coordinate distance reports both components")
+    func coordinateDistance() {
+        let a = freePoint(Vec2(1, 2))
+        let b = freePoint(Vec2(4, 6))
+        let measurement = SketchObject(kind: .measurement(.coordinateDistance, refs: [a.id, b.id]))
+        var eval = GeometryEval(objects: [a, b, measurement], settings: CanvasSettings())
+        let result = eval.evaluate(measurement.id)
+        #expect((result.text ?? "").contains("Δx"))
+        #expect(abs((result.value ?? 0) - 5) < 1e-7)
+    }
+
+    @Test("parameters expose their value")
+    func parameterValue() {
+        var parameter = SketchObject(kind: .parameter(value: 3, minimum: 0, maximum: 10))
+        parameter.label = "a"
+        var eval = GeometryEval(objects: [parameter], settings: CanvasSettings())
+        let result = eval.evaluate(parameter.id)
+        #expect(result.value == 3)
+        #expect((result.text ?? "").contains("a ="))
+    }
+
+    @Test("the derivative plot follows the sampled slope")
+    func derivativePlot() {
+        let plot = SketchObject(kind: .graph(.derivative("x^2")))
+        var eval = GeometryEval(objects: [plot], settings: CanvasSettings())
+        guard case .polyline(let points)? = eval.path(plot.id) else {
+            Issue.record("expected a polyline")
+            return
+        }
+        if let point = points.first(where: { abs($0.x - 2) < 0.06 }) {
+            #expect(abs(point.y - 4) < 0.05)
+        } else {
+            Issue.record("no sample near x = 2")
+        }
+    }
+
+    @Test("a tangent line uses the point and slope")
+    func tangentAtX() {
+        let tangent = SketchObject(kind: .graph(.tangent("x^2", x: 1)))
+        var eval = GeometryEval(objects: [tangent], settings: CanvasSettings())
+        #expect((eval.path(tangent.id)?.distance(to: Vec2(2, 3)) ?? 1) < 1e-5)
+    }
+
+    @Test("a value table includes the sampled values")
+    func valueTable() {
+        let table = SketchObject(kind: .graph(.table("x^2", from: 0, to: 2, step: 1)))
+        var eval = GeometryEval(objects: [table], settings: CanvasSettings())
+        let text = eval.evaluate(table.id).text ?? ""
+        #expect(text.contains("x"))
+        #expect(text.contains("4"))
+    }
+
     @Test("point on a segment at half its parameter is the midpoint")
     func pointOnPath() {
         let a = freePoint(Vec2(0, 0))

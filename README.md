@@ -60,20 +60,20 @@ app-bundle binary does not carry it.
 ## Core features
 
 - **Tools** — click to select, hold to drag, hand/pan, point, segment, ray, line, circle, polygon, angle marker and text.
-- **Constructions** — midpoint, perpendicular, parallel, angle bisector, intersection, segment,
-  circle by centre + point, circle by centre + radius, arc on a circle, arc through three points,
-  polygon interior, point on object and locus.
+- **Constructions** — midpoint, perpendicular, parallel, angle bisector, perpendicular bisector,
+  intersection, segment, circle by centre + point, circle by centre + radius, arc on a circle,
+  arc through three points, polygon interior, point on object, tangents, radical axis, vector,
+  vector sum/difference, parameters, coordinate systems and locus.
 - **Measurements** — distance, length, perimeter, circumference, angle, area, radius, ratio,
-  coordinates, abscissa/ordinate, polar distance/direction, arc angle/length, equation,
-  slope and calculations.
+  coordinates, abscissa/ordinate, polar distance/direction, coordinate distance, arc angle/length,
+  equation, slope, measure-all and calculations.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
   0–5 decimal places, as the original's Units preferences offer.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
-- **Graph** — orthogonal (standard or dense), triangular and polar grids, axes, snapping with haptic feedback, and function plots.
+- **Graph** — orthogonal (standard or dense), triangular and polar grids, axes, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
-- **Inspector** — object browser, label, definition, colour, line width, dash, point shape and
-  size, visibility, fill, arc fill (sector or segment), units, angle unit and decimal precision.
+- **Inspector** — object browser, label, definition, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
 - **Construction protocol** — a sheet listing every construction step in order.
 - **Documents** — a document-based app: new, open, save and save as (`.gsp`, JSON document format),
   autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,

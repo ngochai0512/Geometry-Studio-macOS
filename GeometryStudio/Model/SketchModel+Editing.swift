@@ -103,6 +103,28 @@ extension SketchModel {
             return out
         case .locus(let driver, let target):
             return [driver, target]
+        case .parameter, .graph:
+            return []
+        case .construction(let kind):
+            switch kind {
+            case .perpendicularBisector(let a, let b):
+                return [a, b]
+            case .tangentPointToCircle(let point, let circle, _):
+                return [point, circle]
+            case .tangentCircleToCircle(let a, let b, _):
+                return [a, b]
+            case .radicalAxis(let a, let b):
+                return [a, b]
+            }
+        case .vector(let kind):
+            switch kind {
+            case .fromPoints(let from, let to):
+                return [from, to]
+            case .sum(let a, let b, _):
+                return [a, b]
+            }
+        case .coordinateSystem(_, let origin, _, _):
+            return [origin]
         }
     }
 

@@ -18,6 +18,7 @@ enum MeasureKind: String, Codable, CaseIterable, Identifiable {
     case ordinate
     case polarDistance
     case polarDirection
+    case coordinateDistance
     case equation
     case slope
     var id: String {
@@ -55,6 +56,8 @@ enum MeasureKind: String, Codable, CaseIterable, Identifiable {
             return "Polar Distance"
         case .polarDirection:
             return "Polar Direction"
+        case .coordinateDistance:
+            return "Coordinate Distance"
         case .equation:
             return "Equation"
         case .slope:
@@ -94,6 +97,45 @@ enum ArcFill: String, Codable, CaseIterable, Identifiable {
             return "Segment"
         }
     }
+}
+
+enum CoordinateKind: String, Codable, CaseIterable, Identifiable {
+    case cartesian
+    case polar
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .cartesian:
+            return "Cartesian"
+        case .polar:
+            return "Polar"
+        }
+    }
+}
+
+/// The constructed straight objects that are not a single segment between two
+/// selected points: perpendicular bisectors, tangents and radical axes.
+enum ConstructionKind: Codable, Hashable {
+    case perpendicularBisector(a: UUID, b: UUID)
+    case tangentPointToCircle(point: UUID, circle: UUID, index: Int)
+    case tangentCircleToCircle(a: UUID, b: UUID, index: Int)
+    case radicalAxis(a: UUID, b: UUID)
+}
+
+enum VectorKind: Codable, Hashable {
+    case fromPoints(from: UUID, to: UUID)
+    case sum(a: UUID, b: UUID, subtract: Bool)
+}
+
+enum GraphFeature: Codable, Hashable {
+    case derivative(String)
+    case integral(String, from: Double, to: Double)
+    case tangent(String, x: Double)
+    case table(String, from: Double, to: Double, step: Double)
 }
 
 struct TransformSpec: Codable, Hashable {
@@ -201,6 +243,16 @@ enum ObjectKind: Codable, Hashable {
     /// The sampled path of `target` as `driver` (a point on a path) sweeps
     /// through its domain, as in the original's Locus command.
     case locus(driver: UUID, target: UUID)
+    /// A numeric parameter displayed as a card and edited with a slider.
+    case parameter(value: Double, minimum: Double, maximum: Double)
+    /// Perpendicular bisector, tangents and radical axis.
+    case construction(ConstructionKind)
+    /// A directed segment or the sum/difference of two vectors.
+    case vector(VectorKind)
+    /// A coordinate system drawn at a point, with its own scale and unit.
+    case coordinateSystem(kind: CoordinateKind, origin: UUID, step: Double, unit: LengthUnit)
+    /// Derivative plot, integral shading, tangent at x, or a value table.
+    case graph(GraphFeature)
 }
 
 struct SketchObject: Identifiable, Codable, Hashable {
@@ -250,7 +302,7 @@ struct SketchObject: Identifiable, Codable, Hashable {
         switch kind {
         case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector,
              .circle, .circleRadius, .arcOnCircle, .arcThroughPoints, .polygon,
-             .functionPlot, .transformed, .locus:
+             .functionPlot, .transformed, .locus, .construction, .vector, .graph:
             return true
         default:
             return false

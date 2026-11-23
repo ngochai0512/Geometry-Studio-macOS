@@ -64,6 +64,42 @@ extension GeometryEval {
             return "\(transformName(spec.kind)) of \(reference(source))"
         case .locus(let driver, let target):
             return "Locus of \(reference(target)) as \(reference(driver)) moves"
+        case .parameter(let value, let minimum, let maximum):
+            let name = object.label.isEmpty ? "Parameter" : "Parameter \(object.label)"
+            return "\(name) = \(formatNumber(value, precision: settings.precision))"
+                + " (\(formatNumber(minimum, precision: settings.precision))…\(formatNumber(maximum, precision: settings.precision)))"
+        case .construction(let kind):
+            switch kind {
+            case .perpendicularBisector(let a, let b):
+                return "Perpendicular bisector of \(reference(a))\(reference(b))"
+            case .tangentPointToCircle(let point, let circle, _):
+                return "Tangent from \(reference(point)) to \(reference(circle))"
+            case .tangentCircleToCircle(let a, let b, _):
+                return "Common tangent of \(reference(a)) and \(reference(b))"
+            case .radicalAxis(let a, let b):
+                return "Radical axis of \(reference(a)) and \(reference(b))"
+            }
+        case .vector(let kind):
+            switch kind {
+            case .fromPoints(let from, let to):
+                return "Vector \(reference(from))→\(reference(to))"
+            case .sum(let a, let b, let subtract):
+                return "\(subtract ? "Difference" : "Sum") of \(reference(a)) and \(reference(b))"
+            }
+        case .coordinateSystem(let kind, let origin, let step, let unit):
+            let stepText = formatNumber(step / max(unit.perUnit, 1e-6), precision: 2)
+            return "\(kind.title) coordinate system at \(reference(origin)) · \(stepText) \(unit.short) step"
+        case .graph(let feature):
+            switch feature {
+            case .derivative(let expression):
+                return "Derivative of \(expression)"
+            case .integral(let expression, let from, let to):
+                return "Integral of \(expression) from \(formatNumber(from, precision: 2)) to \(formatNumber(to, precision: 2))"
+            case .tangent(let expression, let x):
+                return "Tangent of \(expression) at x = \(formatNumber(x, precision: 2))"
+            case .table(let expression, _, _, _):
+                return "Value table for \(expression)"
+            }
         }
     }
 

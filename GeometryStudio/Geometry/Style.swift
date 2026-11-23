@@ -60,11 +60,37 @@ enum PointShape: String, Codable, CaseIterable, Identifiable {
     case hollow
     case square
     case cross
+    case diamond
+    case triangle
     var id: String {
         rawValue
     }
     var name: String {
         rawValue.capitalized
+    }
+}
+
+enum AngleMarkerStyle: String, Codable, CaseIterable, Identifiable {
+    case arc
+    case doubleArc
+    case rightAngle
+    case none
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .arc:
+            return "Arc"
+        case .doubleArc:
+            return "Double arc"
+        case .rightAngle:
+            return "Right angle"
+        case .none:
+            return "None"
+        }
     }
 }
 
@@ -75,6 +101,9 @@ struct ObjectStyle: Codable, Hashable {
     var pointSize: Double = 5.5
     var pointShape: PointShape = .filled
     var fillOpacity: Double = 0.12
+    /// Tick marks on a segment: 0 means none, up to three.
+    var tickCount: Int = 0
+    var angleMarker: AngleMarkerStyle = .arc
 
     init() {}
 
@@ -86,5 +115,7 @@ struct ObjectStyle: Codable, Hashable {
         pointSize = try c.decodeIfPresent(Double.self, forKey: .pointSize) ?? 5.5
         pointShape = try c.decodeIfPresent(PointShape.self, forKey: .pointShape) ?? .filled
         fillOpacity = try c.decodeIfPresent(Double.self, forKey: .fillOpacity) ?? 0.12
+        tickCount = try c.decodeIfPresent(Int.self, forKey: .tickCount) ?? 0
+        angleMarker = try c.decodeIfPresent(AngleMarkerStyle.self, forKey: .angleMarker) ?? .arc
     }
 }

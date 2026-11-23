@@ -38,18 +38,18 @@ Deferred within Tier 1: window appearance moved to #45, where the canvas theme l
 | 13 | Arc angle and arc length measurements | `1,100`–`1,103` | `MeasureKind`, `GeometryEval` | S | [x] |
 | 14 | Persistent marks: mirror, center, angle, ratio, vector (replacing modal dialogs) | `1,33`–`1,45` | `ObjectKind` + inspector | M | [x] |
 | 15 | Circle by center + numeric radius | construct table | `SketchModel+Construction` | S | [x] |
-| 16 | Parameter / slider objects | `0,151` (parametric plots need them) | `ObjectKind` | S | [ ] |
-| 17 | Tangents (point→circle, circle→circle), perpendicular bisector, radical axis | construct table | `GeometryEval`, `SketchModel+Construction` | S/M | [ ] |
-| 18 | Polar distance/direction, abscissa/ordinate, coordinate distance | `1,109`, `1,110` | `MeasureKind` | S | [ ] |
-| 19 | Vector objects, vector sum and difference | `1,40` | `ObjectKind`, canvas arrows | S | [ ] |
-| 20 | Tick marks, angle-marker styles, richer point shapes and sizes | `0,144`–`0,149` | `Geometry/Style.swift`, `CanvasDrawing` | S | [ ] |
+| 16 | Parameter / slider objects | `0,151` (parametric plots need them) | `ObjectKind` | S | [x] |
+| 17 | Tangents (point→circle, circle→circle), perpendicular bisector, radical axis | construct table | `GeometryEval`, `SketchModel+Construction` | S/M | [x] |
+| 18 | Polar distance/direction, abscissa/ordinate, coordinate distance | `1,109`, `1,110` | `MeasureKind` | S | [x] |
+| 19 | Vector objects, vector sum and difference | `1,40` | `ObjectKind`, canvas arrows | S | [x] |
+| 20 | Tick marks, angle-marker styles, richer point shapes and sizes | `0,144`–`0,149` | `Geometry/Style.swift`, `CanvasDrawing` | S | [x] |
 | 21 | Construction protocol: ordered list of every construction step | original list view | `Views/SketchSheets.swift` (ProtocolSheet) | S | [x] |
 | 22 | Describe / Information tool: click an object, read its definition | `15,18` "Click objects to describe their definitions" | `Model/GeometryEval+Definition.swift` + inspector | S | [x] |
-| 23 | Measure-all, and label placement rules | `1,88`–`1,115` | `GeometryEval.measurement` | S | [ ] |
-| 24 | Coordinate systems as objects: multiple axes, polar grid, per-graph units | `0,67` | `ObjectKind` + `CanvasDrawing` | M | [ ] |
-| 25 | Graph extras: derivative and integral shading, tangent at x, root/intersection solver, value table | `0,112`–`0,115` | `Geometry/Expression`, model extensions | M | [ ] |
+| 23 | Measure-all, and label placement rules | `1,88`–`1,115` | `GeometryEval.measurement` | S | [x] |
+| 24 | Coordinate systems as objects: multiple axes, polar grid, per-graph units | `0,67` | `ObjectKind` + `CanvasDrawing` | M | [x] |
+| 25 | Graph extras: derivative and integral shading, tangent at x, root/intersection solver, value table | `0,112`–`0,115` | `Geometry/Expression`, model extensions | M | [x] |
 
-Item 18 is partially shipped: abscissa, ordinate, polar distance and polar direction are implemented. Coordinate distance waits on coordinate systems (#24) so "coordinate" has a defined axis.
+Item 18: abscissa, ordinate, polar distance/direction and coordinate distance are implemented. Coordinate distance uses the origin and unit of a selected coordinate-system object when one is in the selection; otherwise it uses the document axes and unit.
 
 Item 12 ships as two fill modes on the arc object: Sector (centre wedge) and Segment (chord cap). The original's three command strings do not map to three distinct regions here.
 

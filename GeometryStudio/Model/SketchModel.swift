@@ -453,6 +453,10 @@ final class SketchModel {
             return true
         case .caption, .measurement, .calculation, .angle:
             return true
+        case .parameter:
+            return true
+        case .graph(.table):
+            return true
         default:
             return false
         }
@@ -524,6 +528,37 @@ final class SketchModel {
             return "Transformed Image"
         case .locus:
             return "Locus"
+        case .parameter:
+            return "Parameter"
+        case .construction(let kind):
+            switch kind {
+            case .perpendicularBisector:
+                return "Perpendicular Bisector"
+            case .tangentPointToCircle, .tangentCircleToCircle:
+                return "Tangent"
+            case .radicalAxis:
+                return "Radical Axis"
+            }
+        case .vector(let kind):
+            switch kind {
+            case .fromPoints:
+                return "Vector"
+            case .sum(_, _, let subtract):
+                return subtract ? "Vector Difference" : "Vector Sum"
+            }
+        case .coordinateSystem(let kind, _, _, _):
+            return "\(kind.title) Coordinate System"
+        case .graph(let feature):
+            switch feature {
+            case .derivative:
+                return "Derivative Plot"
+            case .integral:
+                return "Integral"
+            case .tangent:
+                return "Tangent"
+            case .table:
+                return "Value Table"
+            }
         }
     }
 
@@ -551,6 +586,32 @@ final class SketchModel {
             return "arrow.triangle.2.circlepath"
         case .locus:
             return "scribble"
+        case .parameter:
+            return "slider.horizontal.3"
+        case .construction(let kind):
+            switch kind {
+            case .perpendicularBisector:
+                return "line.diagonal"
+            case .tangentPointToCircle, .tangentCircleToCircle:
+                return "line.diagonal.arrow"
+            case .radicalAxis:
+                return "line.diagonal"
+            }
+        case .vector:
+            return "arrow.right"
+        case .coordinateSystem(let kind, _, _, _):
+            return kind == .polar ? "circle.grid.cross" : "grid"
+        case .graph(let feature):
+            switch feature {
+            case .derivative:
+                return "function"
+            case .integral:
+                return "square.split.bottomrightquarter"
+            case .tangent:
+                return "line.diagonal"
+            case .table:
+                return "tablecells"
+            }
         }
     }
 }

@@ -76,6 +76,26 @@ struct SketchCommands: Commands {
             Button("Point on Object") { model?.constructPointOnPath() }
                 .disabled(model == nil)
             Divider()
+            Button("Perpendicular Bisector") { model?.constructPerpendicularBisector() }
+                .disabled(model == nil)
+            Button("Tangents") { model?.constructTangents() }
+                .disabled(model == nil)
+            Button("Radical Axis") { model?.constructRadicalAxis() }
+                .disabled(model == nil)
+            Button("Vector") { model?.constructVector() }
+                .disabled(model == nil)
+            Button("Vector Sum") { model?.constructVectorSum(subtract: false) }
+                .disabled(model == nil)
+            Button("Vector Difference") { model?.constructVectorSum(subtract: true) }
+                .disabled(model == nil)
+            Button("Parameter") { model?.addParameter() }
+                .disabled(model == nil)
+            Menu("Coordinate System") {
+                Button("Cartesian") { model?.constructCoordinateSystem(.cartesian) }
+                Button("Polar") { model?.constructCoordinateSystem(.polar) }
+            }
+            .disabled(model == nil)
+            Divider()
             Button("Locus from Selection") { model?.constructLocus() }
                 .disabled(model == nil)
             Divider()
@@ -117,9 +137,14 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
             Button("Polar Direction") { model?.measure(.polarDirection) }
                 .disabled(model == nil)
+            Button("Coordinate Distance") { model?.measure(.coordinateDistance) }
+                .disabled(model == nil)
             Button("Equation") { model?.measure(.equation) }
                 .disabled(model == nil)
             Button("Slope") { model?.measure(.slope) }
+                .disabled(model == nil)
+            Divider()
+            Button("Measure All") { model?.measureAll() }
                 .disabled(model == nil)
             Divider()
             Button("Calculate…") {
@@ -175,6 +200,19 @@ struct SketchCommands: Commands {
                 NotificationCenter.default.post(name: .openFunction, object: nil)
             }
             .disabled(model == nil)
+            Divider()
+            Button("Plot Derivative") { model?.addDerivativePlot() }
+                .disabled(model == nil)
+            Button("Shade Integral") { model?.addIntegralPlot() }
+                .disabled(model == nil)
+            Button("Tangent at x") { model?.addTangentAt() }
+                .disabled(model == nil)
+            Button("Value Table") { model?.addValueTable() }
+                .disabled(model == nil)
+            Button("Find Roots") { model?.findFunctionRoots() }
+                .disabled(model == nil)
+            Button("Find Intersections") { model?.findFunctionIntersections() }
+                .disabled(model == nil)
         }
 
         CommandMenu("Display") {
