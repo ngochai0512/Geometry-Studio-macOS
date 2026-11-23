@@ -97,7 +97,12 @@ extension SketchModel {
         var current = settings
         current.grid = new.grid
         current.gridType = new.gridType
+        current.gridColor = new.gridColor
+        current.gridBold = new.gridBold
+        current.backgroundColor = new.backgroundColor
         current.axes = new.axes
+        current.axesLabels = new.axesLabels
+        current.axesLabelStyle = new.axesLabelStyle
         current.snap = new.snap
         current.showLabels = new.showLabels
         current.lengthUnit = new.lengthUnit

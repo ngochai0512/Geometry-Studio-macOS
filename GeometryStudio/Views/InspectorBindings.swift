@@ -563,6 +563,19 @@ extension InspectorView {
         )
     }
 
+    var canvasBackgroundBinding: Binding<Color> {
+        Binding(
+            get: { model.settings.backgroundColor.color },
+            set: { newValue in
+                let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .white
+                model.settings.backgroundColor = RGBA(Double(ns.redComponent),
+                                                      Double(ns.greenComponent),
+                                                      Double(ns.blueComponent),
+                                                      Double(ns.alphaComponent))
+            }
+        )
+    }
+
     var colorBinding: Binding<Color> {
         Binding(
             get: {

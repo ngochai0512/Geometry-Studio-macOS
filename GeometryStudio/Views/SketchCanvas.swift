@@ -70,9 +70,7 @@ struct SketchCanvas: View {
                 if printing {
                     Color.white
                 } else {
-                    // Ink colours are fixed, so the paper stays light in every appearance.
-                    Color(nsColor: .textBackgroundColor)
-                        .environment(\.colorScheme, .light)
+                    model.settings.backgroundColor.color
                 }
             }
             .contentShape(Rectangle())

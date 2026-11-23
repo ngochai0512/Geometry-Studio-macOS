@@ -382,7 +382,37 @@ extension InspectorView {
                     .labelsHidden()
                     .pickerStyle(.menu)
                 }
+                LabeledContent("Grid color") {
+                    Picker("Grid color", selection: $model.settings.gridColor) {
+                        ForEach(RGBA.gridPalette, id: \.0) { name, color in
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(color.color)
+                                    .frame(width: 10, height: 10)
+                                Text(name)
+                            }
+                            .tag(color)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                Toggle("Bold grid", isOn: $model.settings.gridBold)
+                LabeledContent("Background") {
+                    ColorPicker("Background", selection: canvasBackgroundBinding)
+                        .labelsHidden()
+                }
                 Toggle("Axes", isOn: $model.settings.axes)
+                Toggle("Axes numbers", isOn: $model.settings.axesLabels)
+                LabeledContent("Label style") {
+                    Picker("Label style", selection: $model.settings.axesLabelStyle) {
+                        ForEach(AxisLabelStyle.presets, id: \.self) { style in
+                            Text(style.title).tag(style)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
                 Toggle("Snap points to grid", isOn: $model.settings.snap)
                 Toggle("Show labels", isOn: $model.settings.showLabels)
                 LabeledContent("Length") {

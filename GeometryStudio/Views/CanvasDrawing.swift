@@ -159,7 +159,10 @@ extension SketchCanvas {
             minor.addLine(to: CGPoint(x: size.width, y: sy))
             y += step
         }
-        context.stroke(minor, with: .color(ink.opacity(0.055)), lineWidth: 0.7)
+        let gridColor = model.settings.gridColor.color
+        let bold = model.settings.gridBold
+        context.stroke(minor, with: .color(gridColor.opacity(bold ? 0.16 : 0.08)),
+                       lineWidth: bold ? 1.0 : 0.7)
 
         var major = Path()
         let majorStep = step * 5
@@ -177,7 +180,8 @@ extension SketchCanvas {
             major.addLine(to: CGPoint(x: size.width, y: sy))
             my += majorStep
         }
-        context.stroke(major, with: .color(ink.opacity(0.09)), lineWidth: 0.8)
+        context.stroke(major, with: .color(gridColor.opacity(bold ? 0.28 : 0.14)),
+                       lineWidth: bold ? 1.4 : 0.8)
     }
 
     private func drawTriangularGrid(context: inout GraphicsContext, size: CGSize,
@@ -219,7 +223,8 @@ extension SketchCanvas {
                 offset += rootStep
             }
         }
-        context.stroke(path, with: .color(ink.opacity(0.06)), lineWidth: 0.7)
+        context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
+                       lineWidth: model.settings.gridBold ? 1.0 : 0.7)
     }
 
     private func drawPolarGrid(context: inout GraphicsContext, size: CGSize,
@@ -255,7 +260,8 @@ extension SketchCanvas {
             path.addLine(to: CGPoint(x: center.x + cos(angle) * spokeLength,
                                      y: center.y - sin(angle) * spokeLength))
         }
-        context.stroke(path, with: .color(ink.opacity(0.06)), lineWidth: 0.7)
+        context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
+                       lineWidth: model.settings.gridBold ? 1.0 : 0.7)
     }
 
     private func drawAxes(context: inout GraphicsContext, size: CGSize,
@@ -272,9 +278,11 @@ extension SketchCanvas {
         }
         context.stroke(axes, with: .color(ink.opacity(0.3)), lineWidth: 1)
 
-        guard let step else {
+        guard let step, model.settings.axesLabels else {
             return
         }
+        let labelStyle = model.settings.axesLabelStyle
+        let font = axisLabelFont(labelStyle)
         let scale = model.settings.scale
         let unit = max(model.settings.lengthUnit.perUnit, 1e-6)
         let labelEvery = GridMetrics.labelEvery(step: step, scale: scale)
@@ -285,7 +293,7 @@ extension SketchCanvas {
                 let p = model.screenPoint(Vec2(x, 0), size: size)
                 if abs(x) > 1e-9 && p.y >= 0 && p.y <= size.height {
                     let label = Text(GridMetrics.cleanNumber(x / unit))
-                        .font(.system(.caption2, design: .rounded))
+                        .font(font)
                         .foregroundStyle(secondaryInk.opacity(0.8))
                     context.draw(label, at: CGPoint(x: p.x, y: min(max(p.y + 13, 12), size.height - 10)),
                                  anchor: .top)
@@ -300,7 +308,7 @@ extension SketchCanvas {
                 let p = model.screenPoint(Vec2(0, y), size: size)
                 if abs(y) > 1e-9 && p.x >= 0 && p.x <= size.width {
                     let label = Text(GridMetrics.cleanNumber(y / unit))
-                        .font(.system(.caption2, design: .rounded))
+                        .font(font)
                         .foregroundStyle(secondaryInk.opacity(0.8))
                     context.draw(label, at: CGPoint(x: min(max(p.x - 8, 10), size.width - 10), y: p.y),
                                  anchor: .trailing)
@@ -310,7 +318,7 @@ extension SketchCanvas {
         }
         if origin.x > 8 && origin.x < size.width - 8 && origin.y > 8 && origin.y < size.height - 8 {
             context.draw(Text("0")
-                .font(.system(.caption2, design: .rounded))
+                .font(font)
                 .foregroundStyle(secondaryInk.opacity(0.75)),
                          at: CGPoint(x: origin.x - 7, y: origin.y + 7), anchor: .topTrailing)
         }
@@ -608,6 +616,16 @@ extension SketchCanvas {
                                                 width: 8, height: 8)),
                          with: .color(accent))
         }
+    }
+
+    private func axisLabelFont(_ style: AxisLabelStyle) -> Font {
+        var font = Font.system(.caption2,
+                               design: style.serif ? .serif : .rounded,
+                               weight: style.bold ? .bold : .regular)
+        if style.italic {
+            font = font.italic()
+        }
+        return font
     }
 
     private func drawTickMarks(_ a: Vec2, _ b: Vec2, count: Int, color: Color,

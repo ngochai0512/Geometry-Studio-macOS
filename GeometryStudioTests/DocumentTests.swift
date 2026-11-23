@@ -29,6 +29,12 @@ struct DocumentTests {
         document.settings.precision = 4
         document.settings.lengthUnit = .cm
         document.settings.gridType = .triangular
+        document.settings.gridColor = RGBA(hex: 0xE6E6EB)
+        document.settings.gridBold = true
+        document.settings.backgroundColor = RGBA(0.1, 0.2, 0.3, 0.5)
+        document.settings.axesLabels = false
+        let labelStyle = AxisLabelStyle(bold: false, serif: true)
+        document.settings.axesLabelStyle = labelStyle
         document.title = "Round Trip"
 
         let data = try JSONEncoder().encode(document)
@@ -40,6 +46,11 @@ struct DocumentTests {
         #expect(decoded.settings.precision == 4)
         #expect(decoded.settings.lengthUnit == .cm)
         #expect(decoded.settings.gridType == .triangular)
+        #expect(decoded.settings.gridColor == RGBA(hex: 0xE6E6EB))
+        #expect(decoded.settings.gridBold)
+        #expect(decoded.settings.backgroundColor == RGBA(0.1, 0.2, 0.3, 0.5))
+        #expect(!decoded.settings.axesLabels)
+        #expect(decoded.settings.axesLabelStyle == labelStyle)
         #expect(decoded.version == SketchDocument.currentVersion)
     }
 
@@ -184,6 +195,11 @@ struct DocumentTests {
         #expect(decoded.settings.showLabels)
         #expect(decoded.settings.angleUnit == .degrees)
         #expect(decoded.settings.gridType == .orthogonal)
+        #expect(decoded.settings.gridColor == RGBA(hex: 0x1C1C1F))
+        #expect(!decoded.settings.gridBold)
+        #expect(decoded.settings.backgroundColor == RGBA(1, 1, 1))
+        #expect(decoded.settings.axesLabels)
+        #expect(decoded.settings.axesLabelStyle == AxisLabelStyle())
         #expect(decoded.settings.scale == SketchMetrics.pixelsPerCentimetre)
     }
 

@@ -41,7 +41,12 @@ enum GridType: String, Codable, CaseIterable, Identifiable {
 struct CanvasSettings: Codable, Hashable {
     var grid: Bool = true
     var gridType: GridType = .orthogonal
+    var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
+    var gridBold: Bool = false
+    var backgroundColor: RGBA = RGBA(1, 1, 1)
     var axes: Bool = true
+    var axesLabels: Bool = true
+    var axesLabelStyle: AxisLabelStyle = AxisLabelStyle()
     var snap: Bool = false
     var showLabels: Bool = true
     // Defaults read from the original's preference initialiser (routine):
@@ -59,7 +64,13 @@ struct CanvasSettings: Codable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         grid = try c.decodeIfPresent(Bool.self, forKey: .grid) ?? true
         gridType = try c.decodeIfPresent(GridType.self, forKey: .gridType) ?? .orthogonal
+        gridColor = try c.decodeIfPresent(RGBA.self, forKey: .gridColor) ?? RGBA(hex: 0x1C1C1F)
+        gridBold = try c.decodeIfPresent(Bool.self, forKey: .gridBold) ?? false
+        backgroundColor = try c.decodeIfPresent(RGBA.self, forKey: .backgroundColor) ?? RGBA(1, 1, 1)
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true
+        axesLabels = try c.decodeIfPresent(Bool.self, forKey: .axesLabels) ?? true
+        axesLabelStyle = try c.decodeIfPresent(AxisLabelStyle.self, forKey: .axesLabelStyle)
+            ?? AxisLabelStyle()
         snap = try c.decodeIfPresent(Bool.self, forKey: .snap) ?? false
         showLabels = try c.decodeIfPresent(Bool.self, forKey: .showLabels) ?? true
         lengthUnit = try c.decodeIfPresent(LengthUnit.self, forKey: .lengthUnit) ?? .inches

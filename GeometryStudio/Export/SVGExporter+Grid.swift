@@ -17,30 +17,32 @@ extension SVGExporter {
         var parts: [String] = []
 
         if settings.grid {
+            let gridColor = hex(settings.gridColor)
+            let bold = settings.gridBold
             switch settings.gridType {
             case .orthogonal, .orthogonalDense:
                 parts.append(element("path", [("d", gridLines(step: step)),
                                               ("fill", "none"),
-                                              ("stroke", hex(RGBA.ink)),
-                                              ("stroke-opacity", "0.055"),
-                                              ("stroke-width", "0.7")]))
+                                              ("stroke", gridColor),
+                                              ("stroke-opacity", bold ? "0.16" : "0.08"),
+                                              ("stroke-width", bold ? "1" : "0.7")]))
                 parts.append(element("path", [("d", gridLines(step: step * 5)),
                                               ("fill", "none"),
-                                              ("stroke", hex(RGBA.ink)),
-                                              ("stroke-opacity", "0.09"),
-                                              ("stroke-width", "0.8")]))
+                                              ("stroke", gridColor),
+                                              ("stroke-opacity", bold ? "0.28" : "0.14"),
+                                              ("stroke-width", bold ? "1.4" : "0.8")]))
             case .triangular:
                 parts.append(element("path", [("d", triangularGridPath(step: step)),
                                               ("fill", "none"),
-                                              ("stroke", hex(RGBA.ink)),
-                                              ("stroke-opacity", "0.06"),
-                                              ("stroke-width", "0.7")]))
+                                              ("stroke", gridColor),
+                                              ("stroke-opacity", bold ? "0.16" : "0.08"),
+                                              ("stroke-width", bold ? "1" : "0.7")]))
             case .polar:
                 parts.append(element("path", [("d", polarGridPath(step: step)),
                                               ("fill", "none"),
-                                              ("stroke", hex(RGBA.ink)),
-                                              ("stroke-opacity", "0.06"),
-                                              ("stroke-width", "0.7")]))
+                                              ("stroke", gridColor),
+                                              ("stroke-opacity", bold ? "0.16" : "0.08"),
+                                              ("stroke-width", bold ? "1" : "0.7")]))
             }
         }
 
@@ -59,7 +61,8 @@ extension SVGExporter {
                                               ("stroke-opacity", "0.3"),
                                               ("stroke-width", "1")]))
             }
-            if settings.gridType == .orthogonal || settings.gridType == .orthogonalDense {
+            if settings.axesLabels,
+               settings.gridType == .orthogonal || settings.gridType == .orthogonalDense {
                 parts.append(contentsOf: axisLabelParts(step: step, origin: origin))
             }
         }
@@ -163,13 +166,18 @@ extension SVGExporter {
     private func axisLabelParts(step: Double, origin: (x: Double, y: Double)) -> [String] {
         let unit = max(settings.lengthUnit.perUnit, 1e-6)
         let labelEvery = GridMetrics.labelEvery(step: step, scale: settings.scale)
-        let attributes: [(String, String)] = [
-            ("font-family", svgFontFamily),
+        var attributes: [(String, String)] = [
+            ("font-family", settings.axesLabelStyle.serif
+                ? "Georgia, 'Times New Roman', serif"
+                : svgFontFamily),
             ("font-size", "10"),
-            ("font-weight", "400"),
+            ("font-weight", settings.axesLabelStyle.bold ? "700" : "400"),
             ("fill", hex(RGBA.secondaryInk)),
             ("fill-opacity", "0.8")
         ]
+        if settings.axesLabelStyle.italic {
+            attributes.append(("font-style", "italic"))
+        }
         let rect = visibleRect
         var parts: [String] = []
 

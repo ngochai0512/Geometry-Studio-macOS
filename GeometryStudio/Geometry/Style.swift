@@ -16,6 +16,28 @@ struct RGBA: Codable, Hashable {
         self.a = a
     }
 
+    init(hex: UInt32, alpha: Double = 1) {
+        self.init(Double((hex >> 16) & 0xFF) / 255,
+                  Double((hex >> 8) & 0xFF) / 255,
+                  Double(hex & 0xFF) / 255,
+                  alpha)
+    }
+
+    init?(hexString: String) {
+        let value = hexString.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        guard value.count == 6, let hex = UInt32(value, radix: 16) else {
+            return nil
+        }
+        self.init(hex: hex)
+    }
+
+    var hex: String {
+        String(format: "%02X%02X%02X",
+               Int((r * 255).rounded()),
+               Int((g * 255).rounded()),
+               Int((b * 255).rounded()))
+    }
+
     var color: Color {
         Color(red: r, green: g, blue: b).opacity(a)
     }
@@ -40,6 +62,18 @@ struct RGBA: Codable, Hashable {
         ("Magenta", .magenta),
         ("Red", RGBA(0.85, 0.18, 0.16)),
         ("Green", RGBA(0.12, 0.62, 0.25))
+    ]
+
+    /// Neutral shades offered for the grid, darkest first.
+    static let gridPalette: [(String, RGBA)] = [
+        ("#1C1C1F", RGBA(hex: 0x1C1C1F)),
+        ("#2F2F33", RGBA(hex: 0x2F2F33)),
+        ("#6E6D73", RGBA(hex: 0x6E6D73)),
+        ("#85848A", RGBA(hex: 0x85848A)),
+        ("#B4B3BA", RGBA(hex: 0xB4B3BA)),
+        ("#D1D0D6", RGBA(hex: 0xD1D0D6)),
+        ("#E6E6EB", RGBA(hex: 0xE6E6EB)),
+        ("#F3F2F7", RGBA(hex: 0xF3F2F7))
     ]
 }
 
@@ -91,6 +125,51 @@ enum AngleMarkerStyle: String, Codable, CaseIterable, Identifiable {
         case .none:
             return "None"
         }
+    }
+}
+
+struct AxisLabelStyle: Codable, Hashable {
+    var bold = false
+    var italic = false
+    var serif = false
+
+    init() {}
+
+    init(bold: Bool, italic: Bool = false, serif: Bool = false) {
+        self.bold = bold
+        self.italic = italic
+        self.serif = serif
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bold = try c.decodeIfPresent(Bool.self, forKey: .bold) ?? false
+        italic = try c.decodeIfPresent(Bool.self, forKey: .italic) ?? false
+        serif = try c.decodeIfPresent(Bool.self, forKey: .serif) ?? false
+    }
+
+    var title: String {
+        switch (bold, italic, serif) {
+        case (false, false, false):
+            return "Regular"
+        case (true, false, false):
+            return "Bold"
+        case (false, true, false):
+            return "Italic"
+        case (false, false, true):
+            return "Serif"
+        default:
+            return "Custom"
+        }
+    }
+
+    static var presets: [AxisLabelStyle] {
+        [
+            AxisLabelStyle(),
+            AxisLabelStyle(bold: true),
+            AxisLabelStyle(bold: false, italic: true),
+            AxisLabelStyle(bold: false, serif: true)
+        ]
     }
 }
 

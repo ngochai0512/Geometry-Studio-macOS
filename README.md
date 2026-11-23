@@ -70,7 +70,7 @@ app-bundle binary does not carry it.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
   0–5 decimal places, as the original's Units preferences offer.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
-- **Graph** — orthogonal (standard or dense), triangular and polar grids, axes, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
+- **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
 - **Inspector** — object browser, label, definition, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
@@ -117,9 +117,14 @@ draft.
 
 ## Evidence
 
-The original was inspected statically (nothing from it was run). Key evidence ids:
-`evidence` (x86 Mach-O),
-`evidence` (C object struct),
-`evidence` (C constraint checker),
-`evidence` (`.c` source path),
-`evidence` (C++ exports).
+The original was inspected statically and nothing from it was run. Each marker resolves in
+[`EVIDENCE.md`](EVIDENCE.md), which gives the command and the output it must show:
+
+- `[E1]` x86 Mach-O, 32-bit and not PIE.
+- `[E2]` the geometry object is a C record, `the object record`.
+- `[E3]`, `[E4]` the constraint checker is C.
+- `[E5]`, `[E6]` the engine and UI sources are `.c` and `.m`.
+- `[E7]` the binary also exports C++ names and links `libstdc++`.
+
+The remaining claims cite addresses, symbols and localizable table ranges inline in
+`MECHANICS.md`. No decompiled listing or extracted resource is stored in this repo.
