@@ -8,6 +8,7 @@ enum AppPreferences {
         static let angleUnit = "newSketch.angleUnit"
         static let precision = "newSketch.precision"
         static let grid = "newSketch.grid"
+        static let gridType = "newSketch.gridType"
         static let axes = "newSketch.axes"
         static let snap = "newSketch.snap"
         static let showLabels = "newSketch.showLabels"
@@ -28,6 +29,10 @@ enum AppPreferences {
         }
         if defaults.object(forKey: Keys.grid) != nil {
             settings.grid = defaults.bool(forKey: Keys.grid)
+        }
+        if let raw = defaults.string(forKey: Keys.gridType),
+           let type = GridType(rawValue: raw) {
+            settings.gridType = type
         }
         if defaults.object(forKey: Keys.axes) != nil {
             settings.axes = defaults.bool(forKey: Keys.axes)

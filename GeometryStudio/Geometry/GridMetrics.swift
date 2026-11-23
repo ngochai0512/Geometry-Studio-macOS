@@ -9,10 +9,12 @@ import Foundation
 enum GridMetrics {
     private static let candidates: [Double] = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]
 
-    /// One grid cell in world units.
-    static func step(scale: Double, perUnit: Double) -> Double {
+    /// One grid cell in world units. `minimumSpacing` is the smallest screen
+    /// gap the grid may use, so the dense variant can share the candidate
+    /// ladder without duplicating it.
+    static func step(scale: Double, perUnit: Double, minimumSpacing: Double = 50) -> Double {
         let unit = max(perUnit, 1e-6)
-        for candidate in candidates where candidate * unit * scale >= 50 {
+        for candidate in candidates where candidate * unit * scale >= minimumSpacing {
             return candidate * unit
         }
         return (candidates.last ?? 1) * unit

@@ -5,6 +5,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferences.Keys.angleUnit) private var angleUnit: AngleUnit = .degrees
     @AppStorage(AppPreferences.Keys.precision) private var precision: Int = 2
     @AppStorage(AppPreferences.Keys.grid) private var grid = true
+    @AppStorage(AppPreferences.Keys.gridType) private var gridType: GridType = .orthogonal
     @AppStorage(AppPreferences.Keys.axes) private var axes = true
     @AppStorage(AppPreferences.Keys.snap) private var snap = false
     @AppStorage(AppPreferences.Keys.showLabels) private var showLabels = true
@@ -18,7 +19,7 @@ struct SettingsView: View {
                 newSketchTab
             }
         }
-        .frame(width: 460, height: 330)
+        .frame(width: 460, height: 360)
     }
 
     private var unitsTab: some View {
@@ -47,6 +48,11 @@ struct SettingsView: View {
         Form {
             Section {
                 Toggle("Show grid", isOn: $grid)
+                Picker("Grid style", selection: $gridType) {
+                    ForEach(GridType.allCases) { type in
+                        Text(type.title).tag(type)
+                    }
+                }
                 Toggle("Show axes", isOn: $axes)
                 Toggle("Snap points to grid", isOn: $snap)
                 Toggle("Show labels", isOn: $showLabels)
@@ -73,6 +79,7 @@ struct SettingsView: View {
         angleUnit = .degrees
         precision = 2
         grid = true
+        gridType = .orthogonal
         axes = true
         snap = false
         showLabels = true

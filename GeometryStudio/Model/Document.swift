@@ -13,8 +13,34 @@ enum DocumentError: LocalizedError, Equatable {
     }
 }
 
+/// The family of grid the canvas draws and snaps to.
+enum GridType: String, Codable, CaseIterable, Identifiable {
+    case orthogonal
+    case orthogonalDense
+    case triangular
+    case polar
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .orthogonal:
+            return "Orthogonal"
+        case .orthogonalDense:
+            return "Orthogonal (dense)"
+        case .triangular:
+            return "Triangular"
+        case .polar:
+            return "Polar"
+        }
+    }
+}
+
 struct CanvasSettings: Codable, Hashable {
     var grid: Bool = true
+    var gridType: GridType = .orthogonal
     var axes: Bool = true
     var snap: Bool = false
     var showLabels: Bool = true
@@ -32,6 +58,7 @@ struct CanvasSettings: Codable, Hashable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         grid = try c.decodeIfPresent(Bool.self, forKey: .grid) ?? true
+        gridType = try c.decodeIfPresent(GridType.self, forKey: .gridType) ?? .orthogonal
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true
         snap = try c.decodeIfPresent(Bool.self, forKey: .snap) ?? false
         showLabels = try c.decodeIfPresent(Bool.self, forKey: .showLabels) ?? true

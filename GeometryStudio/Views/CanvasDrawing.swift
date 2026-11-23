@@ -103,103 +103,208 @@ extension SketchCanvas {
         guard model.settings.grid || model.settings.axes else {
             return
         }
-        let scale = model.settings.scale
-        // Labels are in the chosen distance unit; the sketch stores world
-        // centimetres, so the step converts through the display unit.
-        let unit = max(model.settings.lengthUnit.perUnit, 1e-6)
-        let step = GridMetrics.step(scale: scale, perUnit: model.settings.lengthUnit.perUnit)
-
-        if model.settings.grid {
-            let startX = floor(rect.minX / step) * step
-            let startY = floor(rect.minY / step) * step
-            var minor = Path()
-            var x = startX
-            while x <= rect.maxX + step {
-                let sx = model.screenPoint(Vec2(x, 0), size: size).x
-                minor.move(to: CGPoint(x: sx, y: 0))
-                minor.addLine(to: CGPoint(x: sx, y: size.height))
-                x += step
-            }
-            var y = startY
-            while y <= rect.maxY + step {
-                let sy = model.screenPoint(Vec2(0, y), size: size).y
-                minor.move(to: CGPoint(x: 0, y: sy))
-                minor.addLine(to: CGPoint(x: size.width, y: sy))
-                y += step
-            }
-            context.stroke(minor, with: .color(ink.opacity(0.055)), lineWidth: 0.7)
-
-            // Emphasised grid lines every five steps.
-            var major = Path()
-            let majorStep = step * 5
-            var mx = floor(rect.minX / majorStep) * majorStep
-            while mx <= rect.maxX + majorStep {
-                let sx = model.screenPoint(Vec2(mx, 0), size: size).x
-                major.move(to: CGPoint(x: sx, y: 0))
-                major.addLine(to: CGPoint(x: sx, y: size.height))
-                mx += majorStep
-            }
-            var my = floor(rect.minY / majorStep) * majorStep
-            while my <= rect.maxY + majorStep {
-                let sy = model.screenPoint(Vec2(0, my), size: size).y
-                major.move(to: CGPoint(x: 0, y: sy))
-                major.addLine(to: CGPoint(x: size.width, y: sy))
-                my += majorStep
-            }
-            context.stroke(major, with: .color(ink.opacity(0.09)), lineWidth: 0.8)
+        let settings = model.settings
+        let step = GridMetrics.step(
+            scale: settings.scale,
+            perUnit: settings.lengthUnit.perUnit,
+            minimumSpacing: settings.gridType == .orthogonalDense ? 24 : 50
+        )
+        guard step > 0, step.isFinite else {
+            return
         }
 
-        if model.settings.axes {
-            let origin = model.screenPoint(Vec2(0, 0), size: size)
-            var axes = Path()
-            if origin.y >= 0 && origin.y <= size.height {
-                axes.move(to: CGPoint(x: 0, y: origin.y))
-                axes.addLine(to: CGPoint(x: size.width, y: origin.y))
+        if settings.grid {
+            switch settings.gridType {
+            case .orthogonal, .orthogonalDense:
+                drawOrthogonalGrid(context: &context, size: size, rect: rect, step: step)
+            case .triangular:
+                drawTriangularGrid(context: &context, size: size, rect: rect, step: step)
+            case .polar:
+                drawPolarGrid(context: &context, size: size, rect: rect, step: step)
             }
-            if origin.x >= 0 && origin.x <= size.width {
-                axes.move(to: CGPoint(x: origin.x, y: 0))
-                axes.addLine(to: CGPoint(x: origin.x, y: size.height))
-            }
-            context.stroke(axes, with: .color(ink.opacity(0.3)), lineWidth: 1)
+        }
 
-            let tickStep = step
-            let labelEvery = GridMetrics.labelEvery(step: tickStep, scale: scale)
-            var x = floor(rect.minX / tickStep) * tickStep
-            while x <= rect.maxX + tickStep {
-                let index = Int((x / tickStep).rounded())
-                if index % labelEvery == 0 {
-                    let p = model.screenPoint(Vec2(x, 0), size: size)
-                    if abs(x) > 1e-9 && p.y >= 0 && p.y <= size.height {
-                        let label = Text(GridMetrics.cleanNumber(x / unit))
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(secondaryInk.opacity(0.8))
-                        context.draw(label, at: CGPoint(x: p.x, y: min(max(p.y + 13, 12), size.height - 10)),
-                                     anchor: .top)
-                    }
+        if settings.axes {
+            let labelStep: Double? = settings.gridType == .orthogonal || settings.gridType == .orthogonalDense
+                ? step
+                : nil
+            drawAxes(context: &context, size: size, rect: rect, step: labelStep)
+        }
+    }
+
+    private func drawOrthogonalGrid(context: inout GraphicsContext, size: CGSize,
+                                    rect: WorldRect, step: Double) {
+        let startX = floor(rect.minX / step) * step
+        let startY = floor(rect.minY / step) * step
+        var minor = Path()
+        var x = startX
+        while x <= rect.maxX + step {
+            let sx = model.screenPoint(Vec2(x, 0), size: size).x
+            minor.move(to: CGPoint(x: sx, y: 0))
+            minor.addLine(to: CGPoint(x: sx, y: size.height))
+            x += step
+        }
+        var y = startY
+        while y <= rect.maxY + step {
+            let sy = model.screenPoint(Vec2(0, y), size: size).y
+            minor.move(to: CGPoint(x: 0, y: sy))
+            minor.addLine(to: CGPoint(x: size.width, y: sy))
+            y += step
+        }
+        context.stroke(minor, with: .color(ink.opacity(0.055)), lineWidth: 0.7)
+
+        var major = Path()
+        let majorStep = step * 5
+        var mx = floor(rect.minX / majorStep) * majorStep
+        while mx <= rect.maxX + majorStep {
+            let sx = model.screenPoint(Vec2(mx, 0), size: size).x
+            major.move(to: CGPoint(x: sx, y: 0))
+            major.addLine(to: CGPoint(x: sx, y: size.height))
+            mx += majorStep
+        }
+        var my = floor(rect.minY / majorStep) * majorStep
+        while my <= rect.maxY + majorStep {
+            let sy = model.screenPoint(Vec2(0, my), size: size).y
+            major.move(to: CGPoint(x: 0, y: sy))
+            major.addLine(to: CGPoint(x: size.width, y: sy))
+            my += majorStep
+        }
+        context.stroke(major, with: .color(ink.opacity(0.09)), lineWidth: 0.8)
+    }
+
+    private func drawTriangularGrid(context: inout GraphicsContext, size: CGSize,
+                                    rect: WorldRect, step: Double) {
+        let height = step * sqrt(3) / 2
+        guard height > 0, height.isFinite else {
+            return
+        }
+        var path = Path()
+        let firstRow = Int(floor(rect.minY / height)) - 1
+        let lastRow = Int(ceil(rect.maxY / height)) + 1
+        for row in firstRow...lastRow {
+            let y = Double(row) * height
+            let a = model.screenPoint(Vec2(rect.minX, y), size: size)
+            let b = model.screenPoint(Vec2(rect.maxX, y), size: size)
+            path.move(to: a)
+            path.addLine(to: b)
+        }
+
+        let slope = sqrt(3.0)
+        let corners = [
+            Vec2(rect.minX, rect.minY),
+            Vec2(rect.minX, rect.maxY),
+            Vec2(rect.maxX, rect.minY),
+            Vec2(rect.maxX, rect.maxY)
+        ]
+        for family in [slope, -slope] {
+            let offsets = corners.map { $0.y - family * $0.x }
+            guard let minOffset = offsets.min(), let maxOffset = offsets.max() else {
+                continue
+            }
+            let rootStep = 2 * height
+            var offset = floor(minOffset / rootStep) * rootStep
+            while offset <= maxOffset + rootStep {
+                let a = model.screenPoint(Vec2(rect.minX, family * rect.minX + offset), size: size)
+                let b = model.screenPoint(Vec2(rect.maxX, family * rect.maxX + offset), size: size)
+                path.move(to: a)
+                path.addLine(to: b)
+                offset += rootStep
+            }
+        }
+        context.stroke(path, with: .color(ink.opacity(0.06)), lineWidth: 0.7)
+    }
+
+    private func drawPolarGrid(context: inout GraphicsContext, size: CGSize,
+                               rect: WorldRect, step: Double) {
+        let center = model.screenPoint(Vec2(0, 0), size: size)
+        let corners = [
+            Vec2(rect.minX, rect.minY),
+            Vec2(rect.minX, rect.maxY),
+            Vec2(rect.maxX, rect.minY),
+            Vec2(rect.maxX, rect.maxY)
+        ]
+        let maxRadius = corners.map(\.length).max() ?? 0
+        let minRadius = corners.map(\.length).min() ?? 0
+        guard maxRadius > 0, maxRadius.isFinite else {
+            return
+        }
+        let firstRing = max(1, Int(floor(minRadius / step)))
+        let lastRing = max(firstRing, Int(ceil(maxRadius / step)))
+        let span = lastRing - firstRing + 1
+        let ringStride = max(1, Int(ceil(Double(span) / 240.0)))
+        var path = Path()
+        var ring = firstRing
+        while ring <= lastRing {
+            let radius = Double(ring) * step * model.settings.scale
+            path.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius,
+                                       width: radius * 2, height: radius * 2))
+            ring += ringStride
+        }
+        let spokeLength = maxRadius * model.settings.scale + 24
+        for index in 0..<24 {
+            let angle = Double(index) * .pi / 12
+            path.move(to: center)
+            path.addLine(to: CGPoint(x: center.x + cos(angle) * spokeLength,
+                                     y: center.y - sin(angle) * spokeLength))
+        }
+        context.stroke(path, with: .color(ink.opacity(0.06)), lineWidth: 0.7)
+    }
+
+    private func drawAxes(context: inout GraphicsContext, size: CGSize,
+                          rect: WorldRect, step: Double?) {
+        let origin = model.screenPoint(Vec2(0, 0), size: size)
+        var axes = Path()
+        if origin.y >= 0 && origin.y <= size.height {
+            axes.move(to: CGPoint(x: 0, y: origin.y))
+            axes.addLine(to: CGPoint(x: size.width, y: origin.y))
+        }
+        if origin.x >= 0 && origin.x <= size.width {
+            axes.move(to: CGPoint(x: origin.x, y: 0))
+            axes.addLine(to: CGPoint(x: origin.x, y: size.height))
+        }
+        context.stroke(axes, with: .color(ink.opacity(0.3)), lineWidth: 1)
+
+        guard let step else {
+            return
+        }
+        let scale = model.settings.scale
+        let unit = max(model.settings.lengthUnit.perUnit, 1e-6)
+        let labelEvery = GridMetrics.labelEvery(step: step, scale: scale)
+        var x = floor(rect.minX / step) * step
+        while x <= rect.maxX + step {
+            let index = Int((x / step).rounded())
+            if index % labelEvery == 0 {
+                let p = model.screenPoint(Vec2(x, 0), size: size)
+                if abs(x) > 1e-9 && p.y >= 0 && p.y <= size.height {
+                    let label = Text(GridMetrics.cleanNumber(x / unit))
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(secondaryInk.opacity(0.8))
+                    context.draw(label, at: CGPoint(x: p.x, y: min(max(p.y + 13, 12), size.height - 10)),
+                                 anchor: .top)
                 }
-                x += tickStep
             }
-            var yy = floor(rect.minY / tickStep) * tickStep
-            while yy <= rect.maxY + tickStep {
-                let index = Int((yy / tickStep).rounded())
-                if index % labelEvery == 0 {
-                    let p = model.screenPoint(Vec2(0, yy), size: size)
-                    if abs(yy) > 1e-9 && p.x >= 0 && p.x <= size.width {
-                        let label = Text(GridMetrics.cleanNumber(yy / unit))
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(secondaryInk.opacity(0.8))
-                        context.draw(label, at: CGPoint(x: min(max(p.x - 8, 10), size.width - 10), y: p.y),
-                                     anchor: .trailing)
-                    }
+            x += step
+        }
+        var y = floor(rect.minY / step) * step
+        while y <= rect.maxY + step {
+            let index = Int((y / step).rounded())
+            if index % labelEvery == 0 {
+                let p = model.screenPoint(Vec2(0, y), size: size)
+                if abs(y) > 1e-9 && p.x >= 0 && p.x <= size.width {
+                    let label = Text(GridMetrics.cleanNumber(y / unit))
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(secondaryInk.opacity(0.8))
+                    context.draw(label, at: CGPoint(x: min(max(p.x - 8, 10), size.width - 10), y: p.y),
+                                 anchor: .trailing)
                 }
-                yy += tickStep
             }
-            if origin.x > 8 && origin.x < size.width - 8 && origin.y > 8 && origin.y < size.height - 8 {
-                context.draw(Text("0")
-                    .font(.system(.caption2, design: .rounded))
-                    .foregroundStyle(secondaryInk.opacity(0.75)),
-                             at: CGPoint(x: origin.x - 7, y: origin.y + 7), anchor: .topTrailing)
-            }
+            y += step
+        }
+        if origin.x > 8 && origin.x < size.width - 8 && origin.y > 8 && origin.y < size.height - 8 {
+            context.draw(Text("0")
+                .font(.system(.caption2, design: .rounded))
+                .foregroundStyle(secondaryInk.opacity(0.75)),
+                         at: CGPoint(x: origin.x - 7, y: origin.y + 7), anchor: .topTrailing)
         }
     }
 

@@ -28,6 +28,7 @@ struct DocumentTests {
         document.objects = [object]
         document.settings.precision = 4
         document.settings.lengthUnit = .cm
+        document.settings.gridType = .triangular
         document.title = "Round Trip"
 
         let data = try JSONEncoder().encode(document)
@@ -38,6 +39,7 @@ struct DocumentTests {
         #expect(decoded.objects.first?.position == Vec2(1.5, -2))
         #expect(decoded.settings.precision == 4)
         #expect(decoded.settings.lengthUnit == .cm)
+        #expect(decoded.settings.gridType == .triangular)
         #expect(decoded.version == SketchDocument.currentVersion)
     }
 
@@ -162,6 +164,7 @@ struct DocumentTests {
         #expect(decoded.settings.axes)
         #expect(decoded.settings.showLabels)
         #expect(decoded.settings.angleUnit == .degrees)
+        #expect(decoded.settings.gridType == .orthogonal)
         #expect(decoded.settings.scale == SketchMetrics.pixelsPerCentimetre)
     }
 
