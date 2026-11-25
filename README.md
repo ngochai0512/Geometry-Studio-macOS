@@ -1,10 +1,9 @@
 # Geometry Studio
 
-A native macOS dynamic geometry sketchpad, rebuilt in **Swift and SwiftUI** for Apple silicon.
+A native macOS dynamic geometry sketchpad, written in **Swift and SwiftUI** for Apple silicon.
 
-The original is the reference application 5.06 (2013), a a legacy build application. It
-cannot run on Apple silicon; this is a new implementation of the same idea: construct points,
-lines, circles and polygons, then drag a free point and watch every dependent object update.
+It is an independent implementation: construct points, lines, circles and polygons, then drag a
+free point and watch every dependent object update.
 
 ## Build and run
 
@@ -68,7 +67,7 @@ app-bundle binary does not carry it.
   coordinates, abscissa/ordinate, polar distance/direction, coordinate distance, arc angle/length,
   equation, slope, measure-all and calculations.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
-  0–5 decimal places, as the original's Units preferences offer.
+  0–5 decimal places, with inches, hundredths and degrees as the defaults.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
 - **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
 - **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback.
@@ -87,6 +86,16 @@ app-bundle binary does not carry it.
 - **Preferences** — General, Units, Canvas, Update and About panes, covering start at login,
   GPU rendering, and the default length unit, angle unit, precision, grid, axes, snapping and
   labels for new sketches.
+- **Drawing aids** — smart guides that snap to points, midpoints, intersections, parallel and
+  perpendicular lines; selectable angle increments (5°, 15°, 30°, 45°, 90°); square, dense,
+  triangular, polar and isometric grids.
+- **Editing** — object browser with search, kind filter, lock and front/back layer order;
+  in-place label editing; on-canvas scale and rotate handles; duplicate (⌘D), copy and paste
+  across documents, and paste in place.
+- **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K command
+  palette and an undo history panel.
+- **Live feedback** — a readout of a dragged point's position and dependent measurements, plus
+  area and perimeter for the current selection in the status bar.
 - **New documents** — a new sketch starts blank, with only the grid and axes from your
   preferences.
 
@@ -108,25 +117,14 @@ app-bundle binary does not carry it.
 selection. Scroll to pan, pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a
 draft.
 
-## What is new versus the original
+`⌘K` opens the command palette, `⌘D` duplicates the selection, `⌥⌘C` / `⌥⌘X` / `⌥⌘V` copy,
+cut and paste objects across documents, `⌃⌘V` pastes in place, and `⌥⌘Z` opens the undo
+history. Double-click a label to edit it in place.
 
-- The original's geometry engine is C (`the object record` plus C functions such as the constraint
-  checker); this rebuild writes the same model and rules in Swift. See `MECHANICS.md` for the
-  evidence, the addresses and the values.
-- The document format is this app's own JSON-based `.gsp`, not the original binary format.
-- Custom tools/scripts, action buttons, iterations, tables, pictures, export and
-  multiple pages are not included in this version.
+## Design notes
 
-## Evidence
-
-The original was inspected statically and nothing from it was run. Each marker resolves in
-[`EVIDENCE.md`](EVIDENCE.md), which gives the command and the output it must show:
-
-- `[E1]` x86 Mach-O, 32-bit and not PIE.
-- `[E2]` the geometry object is a C record, `the object record`.
-- `[E3]`, `[E4]` the constraint checker is C.
-- `[E5]`, `[E6]` the engine and UI sources are `.c` and `.m`.
-- `[E7]` the binary also exports C++ names and links `libstdc++`.
-
-The remaining claims cite addresses, symbols and localizable table ranges inline in
-`MECHANICS.md`. No decompiled listing or extracted resource is stored in this repo.
+- The geometry engine is written in Swift; the rules it implements and the values it uses are
+  listed in `MECHANICS.md`.
+- The document format is this app's own JSON-based `.gsp`.
+- Custom tools/scripts, action buttons, iterations, tables, pictures and multiple pages are not
+  included in this version.

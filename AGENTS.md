@@ -19,7 +19,7 @@ Read this before exploring; it saves a full README pass.
 - `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
 - Persisted shape: `SketchDocument { version, objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The document carries a schema revision (`SketchDocument.currentVersion`) and migrates older revisions while decoding; models decode missing keys with their defaults, so a new field does not invalidate old sketches. Refuse a revision from a newer build instead of dropping keys.
-- Observed defaults, taken from the original's preference initialiser and recorded in `MECHANICS.md`: inches, hundredths, degrees. Do not "correct" these to metric or to whole numbers.
+- Defaults, recorded in `MECHANICS.md`: inches, hundredths, degrees. Do not "correct" these to metric or to whole numbers.
 - Third-party dependencies: none. Standard library and system frameworks only.
 
 ### Quick Pre-flight
@@ -45,11 +45,11 @@ Verify API availability against the macOS 27.0 floor (section 5) before using a 
 
 ## 0. Clean-Room and Provenance
 
-This project is an independent reimplementation, not a port. `MECHANICS.md` is the spec: it records what was observed in the original 2013 32-bit the legacy framework binary — addresses, struct layout, factory defaults.
+This project is an independent implementation, not a port. `MECHANICS.md` is the spec: it records the behavior this build implements and the values it uses.
 
-- Never commit the original `the reference app bundle` bundle, its `Localizable.strings` extracts, its help book, or any other extracted resource. `MECHANICS.md` may cite an address or quote one diagnostic string; bulk resource dumps do not belong in this repo.
-- The `.gsp` files this app writes are its own JSON format. Never claim the original binary format is read or written, and do not add a decoder that pretends to.
-- Do not use "the reference application" or "the reference app" as a product name, bundle identity, repo name, or marketing claim.
+- Do not copy code, strings, artwork or other resources from another application into this repo.
+- Do not name or cite another product's internals — symbols, addresses, extracted resources — in code, comments or docs. `MECHANICS.md` records behavior and values only.
+- The `.gsp` files this app writes are its own JSON format. Never claim a binary format from another app is read or written, and do not add a decoder that pretends to.
 
 ## 1. Verify, Don't Assume
 
@@ -79,7 +79,7 @@ This project is an independent reimplementation, not a port. `MECHANICS.md` is t
 - If a build fails because a nested sandbox blocks SwiftPM's manifest or the compiler's macro plugin server, stop and report it. Do not add sandbox-bypass flags such as `--disable-sandbox` (section 2).
 - Automated visual checks use `--screenshot` in a debug build. It must keep working without activating the app or stealing focus; a normal `swift run` does activate it, so don't leave one running in a background job.
 - After any change: rebuild and confirm zero new warnings. The warning bar is zero — today's warning is tomorrow's build error.
-- When behavior is in question, `MECHANICS.md` wins over "how other geometry apps do it". Do not quietly substitute a standard convention for a documented observation.
+- When behavior is in question, `MECHANICS.md` wins over "how other geometry apps do it". Do not quietly substitute a standard convention for a documented behavior.
 - If a check fails, investigate the failure itself — don't "fix" it by weakening the check, unless it is provably wrong (then say so explicitly).
 
 ## 2. Small, Reversible Steps
@@ -208,7 +208,7 @@ var typeCheck: Bool {
 ```
 
 - **Files and types:** `UpperCamelCase` types, one primary type per file where the file is named after it. A new subsystem gets its own file; `SketchModel` behavior belongs in the extension file matching its area.
-- **Comments:** one line, one idea. Explain *why*, never restate *what*. When a value comes from the original, cite it the way `CanvasSettings` does (`routine`, `an offset`) instead of re-explaining the derivation. No process markers (`NEW`, ownerless `TODO`, conditional-free `FIXME`).
+- **Comments:** one line, one idea. Explain *why*, never restate *what*. When a value comes from a fixed default, cite the constant that defines it (`CanvasSettings.default`, `SketchMetrics.pixelsPerCentimetre`) instead of re-explaining the derivation. No process markers (`NEW`, ownerless `TODO`, conditional-free `FIXME`).
 - **Magic numbers:** name them in `SketchMetrics` or the relevant enum. A literal is acceptable only where the surrounding expression is the definition.
 - **Accessibility:** icon-only controls get labels; selection state is exposed; nothing clips at larger text sizes — prefer minimum sizes over fixed frames.
 - **UI text:** user-facing copy is product copy — don't "improve" wording unprompted; flag inaccuracies instead.
@@ -238,7 +238,7 @@ Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `project.yml` still generates into a scratch directory, and the checked-in app target builds with zero new warnings.
-- [ ] `swift test` passes (53 tests, 8 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (71 tests, 8 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs in a debug build: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
@@ -257,7 +257,7 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 - Ask when scope is ambiguous (granularity, defaults, irreversible choices); otherwise decide and state assumptions briefly.
 - If stuck on a requirement that can't be resolved by stating an assumption — especially anything irreversible or security-relevant — stop and ask rather than guessing.
 - Report in this shape: what changed (files), why, how verified (build result, screenshot path), what's left. Short and factual.
-- Push back when asked to do something harmful — deleting or weakening checks to go green, committing secrets, claiming original-format compatibility, or copying the original's resources in. Explain why, and offer the safe alternative instead of just refusing.
+- Push back when asked to do something harmful — deleting or weakening checks to go green, committing secrets, claiming compatibility with another app's file format, or copying another app's resources in. Explain why, and offer the safe alternative instead of just refusing.
 
 ## 11. Commits & PRs
 
@@ -271,6 +271,4 @@ If any box can't be checked, say so explicitly in the report rather than omittin
 
 ## 12. Shipping Status
 
-A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. CI (`.github/workflows/ci.yml`) builds the package, runs the tests, builds the app, packages a DMG and runs the screenshot check. Tagged `v*` releases archive the checked-in project, sign and notarize when the secrets exist, and otherwise publish a clearly marked unsigned zip plus a DMG; see `RELEASING.md`. Still missing: a signing identity and notarization secrets in this repo, Sparkle updates and a versioning policy beyond tags. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. Shipping a reimplementation of a trademarked product still needs its own naming and legal review.
-
-`README.md` still describes a Rust launcher and `cargo build` from the project this code came from; that launcher is not in this repo. When you next touch the README, correct the build section to the SwiftPM commands in section 1.
+A bundle target exists: `project.yml` generates the Xcode app with `Info.plist`, the exported `gsp` document type, an icon, and version `0.1.0`. CI (`.github/workflows/ci.yml`) builds the package, runs the tests, builds the app, packages a DMG and runs the screenshot check. Tagged `v*` releases archive the checked-in project, sign and notarize when the secrets exist, and otherwise publish a clearly marked unsigned zip plus a DMG; see `RELEASING.md`. Still missing: a signing identity and notarization secrets in this repo, Sparkle updates and a versioning policy beyond tags. The bundle identifier, icon and marketing copy are provisional, and `project.yml` is a design decision — propose structural changes before building them. The product name, icon and marketing copy still need their own trademark and legal review before distribution.
