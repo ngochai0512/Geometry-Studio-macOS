@@ -64,6 +64,69 @@ struct UndoTests {
         #expect(manager.canRedo)
     }
 
+    @Test("the segment tool creates an opaque black segment")
+    func segmentToolCreatesVisibleSegment() {
+        let model = SketchModel()
+        model.tool = .segment
+        model.clickCanvas(at: Vec2(-1, 0), tolerance: 0.1, additive: false)
+        model.clickCanvas(at: Vec2(1, 0), tolerance: 0.1, additive: false)
+
+        guard let segment = model.objects.first(where: { object in
+            if case .segment = object.kind {
+                return true
+            }
+            return false
+        }) else {
+            Issue.record("expected the segment tool to add a segment")
+            return
+        }
+        #expect(segment.visible)
+        #expect(segment.style.color == RGBA.black)
+        #expect(segment.style.color.a == 1)
+    }
+
+    @Test("a single selected point can be measured as coordinates")
+    func singlePointMeasurement() {
+        let model = SketchModel()
+        let point = model.add(kind: .freePoint, position: Vec2(1, 2), silent: true)
+        model.selection = [point]
+        model.measure(.coordinates)
+
+        let measured = model.objects.contains { object in
+            if case .measurement(.coordinates, _) = object.kind {
+                return true
+            }
+            return false
+        }
+        #expect(measured)
+    }
+
+    @Test("an invalid measurement is refused instead of creating a blank card")
+    func invalidMeasurementRefused() {
+        let model = SketchModel()
+        let a = model.add(kind: .freePoint, position: Vec2(0, 0), silent: true)
+        let b = model.add(kind: .freePoint, position: Vec2(1, 0), silent: true)
+        let segment = model.add(kind: .segment(a: a, b: b), silent: true)
+        model.selection = [segment]
+        let before = model.objects.count
+        model.measure(.area)
+        #expect(model.objects.count == before)
+    }
+
+    @Test("marks are part of the undo snapshot")
+    func markUndo() {
+        let model = SketchModel()
+        let manager = UndoManager()
+        model.undoManager = manager
+        let point = model.add(kind: .freePoint, position: Vec2(0, 0), silent: true)
+        model.selection = [point]
+        model.markCenter()
+        #expect(model.marks.center == point)
+
+        model.undo()
+        #expect(model.marks.center == nil)
+    }
+
     @Test("redo restores an undone change")
     func redoRestores() {
         let model = SketchModel()

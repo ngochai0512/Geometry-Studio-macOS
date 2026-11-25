@@ -12,7 +12,7 @@ struct DocumentTests {
         #expect(settings.angleUnit == .degrees)
     }
 
-    @Test("unit factors follow the original's 72-point inch")
+    @Test("unit factors follow the 72-point inch")
     func unitFactors() {
         #expect(LengthUnit.cm.perUnit == 1)
         #expect(abs(LengthUnit.inches.perUnit - 2.54) < 1e-12)
@@ -204,6 +204,27 @@ struct DocumentTests {
         #expect(decoded.settings.axesLabels)
         #expect(decoded.settings.axesLabelStyle == AxisLabelStyle())
         #expect(decoded.settings.scale == SketchMetrics.pixelsPerCentimetre)
+        #expect(decoded.settings.smartGuides)
+        #expect(decoded.settings.angleSnap == 0)
+    }
+
+    @Test("the triangle template wires its objects together")
+    func triangleTemplate() throws {
+        let document = SketchTemplate.triangle.document(settings: CanvasSettings())
+
+        #expect(document.objects.count == 12)
+        #expect(document.objects.filter(\.isPointLike).count == 6)
+        let polygon = try #require(document.objects.first(where: {
+            if case .polygon = $0.kind {
+                return true
+            }
+            return false
+        }))
+        guard case .polygon(let vertices) = polygon.kind else {
+            Issue.record("expected a polygon")
+            return
+        }
+        #expect(vertices.count == 3)
     }
 
     @Test("an object missing newer keys uses defaults")
