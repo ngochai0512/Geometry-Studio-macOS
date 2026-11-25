@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // The modal cards ContentView presents. Each owns its chrome and validation;
@@ -151,6 +152,225 @@ struct CircleRadiusSheet: View {
     }
 }
 
+// MARK: - Onboarding, palette and history
+
+private let welcomeTips: [(String, String)] = [
+    ("hand.draw", "Drag a free point and every construction follows"),
+    ("cursorarrow.click.2", "Shift-click adds to the selection; drag on empty space to marquee"),
+    ("character.cursor.ibeam", "Double-click a label to rename it, or drag the label grip"),
+    ("command", "⌘K opens the command palette; ⌘D duplicates the selection"),
+    ("ruler", "Select regions and paths to see area and perimeter in the status bar")
+]
+
+struct WelcomeSheet: View {
+    var isFirstRun: Bool
+    var onTemplate: (SketchTemplate) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "compass.drawing")
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(.tint)
+                .accessibilityHidden(true)
+
+            Text(isFirstRun ? "Welcome to Geometry Studio" : "Tips and Shortcuts")
+                .font(.system(.title2, design: .rounded, weight: .semibold))
+            Text("Construct points, lines, circles and polygons, then drag a free point to see the whole construction update.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 430)
+
+            VStack(alignment: .leading, spacing: 9) {
+                ForEach(welcomeTips.indices, id: \.self) { index in
+                    Label {
+                        Text(welcomeTips[index].1)
+                    } icon: {
+                        Image(systemName: welcomeTips[index].0)
+                            .foregroundStyle(.tint)
+                    }
+                    .font(.subheadline)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+
+            HStack(spacing: 10) {
+                Spacer()
+                Button("Start with a Triangle") {
+                    onTemplate(.triangle)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 520)
+    }
+}
+
+/// One command palette entry.
+struct PaletteCommand: Identifiable {
+    let id = UUID()
+    var title: String
+    var category: String
+    var symbol: String
+    var action: () -> Void
+}
+
+struct CommandPaletteSheet: View {
+    var commands: [PaletteCommand]
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+
+    private var filtered: [PaletteCommand] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return commands
+        }
+        return commands.filter {
+            $0.title.localizedCaseInsensitiveContains(trimmed)
+                || $0.category.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search constructions, measurements and commands", text: $query)
+                    .textFieldStyle(.plain)
+                    .focused($searchFocused)
+                    .onSubmit {
+                        runFirst()
+                    }
+            }
+            .padding(14)
+
+            Divider()
+
+            if filtered.isEmpty {
+                Text("No commands match.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(filtered) { command in
+                    Button {
+                        run(command)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: command.symbol)
+                                .foregroundStyle(.tint)
+                                .frame(width: 18)
+                            Text(command.title)
+                            Spacer()
+                            Text(command.category)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.inset)
+            }
+        }
+        .frame(minWidth: 520, minHeight: 420)
+        .onAppear {
+            searchFocused = true
+        }
+        .onExitCommand {
+            dismiss()
+        }
+    }
+
+    private func runFirst() {
+        guard let first = filtered.first else {
+            return
+        }
+        run(first)
+    }
+
+    private func run(_ command: PaletteCommand) {
+        dismiss()
+        // Let the sheet finish dismissing before a command opens another one.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            command.action()
+        }
+    }
+}
+
+struct UndoHistorySheet: View {
+    let model: SketchModel
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Undo History")
+                    .font(.title3.weight(.semibold))
+                Text("Choose a step to return to. Steps after it can be redone.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+
+            Divider()
+
+            List {
+                historyRow(index: 0, title: "Initial State")
+                ForEach(Array(model.undoHistory.enumerated()), id: \.element.id) { index, entry in
+                    historyRow(index: index + 1, title: entry.name)
+                }
+            }
+            .listStyle(.inset)
+
+            SheetFooter("Done") {}
+        }
+        .frame(minWidth: 440, minHeight: 420)
+    }
+
+    private func historyRow(index: Int, title: String) -> some View {
+        let current = index == model.undoHistoryIndex
+        return Button {
+            model.travelHistory(to: index)
+            dismiss()
+        } label: {
+            HStack(spacing: 8) {
+                Text("\(index)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, alignment: .trailing)
+                Text(title)
+                    .foregroundStyle(current ? Color.primary : Color.secondary)
+                Spacer()
+                if current {
+                    Image(systemName: "smallcircle.filled.circle")
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel("Current state")
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(index > model.undoHistoryIndex && !model.canRedo)
+    }
+}
+
 struct ProtocolSheet: View {
     var steps: [String]
 
@@ -238,4 +458,22 @@ private struct SheetFooter: View {
         "Segment AB",
         "Midpoint M of A and B"
     ])
+}
+
+#Preview("Welcome") {
+    WelcomeSheet(isFirstRun: true,
+                 onTemplate: { _ in })
+}
+
+#Preview("Command Palette") {
+    CommandPaletteSheet(commands: [
+        PaletteCommand(title: "Midpoint", category: "Construct", symbol: "circle.dotted") {},
+        PaletteCommand(title: "Measure All", category: "Measure", symbol: "ruler") {},
+        PaletteCommand(title: "Fit Sketch", category: "View",
+                       symbol: "arrow.up.left.and.arrow.down.right") {}
+    ])
+}
+
+#Preview("Undo History") {
+    UndoHistorySheet(model: SketchModel.sample())
 }

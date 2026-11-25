@@ -1,5 +1,39 @@
 import SwiftUI
 
+/// The object browser's kind filter.
+enum ObjectBrowserFilter: String, CaseIterable, Identifiable {
+    case all
+    case points
+    case paths
+    case regions
+    case measures
+    case hidden
+    case locked
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "All"
+        case .points:
+            return "Points"
+        case .paths:
+            return "Paths"
+        case .regions:
+            return "Regions"
+        case .measures:
+            return "Measures & Text"
+        case .hidden:
+            return "Hidden"
+        case .locked:
+            return "Locked"
+        }
+    }
+}
+
 // Inspector sections. The computed properties are internal because
 // `InspectorView.body` composes them; helpers that stay in this file are
 // private.
@@ -228,6 +262,33 @@ extension InspectorView {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .selectionDisabled()
+
+                HStack(spacing: 8) {
+                    Button {
+                        model.duplicateSelection()
+                    } label: {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
+                    Button {
+                        model.toggleLockSelection()
+                    } label: {
+                        Label(lockLabel,
+                              systemImage: selectionIsLocked ? "lock.open" : "lock")
+                    }
+                    Button {
+                        model.bringSelectionToFront()
+                    } label: {
+                        Label("Front", systemImage: "chevron.up.square")
+                    }
+                    Button {
+                        model.sendSelectionToBack()
+                    } label: {
+                        Label("Back", systemImage: "chevron.down.square")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .selectionDisabled()
             }
         }
     }
@@ -335,6 +396,60 @@ extension InspectorView {
         }
     }
 
+    @ViewBuilder
+    var browserSection: some View {
+        Section("Objects") {
+            TextField("Search objects", text: $browserQuery)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityLabel("Search objects")
+            LabeledContent("Filter") {
+                Picker("Filter", selection: $browserFilter) {
+                    ForEach(ObjectBrowserFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+            if filteredObjects.isEmpty {
+                Text("No objects match.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var filteredObjects: [SketchObject] {
+        var result = model.objects.filter(matchesBrowserFilter)
+        let query = browserQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            result = result.filter {
+                model.displayName(for: $0).localizedCaseInsensitiveContains(query)
+                    || $0.label.localizedCaseInsensitiveContains(query)
+            }
+        }
+        return result
+    }
+
+    private func matchesBrowserFilter(_ object: SketchObject) -> Bool {
+        switch browserFilter {
+        case .all:
+            return true
+        case .points:
+            return object.isPointLike
+        case .paths:
+            return isLineObject(object) || isArcObject(object)
+        case .regions:
+            return isRegionObject(object)
+        case .measures:
+            return isMeasureObject(object)
+        case .hidden:
+            return !object.visible
+        case .locked:
+            return object.isLocked
+        }
+    }
+
     var marksSection: some View {
         Section("Marks") {
             LabeledContent("Mirror", value: model.markName(model.marks.mirror))
@@ -419,6 +534,16 @@ extension InspectorView {
                     .pickerStyle(.menu)
                 }
                 Toggle("Snap points to grid", isOn: $model.settings.snap)
+                Toggle("Smart guides", isOn: $model.settings.smartGuides)
+                LabeledContent("Angle snap") {
+                    Picker("Angle snap", selection: $model.settings.angleSnap) {
+                        ForEach(CanvasSettings.angleSnapChoices, id: \.self) { angle in
+                            Text(angle == 0 ? "Off" : "\(Int(angle))°").tag(angle)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
                 Toggle("Show labels", isOn: $model.settings.showLabels)
                 LabeledContent("Length") {
                     Picker("Length", selection: $model.settings.lengthUnit) {
@@ -504,24 +629,35 @@ extension InspectorView {
 
     private var objectGroups: [(String, [SketchObject])] {
         [
-            ("Points", model.objects.filter { $0.isPointLike }),
-            ("Lines", model.objects.filter { isLineObject($0) }),
-            ("Arcs", model.objects.filter { isArcObject($0) }),
-            ("Circles & Regions", model.objects.filter { isRegionObject($0) }),
-            ("Vectors & Constructions", model.objects.filter {
+            ("Points", filteredObjects.filter { $0.isPointLike }),
+            ("Lines", filteredObjects.filter { isLineObject($0) }),
+            ("Arcs", filteredObjects.filter { isArcObject($0) }),
+            ("Circles & Regions", filteredObjects.filter { isRegionObject($0) }),
+            ("Vectors & Constructions", filteredObjects.filter {
                 isVectorObject($0) || isConstructionObject($0)
             }),
-            ("Graph", model.objects.filter {
+            ("Graph", filteredObjects.filter {
                 isGraphObject($0) || isCoordinateObject($0)
             }),
-            ("Parameters", model.objects.filter { isParameterObject($0) }),
-            ("Measures & Text", model.objects.filter { isMeasureObject($0) })
+            ("Images & Loci", filteredObjects.filter {
+                isTransformedObject($0) || isLocusObject($0)
+            }),
+            ("Parameters", filteredObjects.filter { isParameterObject($0) }),
+            ("Measures & Text", filteredObjects.filter { isMeasureObject($0) })
         ]
     }
 
     private var traceLabel: String {
         !model.selection.isEmpty && model.selection.allSatisfy { model.tracedIDs.contains($0) }
             ? "Untrace" : "Trace"
+    }
+
+    private var selectionIsLocked: Bool {
+        !model.selection.isEmpty && model.selectedObjects.allSatisfy(\.isLocked)
+    }
+
+    private var lockLabel: String {
+        selectionIsLocked ? "Unlock" : "Lock"
     }
 
     private var colorRow: some View {
@@ -558,11 +694,45 @@ extension InspectorView {
                 Image(systemName: model.symbol(for: object))
             }
             Spacer()
+            if object.isLocked {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(.tertiary)
+                    .accessibilityLabel("Locked")
+            }
             if !object.visible {
                 Image(systemName: "eye.slash")
                     .foregroundStyle(.tertiary)
                     .accessibilityLabel("Hidden")
             }
+        }
+        .contextMenu {
+            Button(object.isLocked ? "Unlock" : "Lock") {
+                selectForRow(object.id)
+                model.toggleLockSelection()
+            }
+            Button("Bring to Front") {
+                selectForRow(object.id)
+                model.bringSelectionToFront()
+            }
+            Button("Send to Back") {
+                selectForRow(object.id)
+                model.sendSelectionToBack()
+            }
+            Divider()
+            Button("Duplicate") {
+                selectForRow(object.id)
+                model.duplicateSelection()
+            }
+            Button("Delete", role: .destructive) {
+                selectForRow(object.id)
+                model.deleteSelection()
+            }
+        }
+    }
+
+    private func selectForRow(_ id: UUID) {
+        if !model.selection.contains(id) {
+            model.selection = [id]
         }
     }
 

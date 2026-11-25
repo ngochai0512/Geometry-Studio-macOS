@@ -8,6 +8,8 @@ struct InspectorView: View {
     @Bindable var model: SketchModel
     @Binding var tab: ContentView.InspectorTab
     var onTextAnnotation: (Vec2) -> Void
+    @State var browserQuery = ""
+    @State var browserFilter: ObjectBrowserFilter = .all
 
     init(model: SketchModel,
          tab: Binding<ContentView.InspectorTab>,
@@ -42,6 +44,7 @@ struct InspectorView: View {
                 .scrollContentBackground(.hidden)
             case .sketch:
                 List(selection: objectSelection) {
+                    browserSection
                     sketchSection
                     canvasSection
                     marksSection

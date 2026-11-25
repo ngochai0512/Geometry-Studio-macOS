@@ -5,6 +5,8 @@ import Combine
 struct ContentView: View {
     @Bindable var model: SketchModel
     @Environment(\.controlActiveState) private var controlActiveState
+    @Environment(\.newDocument) private var newDocument
+    var presentsOnboarding: Bool = true
 
     @State private var textAnchor: Vec2 = .zero
     @State private var showTextSheet = false
@@ -13,10 +15,15 @@ struct ContentView: View {
     @State private var showProtocol = false
     @State private var showFunction = false
     @State private var showCalculation = false
+    @State private var showWelcome = false
+    @State private var welcomeFirstRun = true
+    @State private var showPalette = false
+    @State private var showHistory = false
     @State private var circleRadius: Double = 2
     @State private var functionText = "sin(x)"
     @State private var calculationText = ""
     @State private var scrollMonitor: Any?
+    @State private var keyMonitor: Any?
     @State private var selectedTab: InspectorTab = .object
 
     enum InspectorTab: String, CaseIterable, Identifiable {
@@ -27,8 +34,9 @@ struct ContentView: View {
         }
     }
 
-    init(model: SketchModel) {
+    init(model: SketchModel, presentsOnboarding: Bool = true) {
         _model = Bindable(wrappedValue: model)
+        self.presentsOnboarding = presentsOnboarding
     }
 
     var body: some View {
@@ -66,6 +74,7 @@ struct ContentView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear(perform: installScrollMonitor)
+        .onAppear(perform: installKeyMonitor)
         .onAppear {
             ActiveSketch.model = model
         }
@@ -74,6 +83,10 @@ struct ContentView: View {
                 NSEvent.removeMonitor(monitor)
             }
             scrollMonitor = nil
+            if let monitor = keyMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
+            keyMonitor = nil
             if ActiveSketch.model === model {
                 ActiveSketch.model = nil
             }
@@ -91,6 +104,29 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openCalculation)) { _ in
             calculationText = ""
             showCalculation = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
+            showPalette = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openUndoHistory)) { _ in
+            showHistory = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openTips)) { _ in
+            welcomeFirstRun = false
+            showWelcome = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .newSketchRequested)) { _ in
+            guard ActiveSketch.model === model else {
+                return
+            }
+            newDocument(contentType: .geometryStudioSketch)
+        }
+        .onAppear {
+            if presentsOnboarding, !AppPreferences.hasCompletedOnboarding() {
+                welcomeFirstRun = true
+                showWelcome = true
+                AppPreferences.markOnboardingCompleted()
+            }
         }
         .sheet(isPresented: $showTextSheet) {
             AddTextSheet(text: $textDraft) { text in
@@ -118,6 +154,20 @@ struct ContentView: View {
             CalculationSheet(text: $calculationText, names: measurementNames()) { expression in
                 model.addCalculation(expression: expression)
             }
+        }
+        .sheet(isPresented: $showWelcome, onDismiss: {
+            AppPreferences.markOnboardingCompleted()
+        }) {
+            WelcomeSheet(isFirstRun: welcomeFirstRun,
+                         onTemplate: { template in
+                             openTemplate(template)
+                         })
+        }
+        .sheet(isPresented: $showPalette) {
+            CommandPaletteSheet(commands: paletteCommands)
+        }
+        .sheet(isPresented: $showHistory) {
+            UndoHistorySheet(model: model)
         }
         .sheet(isPresented: $model.showAbout) { AboutView() }
     }
@@ -330,6 +380,179 @@ struct ContentView: View {
         }
     }
 
+    /// Tool letters and Return for the polygon draft. Text fields, command
+    /// shortcuts and sheets keep their normal keyboard behavior.
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else {
+            return
+        }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard let window = NSApp.keyWindow, event.window === window else {
+                return event
+            }
+            if window is NSPanel {
+                return event
+            }
+            if window.identifier?.rawValue.contains("Settings") == true {
+                return event
+            }
+            if window.firstResponder is NSTextView {
+                return event
+            }
+            if window.sheetParent != nil {
+                return event
+            }
+            if !event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
+                return event
+            }
+            if event.keyCode == 36 || event.keyCode == 76 {
+                guard model.tool == .polygon, !model.draft.isEmpty else {
+                    return event
+                }
+                model.finishPolygon()
+                return nil
+            }
+            guard let characters = event.charactersIgnoringModifiers?.lowercased(),
+                  let tool = SketchTool.allCases.first(where: {
+                      String($0.shortcut.character).lowercased() == characters
+                  }) else {
+                return event
+            }
+            model.tool = tool
+            return nil
+        }
+    }
+
+    // MARK: palette and templates
+
+    private func openTemplate(_ template: SketchTemplate) {
+        TemplateLibrary.pending = template
+        newDocument(contentType: .geometryStudioSketch)
+        // A failed or abandoned new-document action must not turn the next
+        // ordinary new sketch into the starter sample.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if TemplateLibrary.pending != nil {
+                TemplateLibrary.pending = nil
+            }
+        }
+    }
+
+    private var paletteCommands: [PaletteCommand] {
+        [
+            PaletteCommand(title: "Duplicate Selection", category: "Edit",
+                           symbol: "plus.square.on.square") { model.duplicateSelection() },
+            PaletteCommand(title: "Copy Objects", category: "Edit",
+                           symbol: "doc.on.doc") { model.copySelection() },
+            PaletteCommand(title: "Cut Objects", category: "Edit",
+                           symbol: "scissors") { model.cutSelection() },
+            PaletteCommand(title: "Paste Objects", category: "Edit",
+                           symbol: "doc.on.clipboard") { model.pasteObjects() },
+            PaletteCommand(title: "Paste in Place", category: "Edit",
+                           symbol: "doc.on.clipboard") { model.pasteObjects(inPlace: true) },
+            PaletteCommand(title: "Lock or Unlock Selection", category: "Edit",
+                           symbol: "lock") { model.toggleLockSelection() },
+            PaletteCommand(title: "Send to Back", category: "Edit",
+                           symbol: "chevron.down.square") { model.sendSelectionToBack() },
+            PaletteCommand(title: "Bring to Front", category: "Edit",
+                           symbol: "chevron.up.square") { model.bringSelectionToFront() },
+            PaletteCommand(title: "Undo History…", category: "Edit",
+                           symbol: "clock.arrow.circlepath") { showHistory = true },
+            PaletteCommand(title: "Midpoint", category: "Construct",
+                           symbol: "circle.dotted") { model.constructMidpoint() },
+            PaletteCommand(title: "Perpendicular Line", category: "Construct",
+                           symbol: "arrow.up.and.line.horizontal.and.arrow.down") { model.constructPerpendicular() },
+            PaletteCommand(title: "Parallel Line", category: "Construct",
+                           symbol: "equal") { model.constructParallel() },
+            PaletteCommand(title: "Angle Bisector", category: "Construct",
+                           symbol: "angle") { model.constructBisector() },
+            PaletteCommand(title: "Intersection", category: "Construct",
+                           symbol: "circle.circle") { model.constructIntersection() },
+            PaletteCommand(title: "Segment", category: "Construct",
+                           symbol: "line.diagonal") { model.constructSegment() },
+            PaletteCommand(title: "Circle by Center + Point", category: "Construct",
+                           symbol: "circle") { model.constructCircle() },
+            PaletteCommand(title: "Circle by Center + Radius…", category: "Construct",
+                           symbol: "circle.dashed") { showCircleRadius = true },
+            PaletteCommand(title: "Arc on Circle", category: "Construct",
+                           symbol: "circle.dotted") { model.constructArcOnCircle() },
+            PaletteCommand(title: "Arc Through 3 Points", category: "Construct",
+                           symbol: "circle.dashed") { model.constructArcThroughPoints() },
+            PaletteCommand(title: "Polygon Interior", category: "Construct",
+                           symbol: "pentagon") { model.constructPolygon() },
+            PaletteCommand(title: "Point on Object", category: "Construct",
+                           symbol: "smallcircle.filled.circle") { model.constructPointOnPath() },
+            PaletteCommand(title: "Perpendicular Bisector", category: "Construct",
+                           symbol: "line.diagonal") { model.constructPerpendicularBisector() },
+            PaletteCommand(title: "Tangents", category: "Construct",
+                           symbol: "line.diagonal.arrow") { model.constructTangents() },
+            PaletteCommand(title: "Radical Axis", category: "Construct",
+                           symbol: "line.diagonal") { model.constructRadicalAxis() },
+            PaletteCommand(title: "Vector", category: "Construct",
+                           symbol: "arrow.right") { model.constructVector() },
+            PaletteCommand(title: "Vector Sum", category: "Construct",
+                           symbol: "arrow.triangle.merge") { model.constructVectorSum(subtract: false) },
+            PaletteCommand(title: "Vector Difference", category: "Construct",
+                           symbol: "arrow.triangle.branch") { model.constructVectorSum(subtract: true) },
+            PaletteCommand(title: "Parameter", category: "Construct",
+                           symbol: "slider.horizontal.3") { model.addParameter() },
+            PaletteCommand(title: "Cartesian Coordinate System", category: "Construct",
+                           symbol: "grid") { model.constructCoordinateSystem(.cartesian) },
+            PaletteCommand(title: "Polar Coordinate System", category: "Construct",
+                           symbol: "circle.grid.cross") { model.constructCoordinateSystem(.polar) },
+            PaletteCommand(title: "Locus", category: "Construct",
+                           symbol: "scribble") { model.constructLocus() },
+            PaletteCommand(title: "Construction Protocol…", category: "Construct",
+                           symbol: "list.number") { showProtocol = true },
+            PaletteCommand(title: "Distance", category: "Measure",
+                           symbol: "ruler") { model.measure(.distance) },
+            PaletteCommand(title: "Length", category: "Measure",
+                           symbol: "ruler") { model.measure(.length) },
+            PaletteCommand(title: "Perimeter", category: "Measure",
+                           symbol: "ruler") { model.measure(.perimeter) },
+            PaletteCommand(title: "Circumference", category: "Measure",
+                           symbol: "ruler") { model.measure(.circumference) },
+            PaletteCommand(title: "Angle", category: "Measure",
+                           symbol: "angle") { model.measure(.angle) },
+            PaletteCommand(title: "Area", category: "Measure",
+                           symbol: "square.dashed") { model.measure(.area) },
+            PaletteCommand(title: "Radius", category: "Measure",
+                           symbol: "circle") { model.measure(.radius) },
+            PaletteCommand(title: "Ratio", category: "Measure",
+                           symbol: "divide") { model.measure(.ratio) },
+            PaletteCommand(title: "Coordinates", category: "Measure",
+                           symbol: "location") { model.measure(.coordinates) },
+            PaletteCommand(title: "Equation", category: "Measure",
+                           symbol: "function") { model.measure(.equation) },
+            PaletteCommand(title: "Slope", category: "Measure",
+                           symbol: "line.diagonal") { model.measure(.slope) },
+            PaletteCommand(title: "Measure All", category: "Measure",
+                           symbol: "ruler.fill") { model.measureAll() },
+            PaletteCommand(title: "Calculate…", category: "Measure",
+                           symbol: "function") {
+                calculationText = ""
+                showCalculation = true
+            },
+            PaletteCommand(title: "Plot Function…", category: "Measure",
+                           symbol: "function") { showFunction = true },
+            PaletteCommand(title: "Fit Sketch", category: "View",
+                           symbol: "arrow.up.left.and.arrow.down.right") {
+                model.fitCanvas(size: model.canvasSize)
+            },
+            PaletteCommand(title: "Toggle Grid", category: "View",
+                           symbol: "squareshape.split.2x2") { model.settings.grid.toggle() },
+            PaletteCommand(title: "Toggle Axes", category: "View",
+                           symbol: "chart.xyaxis.line") { model.settings.axes.toggle() },
+            PaletteCommand(title: "Toggle Grid Snapping", category: "View",
+                           symbol: "grid.circle") { model.settings.snap.toggle() },
+            PaletteCommand(title: "Toggle Inspector", category: "View",
+                           symbol: "sidebar.right") { model.inspectorVisible.toggle() },
+            PaletteCommand(title: "Undo", category: "Edit",
+                           symbol: "arrow.uturn.backward") { model.undo() },
+            PaletteCommand(title: "Redo", category: "Edit",
+                           symbol: "arrow.uturn.forward") { model.redo() }
+        ]
+    }
+
     // MARK: selection helpers
 
     private func measurementNames() -> [String] {
@@ -360,6 +583,6 @@ struct ContentView: View {
 }
 
 #Preview("Workspace") {
-    ContentView(model: SketchModel.sample())
+    ContentView(model: SketchModel.sample(), presentsOnboarding: false)
         .frame(width: 1100, height: 760)
 }
