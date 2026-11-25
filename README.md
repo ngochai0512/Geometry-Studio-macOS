@@ -67,7 +67,7 @@ app-bundle binary does not carry it.
   coordinates, abscissa/ordinate, polar distance/direction, coordinate distance, arc angle/length,
   equation, slope, measure-all and calculations.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
-  0–5 decimal places, with inches, hundredths and degrees as the defaults.
+  0–5 decimal places, with centimetres, hundredths and degrees as the defaults.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
 - **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
 - **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback.
@@ -83,19 +83,21 @@ app-bundle binary does not carry it.
   panel and preview; Page Setup controls paper size, orientation and margins.
 - **Export** — File > Export writes a vector PDF, an SVG or a 2× PNG, fitted to a 3:2 canvas
   and drawn on a white page.
-- **Preferences** — General, Units, Canvas, Update and About panes, covering start at login,
-  GPU rendering, and the default length unit, angle unit, precision, grid, axes, snapping and
-  labels for new sketches.
+- **Preferences** — General, Appearance, Units, Canvas, Update and About panes, covering start
+  at login, default object colours, GPU rendering, and the default length unit, angle unit,
+  precision, grid, axes, snapping and labels for new sketches.
 - **Drawing aids** — smart guides that snap to points, midpoints, intersections, parallel and
   perpendicular lines; selectable angle increments (5°, 15°, 30°, 45°, 90°); square, dense,
-  triangular, polar and isometric grids.
+  triangular, polar and isometric grids. The toolbar grid menu switches visibility, style, colour,
+  axes, labels, snapping and angle increments in one place.
 - **Editing** — object browser with search, kind filter, lock and front/back layer order;
-  in-place label editing; on-canvas scale and rotate handles; duplicate (⌘D), copy and paste
-  across documents, and paste in place.
+  in-place label editing; drag any construction by its free points; on-canvas scale and rotate
+  handles; duplicate (⌘D), copy and paste across documents, and paste in place.
 - **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K command
   palette and an undo history panel.
 - **Live feedback** — a readout of a dragged point's position and dependent measurements, plus
-  area and perimeter for the current selection in the status bar.
+  area and perimeter for the current selection in the status bar. Haptics accompany snap
+  alignment and rotation detents on Force Touch trackpads.
 - **New documents** — a new sketch starts blank, with only the grid and axes from your
   preferences.
 

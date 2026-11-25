@@ -19,7 +19,7 @@ Read this before exploring; it saves a full README pass.
 - `SketchModel` extensions cannot add stored properties: new `@Published` state belongs in `SketchModel.swift`; behavior goes in the extension file matching its area.
 - Object graph: `SketchObject` is identified by `UUID`; parents are referenced by `UUID` inside `ObjectKind` (e.g. `.transformed(source:spec:)`, `.locus(driver:target:)`). `GeometryEval` resolves parents before children on every redraw. Pass IDs, never object references.
 - Persisted shape: `SketchDocument { version, objects, settings, title }`, encoded as pretty-printed sorted-key JSON with a `.gsp` extension. The document carries a schema revision (`SketchDocument.currentVersion`) and migrates older revisions while decoding; models decode missing keys with their defaults, so a new field does not invalidate old sketches. Refuse a revision from a newer build instead of dropping keys.
-- Defaults, recorded in `MECHANICS.md`: inches, hundredths, degrees. Do not "correct" these to metric or to whole numbers.
+- Defaults: the original used inches, hundredths and degrees. This build deliberately defaults new sketches to centimetres; keep hundredths and degrees.
 - Third-party dependencies: none. Standard library and system frameworks only.
 
 ### Quick Pre-flight
@@ -238,7 +238,7 @@ Before reporting a change as finished, confirm all of the following:
 
 - [ ] `swift build` succeeds with zero new warnings.
 - [ ] `project.yml` still generates into a scratch directory, and the checked-in app target builds with zero new warnings.
-- [ ] `swift test` passes (82 tests, 9 suites) — or the report says which suite could not run and why.
+- [ ] `swift test` passes (85 tests, 9 suites) — or the report says which suite could not run and why.
 - [ ] The screenshot path still runs in a debug build: `--screenshot /tmp/geometry-studio.png` writes a non-empty PNG.
 - [ ] No dead code, commented-out code, or unexplained temporary hacks left behind.
 - [ ] Persisted `Codable` shape changed additively only, or not at all.
