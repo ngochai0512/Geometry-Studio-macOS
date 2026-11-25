@@ -5,6 +5,8 @@ A native macOS dynamic geometry sketchpad, written in **Swift and SwiftUI** for 
 It is an independent implementation: construct points, lines, circles and polygons, then drag a
 free point and watch every dependent object update.
 
+This app is insprired by Geometer's Sketchpad 5, which was first released in 2009.
+
 ## Build and run
 
 Two build descriptions share one source tree. `Package.swift` drives the SwiftPM targets and
