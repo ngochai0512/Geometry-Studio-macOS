@@ -52,6 +52,11 @@ struct SketchStatusBar: View {
                 Text("\(model.selection.count) selected")
                     .font(.system(.caption, design: .rounded, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
+                if let metrics = model.selectionMetrics() {
+                    Text(selectionMetricsText(metrics))
+                        .font(.system(.caption, design: .monospaced, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal, 14)
@@ -62,7 +67,20 @@ struct SketchStatusBar: View {
     }
 
     private func fmt(_ v: Double) -> String {
-        String(format: "%.2f", v)
+        let digits = max(0, min(model.settings.precision, 6))
+        return String(format: "%.\(digits)f", v)
+    }
+
+    private func selectionMetricsText(_ metrics: SketchModel.SelectionMetrics) -> String {
+        let formatter = model.evaluator()
+        var parts: [String] = []
+        if metrics.area > 0 {
+            parts.append("A \(formatter.formatArea(metrics.area))")
+        }
+        if metrics.perimeter > 0 {
+            parts.append("P \(formatter.formatLength(metrics.perimeter))")
+        }
+        return parts.joined(separator: " · ")
     }
 }
 

@@ -78,7 +78,16 @@ struct GeometryEval {
 
         case .pointOnPath(let parent, let param):
             if let path = path(parent) {
-                result.point = path.point(at: param)
+                if case .functionPlot(let expression) = path {
+                    if var parser = Expression(expression) {
+                        parser.setAngleUnit(settings.angleUnit)
+                        if let y = parser.evaluate(x: param) {
+                            result.point = Vec2(param, y)
+                        }
+                    }
+                } else {
+                    result.point = path.point(at: param)
+                }
             }
 
         case .midpoint(let a, let b):
@@ -453,7 +462,7 @@ struct GeometryEval {
         let v = (pc - pv).normalized()
         let unsigned = acos(min(max(u.dot(v), -1), 1))
         // Plain degrees are undirected (0–180°); directed degrees and
-        // radians keep the sign, as in the original's preferences.
+        // radians keep the sign.
         let value = settings.angleUnit == .degrees ? unsigned : atan2(u.cross(v), u.dot(v))
         var bisector = (u + v).normalized()
         if bisector.length < Metrics.epsilon {
@@ -550,9 +559,9 @@ struct GeometryEval {
     }
 
     /// Samples a driven object while its driver sweeps the driver's whole
-    /// path. reference application calls this a locus; a point on an open path uses the
+    /// path. Sketchpad calls this a locus; a point on an open path uses the
     /// path parameter from 0 to 1, a point on a circle a full counter-clockwise
-    /// turn, matching the original's animation direction rule.
+    /// turn, matching the animation direction rule.
     private mutating func locusCurve(driver: UUID, target: UUID) -> [Vec2]? {
         guard let driverObject = objects[driver],
               case .pointOnPath(let pathID, _) = driverObject.kind,
@@ -603,7 +612,16 @@ struct GeometryEval {
     private mutating func measurement(kind: MeasureKind, refs: [UUID]) -> EvalResult {
         var result = EvalResult()
         let precision = settings.precision
-        let perUnit = settings.lengthUnit.perUnit
+        var frameOrigin = Vec2.zero
+        var frameUnit = settings.lengthUnit
+        if refs.count >= 2,
+           let object = objects[refs[1]],
+           case .coordinateSystem(_, let originID, _, let unit) = object.kind,
+           let origin = point(originID) {
+            frameOrigin = origin
+            frameUnit = unit
+        }
+        let framePerUnit = max(frameUnit.perUnit, 1e-6)
         func labels(_ ids: [UUID]) -> String {
             ids.map { name(of: $0) }.joined()
         }
@@ -705,34 +723,37 @@ struct GeometryEval {
         case .coordinates:
             if let first = refs.first, let p = point(first) {
                 let name = name(of: first)
-                let x = formatNumber(p.x / perUnit, precision: precision)
-                let y = formatNumber(p.y / perUnit, precision: precision)
-                result.value = p.x
-                result.text = "\(name) = (\(x), \(y)) \(settings.lengthUnit.short)"
+                let local = p - frameOrigin
+                let x = formatNumber(local.x / framePerUnit, precision: precision)
+                let y = formatNumber(local.y / framePerUnit, precision: precision)
+                result.value = local.x
+                result.text = "\(name) = (\(x), \(y)) \(frameUnit.short)"
                 result.anchor = p + Vec2(0.55, 0.5)
             }
         case .abscissa:
             if let first = refs.first, let p = point(first) {
-                result.value = p.x
-                result.text = "x \(name(of: first)) = \(formatLength(p.x))"
+                let local = p.x - frameOrigin.x
+                result.value = local
+                result.text = "x \(name(of: first)) = \(formatNumber(local / framePerUnit, precision: precision)) \(frameUnit.short)"
                 result.anchor = p + Vec2(0.55, 0.35)
             }
         case .ordinate:
             if let first = refs.first, let p = point(first) {
-                result.value = p.y
-                result.text = "y \(name(of: first)) = \(formatLength(p.y))"
+                let local = p.y - frameOrigin.y
+                result.value = local
+                result.text = "y \(name(of: first)) = \(formatNumber(local / framePerUnit, precision: precision)) \(frameUnit.short)"
                 result.anchor = p + Vec2(0.55, 0.1)
             }
         case .polarDistance:
             if let first = refs.first, let p = point(first) {
-                let distance = p.length
+                let distance = (p - frameOrigin).length
                 result.value = distance
-                result.text = "r \(name(of: first)) = \(formatLength(distance))"
+                result.text = "r \(name(of: first)) = \(formatNumber(distance / framePerUnit, precision: precision)) \(frameUnit.short)"
                 result.anchor = p + Vec2(0.55, -0.15)
             }
         case .polarDirection:
             if let first = refs.first, let p = point(first) {
-                var direction = atan2(p.y, p.x)
+                var direction = atan2(p.y - frameOrigin.y, p.x - frameOrigin.x)
                 if settings.angleUnit == .degrees, direction < 0 {
                     direction += 2 * .pi
                 }

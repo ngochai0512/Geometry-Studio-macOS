@@ -20,8 +20,11 @@ extension SketchModel {
         return best?.0
     }
 
-    func ensurePoint(at p: Vec2, tolerance: Double) -> UUID {
-        if let existing = existingPoint(near: p, tolerance: tolerance) {
+    func ensurePoint(at p: Vec2, tolerance: Double, anchor: Vec2? = nil) -> UUID {
+        let smart = smartSnappedPoint(p, tolerance: tolerance, anchor: anchor)
+        let target = smart.point
+        if let existing = existingPoint(near: target, tolerance: tolerance) {
+            smartGuides = smart.guides
             return existing
         }
         // Attach to a path when the click is close to one.
@@ -29,7 +32,7 @@ extension SketchModel {
         var bestPath: (UUID, Double)?
         for object in objects where object.visible {
             if let path = e.evaluate(object.id).path {
-                let d = path.distance(to: p)
+                let d = path.distance(to: target)
                 if d <= max(tolerance, 0.05) {
                     if bestPath == nil || d < bestPath!.1 {
                         bestPath = (object.id, d)
@@ -39,15 +42,16 @@ extension SketchModel {
         }
         if let (id, _) = bestPath, let path = e.evaluate(id).path {
             checkpoint("Add Point")
-            let param = path.nearestParam(to: p)
+            let param = path.nearestParam(to: target)
             var object = SketchObject(kind: .pointOnPath(path: id, param: param))
             object.label = nextPointLabel()
             object.order = (objects.map(\.order).max() ?? 0) + 1
             objects.append(object)
+            smartGuides = smart.guides
             return object.id
         }
-        let target = snapped(p)
         if let existing = existingPoint(near: target, tolerance: max(tolerance, 0.05)) {
+            smartGuides = smart.guides
             return existing
         }
         checkpoint("Add Point")
@@ -56,12 +60,26 @@ extension SketchModel {
         object.label = nextPointLabel()
         object.order = (objects.map(\.order).max() ?? 0) + 1
         objects.append(object)
+        smartGuides = smart.guides
         return object.id
+    }
+
+    /// The point a new draft segment should snap around.
+    var draftAnchor: Vec2? {
+        guard let last = draft.last else {
+            return nil
+        }
+        var e = evaluator()
+        return e.evaluate(last).point
     }
 
     // MARK: canvas tool actions
 
     func clickCanvas(at p: Vec2, tolerance: Double, additive: Bool) {
+        if tool != .segment && tool != .ray && tool != .line
+            && tool != .circle && tool != .polygon && tool != .angle {
+            smartGuides = []
+        }
         switch tool {
         case .select:
             if let hit = hitTest(p, tolerance: tolerance) {
@@ -89,8 +107,9 @@ extension SketchModel {
                 selection = [id]
             } else if draft.count == 1 {
                 let first = draft[0]
+                let anchor = draftAnchor
                 perform("Draw \(tool.title)") {
-                    let id = ensurePoint(at: p, tolerance: tolerance)
+                    let id = ensurePoint(at: p, tolerance: tolerance, anchor: anchor)
                     if id == first {
                         statusMessage = "Choose a different second point"
                         return
@@ -120,8 +139,10 @@ extension SketchModel {
                 selection = draft
             } else {
                 let center = draft[0]
+                var centerEvaluator = evaluator()
+                let anchor = centerEvaluator.evaluate(center).point
                 perform("Draw Circle") {
-                    let id = ensurePoint(at: p, tolerance: tolerance)
+                    let id = ensurePoint(at: p, tolerance: tolerance, anchor: anchor)
                     guard id != center else {
                         return
                     }
@@ -135,7 +156,7 @@ extension SketchModel {
             }
 
         case .polygon:
-            let id = ensurePoint(at: p, tolerance: tolerance)
+            let id = ensurePoint(at: p, tolerance: tolerance, anchor: draftAnchor)
             if let first = draft.first, id == first, draft.count >= 3 {
                 finishPolygon()
                 return
@@ -148,7 +169,7 @@ extension SketchModel {
 
         case .angle:
             if draft.count < 2 {
-                let id = ensurePoint(at: p, tolerance: tolerance)
+                let id = ensurePoint(at: p, tolerance: tolerance, anchor: draftAnchor)
                 if draft.count == 0 {
                     draft = [id]
                 } else if id != draft[0] {
@@ -160,7 +181,7 @@ extension SketchModel {
                     return
                 }
                 perform("Mark Angle") {
-                    let id = ensurePoint(at: p, tolerance: tolerance)
+                    let id = ensurePoint(at: p, tolerance: tolerance, anchor: draftAnchor)
                     if id == draft[0] || id == draft[1] {
                         return
                     }
@@ -194,11 +215,13 @@ extension SketchModel {
         objects.append(object)
         selection = [object.id]
         draft = []
+        smartGuides = []
         statusMessage = "Polygon created"
     }
 
     func cancelDraft() {
         draft = []
+        smartGuides = []
         statusMessage = "Cancelled"
     }
 
