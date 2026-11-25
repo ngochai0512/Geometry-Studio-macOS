@@ -1054,15 +1054,14 @@ extension SketchCanvas {
 
             if object.showLabel && model.settings.showLabels && !object.label.isEmpty {
                 let labelPoint = model.screenPoint(p + object.offset, size: size)
+                // Selection is shown on the letter, not with a grip dot: a dot
+                // at the point size reads as a second point once the label is
+                // dragged away from its point.
                 let text = Text(object.label)
                     .font(.system(.callout, design: .rounded, weight: .semibold))
-                    .foregroundStyle(object.style.color.color.opacity(0.95))
+                    .foregroundStyle(selected ? accent : object.style.color.color.opacity(0.95))
                 context.draw(text, at: CGPoint(x: labelPoint.x + 7, y: labelPoint.y - 7),
                              anchor: .bottomLeading)
-                if selected {
-                    let grip = CGRect(x: labelPoint.x + 5, y: labelPoint.y - 14, width: 5, height: 5)
-                    context.fill(Path(ellipseIn: grip), with: .color(accent.opacity(0.85)))
-                }
             }
         }
     }
