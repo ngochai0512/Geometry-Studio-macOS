@@ -276,13 +276,13 @@ extension SketchModel {
     /// polygon, circle or measurement collects the free points its construction
     /// depends on, so handles transform the whole object rather than nothing.
     var canTransformSelection: Bool {
-        movablePointIDs().count >= 2
+        movablePointIDs(for: selection).count >= 2
     }
 
-    private func movablePointIDs() -> [UUID] {
+    func movablePointIDs(for ids: [UUID]) -> [UUID] {
         var seen: Set<UUID> = []
         var result: [UUID] = []
-        var pending = selection
+        var pending = ids
         while let id = pending.popLast() {
             guard !seen.contains(id), let object = objectByID(id) else {
                 continue
@@ -292,7 +292,7 @@ extension SketchModel {
                 continue
             }
             switch object.kind {
-            case .freePoint, .caption:
+            case .freePoint, .caption, .parameter:
                 result.append(id)
             default:
                 pending.append(contentsOf: parents(of: object))
@@ -301,11 +301,52 @@ extension SketchModel {
         return result
     }
 
+    func movablePositions(for id: UUID) -> [UUID: Vec2] {
+        movablePositions(for: [id])
+    }
+
+    func movablePositions(for ids: [UUID]) -> [UUID: Vec2] {
+        var positions: [UUID: Vec2] = [:]
+        for pointID in movablePointIDs(for: ids) {
+            if let position = objectByID(pointID)?.position {
+                positions[pointID] = position
+            }
+        }
+        return positions
+    }
+
+    /// A whole construction can be dragged by its free ancestors. Computed
+    /// cards and images follow other state and are moved by their own controls.
+    func canMoveObject(_ id: UUID) -> Bool {
+        guard let object = objectByID(id), !object.isLocked else {
+            return false
+        }
+        switch object.kind {
+        case .transformed, .locus, .measurement, .calculation, .caption, .angle,
+             .parameter, .graph, .functionPlot:
+            return false
+        default:
+            return !movablePositions(for: id).isEmpty
+        }
+    }
+
+    /// Moves free positions by a delta from a captured starting state. The
+    /// caller supplies the base positions so a live drag does not accumulate.
+    func translateMovablePoints(_ base: [UUID: Vec2], by delta: Vec2) {
+        for (id, start) in base {
+            guard let index = index(of: id), !objects[index].isLocked else {
+                continue
+            }
+            objects[index].position = start + delta
+        }
+        recordTraceSamples()
+    }
+
     func movableSelectionBounds() -> WorldRect? {
         guard canTransformSelection else {
             return nil
         }
-        let points = movablePointIDs().compactMap { id -> Vec2? in
+        let points = movablePointIDs(for: selection).compactMap { id -> Vec2? in
             objectByID(id)?.position
         }
         guard var box = points.first.map({
@@ -335,7 +376,7 @@ extension SketchModel {
 
     func movableSelectionPositions() -> [UUID: Vec2] {
         var positions: [UUID: Vec2] = [:]
-        for id in movablePointIDs() {
+        for id in movablePointIDs(for: selection) {
             if let position = objectByID(id)?.position {
                 positions[id] = position
             }

@@ -11,6 +11,10 @@ struct SketchCanvas: View {
     @State var panStartCenter: Vec2 = .zero
     @State var isPanning = false
     @State var dragPointID: UUID?
+    @State var dragObjectID: UUID?
+    @State var dragObjectBasePositions: [UUID: Vec2] = [:]
+    @State var dragObjectStartWorld: Vec2 = .zero
+    @State var lastMoveSnap: Vec2?
     @State var dragLabelID: UUID?
     @State var dragLabelBaseOffset: Vec2 = .zero
     @State var dragLabelBasePosition: Vec2 = .zero
@@ -22,6 +26,7 @@ struct SketchCanvas: View {
     @State var holdReached = false
     @State var holdSelectionDone = false
     @State var lastSnapWorld: Vec2?
+    @State var lastRotationDetent: Int?
     @State var marqueeStart: CGPoint?
     @State var marqueeCurrent: CGPoint?
     @State var magnifyBase: Double?

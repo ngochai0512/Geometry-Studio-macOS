@@ -89,7 +89,7 @@ enum SketchTool: String, CaseIterable, Identifiable {
     var hint: String {
         switch self {
         case .select:
-            return "Click to select. Drag a point to move it. Shift-click adds to the selection."
+            return "Click to select. Drag a point or a construction to move it. Shift-click adds to the selection."
         case .pan:
             return "Drag the canvas to move the view. Scroll or pinch to zoom."
         case .point:
