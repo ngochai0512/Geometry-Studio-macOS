@@ -216,6 +216,64 @@ struct EditingTests {
         #expect(abs(metrics.area - 6) < 1e-9)
     }
 
+    @Test("moving a segment translates both endpoints")
+    func moveSegment() {
+        let model = SketchModel()
+        let a = point(model, 0, 0)
+        let b = point(model, 3, 0)
+        let segment = model.add(kind: .segment(a: a, b: b), silent: true)
+        let base = model.movablePositions(for: segment)
+
+        #expect(base.count == 2)
+        model.translateMovablePoints(base, by: Vec2(1, 2))
+
+        guard let first = model.objectByID(a)?.position,
+              let second = model.objectByID(b)?.position else {
+            Issue.record("expected both endpoints")
+            return
+        }
+        #expect(first.distance(to: Vec2(1, 2)) < 1e-9)
+        #expect(second.distance(to: Vec2(4, 2)) < 1e-9)
+
+        var evaluator = model.evaluator()
+        guard case .segment(let pa, let pb)? = evaluator.evaluate(segment).path else {
+            Issue.record("expected the segment to follow")
+            return
+        }
+        #expect(pa.distance(to: Vec2(1, 2)) < 1e-9)
+        #expect(pb.distance(to: Vec2(4, 2)) < 1e-9)
+    }
+
+    @Test("a locked object exposes no move positions")
+    func lockedObjectDoesNotMove() {
+        let model = SketchModel()
+        let a = point(model, 0, 0)
+        let b = point(model, 3, 0)
+        let segment = model.add(kind: .segment(a: a, b: b), silent: true)
+        model.selection = [segment]
+        model.toggleLockSelection()
+
+        #expect(!model.canMoveObject(segment))
+        #expect(model.movablePositions(for: segment).isEmpty)
+    }
+
+    @Test("appearance defaults classify object families")
+    func appearanceFamilies() {
+        var appearance = AppearancePreferences()
+        appearance.setColor(.accent, for: .line)
+        appearance.setColor(.violet, for: .region)
+
+        #expect(AppearanceFamily.family(for: .freePoint) == .point)
+        #expect(AppearanceFamily.family(for: .segment(a: UUID(), b: UUID())) == .line)
+        #expect(AppearanceFamily.family(for: .circle(center: UUID(), through: UUID())) == .circle)
+        #expect(AppearanceFamily.family(for: .polygon(vertices: [])) == .region)
+        #expect(AppearanceFamily.family(for: .measurement(.length, refs: [])) == .measure)
+        #expect(appearance.color(for: .line) == .accent)
+        #expect(appearance.color(for: .region) == .violet)
+        #expect(appearance.color(for: .point) == .black)
+        #expect(!RGBA.gridPalette.contains { $0.0.hasPrefix("#") })
+    }
+
     @Test("undo history travels back and forward")
     func historyTravel() {
         let model = SketchModel()

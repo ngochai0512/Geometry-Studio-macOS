@@ -472,7 +472,9 @@ extension InspectorView {
     // MARK: - Selection binding
 
     /// The object list selects through a set; the model keeps click order so
-    /// constructions that read the first picked object still see it.
+    /// constructions that read the first picked object still see it. Stay on
+    /// the sketch tab: switching tabs while the list is applying a selection
+    /// tears down the list mid-update and can crash SwiftUI.
     var objectSelection: Binding<Set<UUID>> {
         Binding(
             get: { Set(model.selection) },
@@ -480,9 +482,6 @@ extension InspectorView {
                 let kept = model.selection.filter { newValue.contains($0) }
                 let added = model.objects.map(\.id).filter { newValue.contains($0) && !kept.contains($0) }
                 model.selection = kept + added
-                if !newValue.isEmpty {
-                    tab = .object
-                }
             }
         )
     }
