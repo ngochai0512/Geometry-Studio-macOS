@@ -48,7 +48,7 @@ struct AboutContent: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
 
-            Text("The original is a 32-bit the legacy framework application whose geometry engine is written in C: its objects are plain C structs. This rebuild is a new Swift implementation, not a copy of its code.")
+            Text("Every object is a plain value type, and every construction is recomputed from its parents as you drag. Written from scratch in Swift, with no borrowed code.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)

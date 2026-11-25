@@ -28,13 +28,12 @@ enum LengthUnit: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// The original keeps canvases in screen points and converts for display:
-    /// `routine` builds the factor table `[1, 72 / 2.54, 72]` for the three
-    /// distance units, and `routine` divides the stored value by the selected
-    /// factor. Read that as pixels, centimetres, inches. This rebuild stores
-    /// world coordinates in centimetres, so these are centimetres per one
-    /// display unit. (Pixels is the original's 72-ppi point, not a 96-dpi CSS
-    /// pixel.)
+    /// Canvases are measured in screen points and converted for display: the
+    /// factor table is `[1, 72 / 2.54, 72]` for pixels, centimetres and
+    /// inches, and a stored value is divided by the selected factor. This
+    /// rebuild stores world coordinates in centimetres, so these are
+    /// centimetres per one display unit. (Pixels means the 72-ppi point, not a
+    /// 96-dpi CSS pixel.)
     var perUnit: Double {
         switch self {
         case .cm:
@@ -48,7 +47,7 @@ enum LengthUnit: String, Codable, CaseIterable, Identifiable {
 }
 
 enum SketchMetrics {
-    /// Classic Mac screen resolution used by the original: 72 points per inch.
+    /// Classic Mac screen resolution: 72 points per inch.
     static let pointsPerInch = 72.0
     static let centimetresPerInch = 2.54
     /// 100% zoom: 72 points per inch ÷ 2.54 cm per inch.

@@ -10,6 +10,7 @@ extension SketchModel {
             statusMessage = "Select a straight object to mark as the mirror"
             return
         }
+        checkpoint("Mark Mirror")
         marks.mirror = mirror
         statusMessage = "Mirror marked: \(displayName(for: object))"
     }
@@ -20,6 +21,7 @@ extension SketchModel {
             statusMessage = "Select a point to mark as the center"
             return
         }
+        checkpoint("Mark Center")
         marks.center = center
         statusMessage = "Center marked: \(displayName(for: object))"
     }
@@ -30,6 +32,7 @@ extension SketchModel {
             statusMessage = "Select three points: first side, vertex, second side"
             return
         }
+        checkpoint("Mark Angle")
         marks.angle = AngleMark(a: points[0], vertex: points[1], c: points[2])
         statusMessage = "Angle marked: \(markName(points[0])) \(markName(points[1])) \(markName(points[2]))"
     }
@@ -48,6 +51,7 @@ extension SketchModel {
             statusMessage = "Both marked objects need a measurable length"
             return
         }
+        checkpoint("Mark Ratio")
         marks.ratio = RatioMark(first: paths[0], second: paths[1])
         statusMessage = "Ratio marked: \(markName(paths[0])) / \(markName(paths[1]))"
     }
@@ -58,6 +62,7 @@ extension SketchModel {
             statusMessage = "Select two points to mark the vector"
             return
         }
+        checkpoint("Mark Vector")
         marks.vector = VectorMark(from: points[0], to: points[1])
         statusMessage = "Vector marked: \(markName(points[0])) → \(markName(points[1]))"
     }
@@ -67,6 +72,7 @@ extension SketchModel {
             statusMessage = "No marks to clear"
             return
         }
+        checkpoint("Clear Marks")
         marks = TransformMarks()
         statusMessage = "Marks cleared"
     }

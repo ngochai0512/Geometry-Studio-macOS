@@ -1,7 +1,15 @@
+import AppKit
 import SwiftUI
 
 struct SketchCommands: Commands {
     @FocusedValue(\.sketchModel) private var model
+
+    private var isEditingText: Bool {
+        guard let responder = NSApp.keyWindow?.firstResponder else {
+            return false
+        }
+        return responder is NSTextView
+    }
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -10,12 +18,45 @@ struct SketchCommands: Commands {
 
         CommandGroup(after: .pasteboard) {
             Divider()
-            Button("Delete") { model?.deleteSelection() }
-                .keyboardShortcut(.delete, modifiers: [])
+            Button("Delete") {
+                if isEditingText {
+                    NSApp.sendAction(Selector(("deleteBackward:")), to: nil, from: nil)
+                } else {
+                    model?.deleteSelection()
+                }
+            }
+            .keyboardShortcut(.delete, modifiers: [])
+            .disabled(model?.selection.isEmpty != false && !isEditingText)
+            Button("Select All") {
+                if isEditingText {
+                    NSApp.sendAction(Selector(("selectAll:")), to: nil, from: nil)
+                } else {
+                    model?.selectAll()
+                }
+            }
+            .keyboardShortcut("a", modifiers: .command)
+            .disabled(model == nil)
+            Divider()
+            Button("Duplicate") { model?.duplicateSelection() }
+                .keyboardShortcut("d", modifiers: .command)
                 .disabled(model?.selection.isEmpty != false)
-            Button("Select All") { model?.selectAll() }
-                .keyboardShortcut("a", modifiers: .command)
-                .disabled(model == nil)
+            Button("Copy Objects") { model?.copySelection() }
+                .keyboardShortcut("c", modifiers: [.command, .option])
+                .disabled(model?.selection.isEmpty != false)
+            Button("Cut Objects") { model?.cutSelection() }
+                .keyboardShortcut("x", modifiers: [.command, .option])
+                .disabled(model?.selection.isEmpty != false)
+            Button("Paste Objects") { model?.pasteObjects() }
+                .keyboardShortcut("v", modifiers: [.command, .option])
+                .disabled(model?.canPasteObjects != true)
+            Button("Paste in Place") { model?.pasteObjects(inPlace: true) }
+                .keyboardShortcut("v", modifiers: [.command, .control])
+                .disabled(model?.canPasteObjects != true)
+            Button("Undo History…") {
+                NotificationCenter.default.post(name: .openUndoHistory, object: nil)
+            }
+            .keyboardShortcut("z", modifiers: [.command, .option])
+            .disabled(model == nil)
         }
 
         CommandGroup(after: .saveItem) {
@@ -248,6 +289,18 @@ struct SketchCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
             .disabled(model == nil)
+            Divider()
+            Button("Command Palette…") {
+                NotificationCenter.default.post(name: .openCommandPalette, object: nil)
+            }
+            .keyboardShortcut("k", modifiers: .command)
+            .disabled(model == nil)
+        }
+
+        CommandGroup(replacing: .help) {
+            Button("Geometry Studio Tips") {
+                NotificationCenter.default.post(name: .openTips, object: nil)
+            }
         }
     }
 }

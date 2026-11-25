@@ -37,6 +37,10 @@ extension SketchModel {
             statusMessage = "Select a point on an object to animate"
             return
         }
+        if objectByID(id)?.isLocked == true {
+            statusMessage = "Unlock the point before animating it"
+            return
+        }
         animationDirection = 1
         animationPointID = id
         startAnimationClock()
@@ -44,11 +48,12 @@ extension SketchModel {
     }
 
     /// Points on straight objects move back and forth; points on circles go
-    /// all the way round, following the original's motion principles.
+    /// all the way round, following the motion principles.
     func advanceAnimation() {
         var e = evaluator()
         guard let id = animationPointID,
               let i = index(of: id),
+              !objects[i].isLocked,
               case .pointOnPath(let parent, let param) = objects[i].kind,
               let path = e.path(parent) else {
             stopAnimationClock()
@@ -120,7 +125,7 @@ extension SketchModel {
     }
 
     /// A locus is the set of positions of a driven object as its driver
-    /// varies over the driver's path (the original's Locus definition).
+    /// varies over the driver's path (the Locus definition).
     func constructLocus() {
         let chosen = selection.compactMap { objectByID($0) }
         guard let driver = chosen.first(where: {
@@ -132,7 +137,15 @@ extension SketchModel {
             statusMessage = "A locus needs a point on a path plus the point it drives"
             return
         }
-        guard let target = chosen.last(where: { $0.id != driver.id && $0.isPointLike }) else {
+        var probe = evaluator()
+        var targetObject: SketchObject?
+        for object in chosen.reversed() where object.id != driver.id {
+            if probe.evaluate(object.id).point != nil {
+                targetObject = object
+                break
+            }
+        }
+        guard let target = targetObject else {
             statusMessage = "Select the driven point after its driver"
             return
         }

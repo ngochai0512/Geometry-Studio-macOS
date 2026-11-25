@@ -8,4 +8,8 @@ extension Notification.Name {
 extension Notification.Name {
     static let openCircleRadius = Notification.Name("openCircleRadius")
     static let openProtocol = Notification.Name("openProtocol")
+    static let openCommandPalette = Notification.Name("openCommandPalette")
+    static let openUndoHistory = Notification.Name("openUndoHistory")
+    static let openTips = Notification.Name("openTips")
+    static let newSketchRequested = Notification.Name("newSketchRequested")
 }

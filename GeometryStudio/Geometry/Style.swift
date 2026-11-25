@@ -46,6 +46,7 @@ struct RGBA: Codable, Hashable {
     }
 
     static let ink = RGBA(0.12, 0.13, 0.16)
+    static let black = RGBA(0, 0, 0)
     static let secondaryInk = RGBA(0.35, 0.37, 0.42)
     static let accent = RGBA(0.0, 0.48, 1.0)
     static let magenta = RGBA(0.85, 0.1, 0.55)
@@ -174,7 +175,7 @@ struct AxisLabelStyle: Codable, Hashable {
 }
 
 struct ObjectStyle: Codable, Hashable {
-    var color: RGBA = .ink
+    var color: RGBA = .black
     var lineWidth: Double = 1.5
     var dash: DashStyle = .solid
     var pointSize: Double = 5.5
@@ -188,7 +189,7 @@ struct ObjectStyle: Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .ink
+        color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .black
         lineWidth = try c.decodeIfPresent(Double.self, forKey: .lineWidth) ?? 1.5
         dash = try c.decodeIfPresent(DashStyle.self, forKey: .dash) ?? .solid
         pointSize = try c.decodeIfPresent(Double.self, forKey: .pointSize) ?? 5.5

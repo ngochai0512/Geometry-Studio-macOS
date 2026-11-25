@@ -7,8 +7,16 @@ import SwiftUI
 /// traces and ticks are drawn here with one triangle pipeline.
 struct MetalCanvas: NSViewRepresentable {
     let model: SketchModel
+    var onFirstFrame: () -> Void = {}
 
-    static let isSupported: Bool = MTLCreateSystemDefaultDevice() != nil
+    static let isSupported: Bool = {
+        // A device alone is not enough: the runtime shader/pipeline must also
+        // build, or the layer stays empty while SwiftUI still draws the points.
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            return false
+        }
+        return MetalSceneRenderer(device: device, pixelFormat: .bgra8Unorm) != nil
+    }()
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -27,6 +35,7 @@ struct MetalCanvas: NSViewRepresentable {
 
         if let device = view.device,
            let renderer = MetalSceneRenderer(device: device, pixelFormat: view.colorPixelFormat) {
+            renderer.onFirstFrame = onFirstFrame
             view.delegate = renderer
             context.coordinator.renderer = renderer
         }
@@ -61,6 +70,8 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
     private let queue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
     private var vertices: [MetalVertex] = []
+    var onFirstFrame: (() -> Void)?
+    private var reportedFirstFrame = false
 
     init?(device: MTLDevice, pixelFormat: MTLPixelFormat) {
         guard let queue = device.makeCommandQueue() else {
@@ -149,6 +160,13 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
         encoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        if !reportedFirstFrame, !vertices.isEmpty {
+            reportedFirstFrame = true
+            let ready = onFirstFrame
+            DispatchQueue.main.async {
+                ready?()
+            }
+        }
     }
 }
 

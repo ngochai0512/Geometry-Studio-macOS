@@ -7,6 +7,12 @@ enum ActiveSketch {
     static weak var model: SketchModel?
 }
 
+/// One entry in the undo history panel.
+struct UndoHistoryEntry: Identifiable, Hashable {
+    var id = UUID()
+    var name: String
+}
+
 @Observable
 final class SketchModel {
     // MARK: state
@@ -15,6 +21,13 @@ final class SketchModel {
     var tool: SketchTool = .select
     var draft: [UUID] = []
     var hoverWorld: Vec2?
+    /// Last pointer position on the canvas, kept after the pointer leaves so
+    /// menu commands can place new objects where the user was working.
+    @ObservationIgnored
+    var lastPointerWorld: Vec2?
+    /// Objects excluded from smart snapping while the current point drag runs.
+    @ObservationIgnored
+    var dragSnapExclusions: Set<UUID> = []
     var isPointerOverCanvas = false
     /// The canvas's last laid-out size, so Fit and the inspector use the real
     /// window instead of a guessed frame.
@@ -22,7 +35,13 @@ final class SketchModel {
     var inspectorVisible = true
     var statusMessage: String = ""
     var showAbout = false
-    /// Animation (the original's Display > Animate).
+    /// Transient guides drawn while a point is placed or dragged.
+    var smartGuides: [SmartGuide] = []
+    /// A parallel record of undo step names for the history panel. Snapshots
+    /// stay in NSUndoManager; this is only the list the panel shows.
+    var undoHistory: [UndoHistoryEntry] = []
+    var undoHistoryIndex = 0
+    /// Animation.
     var animationPointID: UUID?
     var tracedIDs: Set<UUID> = []
     var tracePaths: [UUID: [Vec2]] = [:]
@@ -99,6 +118,7 @@ final class SketchModel {
     struct Snapshot {
         var objects: [SketchObject]
         var selection: [UUID]
+        var marks: TransformMarks
     }
 
     var objects: [SketchObject] {
@@ -195,6 +215,9 @@ final class SketchModel {
         document = newDocument
         selection = []
         draft = []
+        smartGuides = []
+        dragSnapExclusions = []
+        lastPointerWorld = nil
         resetHistory()
     }
 
@@ -244,7 +267,7 @@ final class SketchModel {
                        kindLabel: "m AB", silent: true)
         if let i = index(of: dist) {
             // Keep the length card clear of the angle card at B; both can be
-            // dragged separately afterwards, as in the original.
+            // dragged separately afterwards.
             objects[i].offset = Vec2(0, -1.15)
         }
         let coords = add(kind: .measurement(.coordinates, refs: [o]),
@@ -275,7 +298,7 @@ final class SketchModel {
             lastCheckpointAt = Date()
             return
         }
-        registerUndo(action: action, snapshot: Snapshot(objects: objects, selection: selection))
+        registerUndo(action: action, snapshot: Snapshot(objects: objects, selection: selection, marks: marks))
         lastCoalescingKey = key
         lastCheckpointAt = Date()
     }
@@ -288,11 +311,11 @@ final class SketchModel {
             body()
             return
         }
-        let before = Snapshot(objects: objects, selection: selection)
+        let before = Snapshot(objects: objects, selection: selection, marks: marks)
         openGroup = true
         body()
         openGroup = false
-        guard before.objects != objects || before.selection != selection else {
+        guard before.objects != objects || before.selection != selection || before.marks != marks else {
             return
         }
         registerUndo(action: action, snapshot: before)
@@ -312,6 +335,11 @@ final class SketchModel {
             undoManager.setActionName(action)
             undoManager.endUndoGrouping()
         }
+        if undoHistoryIndex < undoHistory.count {
+            undoHistory.removeSubrange(undoHistoryIndex...)
+        }
+        undoHistory.append(UndoHistoryEntry(name: action))
+        undoHistoryIndex = undoHistory.count
         lastCoalescingKey = nil
         lastCheckpointAt = Date()
         scheduleUndoRefresh()
@@ -324,11 +352,18 @@ final class SketchModel {
         guard let undoManager else {
             return
         }
-        let current = Snapshot(objects: objects, selection: selection)
+        let current = Snapshot(objects: objects, selection: selection, marks: marks)
         objects = snapshot.objects
         selection = snapshot.selection
+        marks = snapshot.marks
+        smartGuides = []
         lastCoalescingKey = nil
         MainActor.assumeIsolated {
+            if undoManager.isUndoing {
+                undoHistoryIndex = max(0, undoHistoryIndex - 1)
+            } else if undoManager.isRedoing {
+                undoHistoryIndex = min(undoHistory.count, undoHistoryIndex + 1)
+            }
             undoManager.registerUndo(withTarget: self) { model in
                 model.restore(current, action: action)
             }
@@ -354,25 +389,40 @@ final class SketchModel {
                 undoManager.removeAllActions()
             }
         }
+        undoHistory.removeAll()
+        undoHistoryIndex = 0
         resetTransientEditingState()
         scheduleUndoRefresh()
     }
 
     func undo() {
-        guard let undoManager else {
+        guard let undoManager, undoManager.canUndo else {
             return
         }
         MainActor.assumeIsolated {
             undoManager.undo()
         }
+        clearSmartGuides()
     }
 
     func redo() {
-        guard let undoManager else {
+        guard let undoManager, undoManager.canRedo else {
             return
         }
         MainActor.assumeIsolated {
             undoManager.redo()
+        }
+        clearSmartGuides()
+    }
+
+    /// Walks the undo stack until the panel's selected step is current.
+    func travelHistory(to index: Int) {
+        let target = min(max(index, 0), undoHistory.count)
+        while undoHistoryIndex > target, canUndo {
+            undo()
+        }
+        while undoHistoryIndex < target, canRedo {
+            redo()
         }
     }
 

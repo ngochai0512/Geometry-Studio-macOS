@@ -241,9 +241,32 @@ extension SketchModel {
         guard let path = e.path(id) else {
             return
         }
-        let worldCenter = settings.center
+        let param: Double
+        let location = hoverWorld ?? lastPointerWorld ?? settings.center
+        if case .functionPlot(let expression) = path {
+            var candidate = location.x
+            if var parser = Expression(expression) {
+                parser.setAngleUnit(settings.angleUnit)
+                if parser.evaluate(x: candidate) == nil {
+                    let rect = visibleRect(size: canvasSize)
+                    let samples = 160
+                    let step = max((rect.maxX - rect.minX) / Double(samples), 0.01)
+                    var x = rect.minX
+                    while x <= rect.maxX {
+                        if parser.evaluate(x: x) != nil {
+                            candidate = x
+                            break
+                        }
+                        x += step
+                    }
+                }
+            }
+            param = candidate
+        } else {
+            param = path.nearestParam(to: location)
+        }
         checkpoint("Construct Point on Path")
-        let newID = commit(kind: .pointOnPath(path: id, param: path.nearestParam(to: worldCenter)),
+        let newID = commit(kind: .pointOnPath(path: id, param: param),
                             label: nextPointLabel())
         selection = [newID]
         statusMessage = "Point attached to the path"
@@ -277,7 +300,7 @@ extension SketchModel {
         checkpoint("Add Parameter")
         var object = SketchObject(kind: .parameter(value: 1, minimum: 0, maximum: 10))
         object.label = name
-        object.position = hoverWorld ?? settings.center
+        object.position = hoverWorld ?? lastPointerWorld ?? settings.center
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.showLabel = true
         objects.append(object)
@@ -420,7 +443,7 @@ extension SketchModel {
     func constructCoordinateSystem(_ kind: CoordinateKind) {
         checkpoint("Add Coordinate System")
         let origin = selectedPoints().first
-            ?? ensureSilentPoint(at: hoverWorld ?? settings.center)
+            ?? ensureSilentPoint(at: hoverWorld ?? lastPointerWorld ?? settings.center)
         let step = GridMetrics.step(scale: settings.scale,
                                     perUnit: settings.lengthUnit.perUnit)
         let id = commit(kind: .coordinateSystem(kind: kind, origin: origin,
@@ -456,6 +479,23 @@ extension SketchModel {
             }
         }
         return nil
+    }
+
+    private func currentFunctionObject() -> SketchObject? {
+        if let selected = selectedObjects.first(where: { object in
+            if case .functionPlot = object.kind {
+                return true
+            }
+            return false
+        }) {
+            return selected
+        }
+        return objects.first(where: { object in
+            if case .functionPlot = object.kind {
+                return true
+            }
+            return false
+        })
     }
 
     func addDerivativePlot() {
@@ -517,7 +557,8 @@ extension SketchModel {
     }
 
     func findFunctionRoots() {
-        guard let source = currentFunctionExpression() else {
+        guard let plot = currentFunctionObject(),
+              case .functionPlot(let source) = plot.kind else {
             statusMessage = "Select or plot a function first"
             return
         }
@@ -527,23 +568,29 @@ extension SketchModel {
             return
         }
         checkpoint("Find Roots")
-        let created = roots.map { ensureSilentPoint(at: Vec2($0, 0)) }
+        let created = roots.map {
+            commit(kind: .pointOnPath(path: plot.id, param: $0), label: nextPointLabel())
+        }
         selection = created
         statusMessage = "\(created.count) root\(created.count == 1 ? "" : "s") found"
     }
 
     func findFunctionIntersections() {
-        let expressions = selectedObjects.compactMap { object -> String? in
-            if case .functionPlot(let expression) = object.kind {
-                return expression
+        let plots = selectedObjects.filter { object in
+            if case .functionPlot = object.kind {
+                return true
             }
-            return nil
+            return false
         }
-        guard expressions.count >= 2 else {
+        guard plots.count >= 2 else {
             statusMessage = "Select two function plots"
             return
         }
-        let difference = "((\(expressions[0])) - (\(expressions[1])))"
+        guard case .functionPlot(let firstExpression) = plots[0].kind,
+              case .functionPlot(let secondExpression) = plots[1].kind else {
+            return
+        }
+        let difference = "((\(firstExpression)) - (\(secondExpression)))"
         let roots = numericalRoots(difference, from: -20, to: 20)
         guard !roots.isEmpty else {
             statusMessage = "No intersections found in the visible range"
@@ -551,7 +598,8 @@ extension SketchModel {
         }
         checkpoint("Find Intersections")
         let created = roots.map { x in
-            ensureSilentPoint(at: Vec2(x, functionValue(expressions[0], at: x) ?? 0))
+            commit(kind: .pointOnPath(path: plots[0].id, param: x),
+                   label: nextPointLabel())
         }
         selection = created
         statusMessage = "\(created.count) intersection\(created.count == 1 ? "" : "s") found"

@@ -19,6 +19,7 @@ enum GridType: String, Codable, CaseIterable, Identifiable {
     case orthogonalDense
     case triangular
     case polar
+    case isometric
 
     var id: String {
         rawValue
@@ -34,11 +35,16 @@ enum GridType: String, Codable, CaseIterable, Identifiable {
             return "Triangular"
         case .polar:
             return "Polar"
+        case .isometric:
+            return "Isometric"
         }
     }
 }
 
 struct CanvasSettings: Codable, Hashable {
+    /// The angle increments the canvas can snap drawing directions to.
+    static let angleSnapChoices: [Double] = [0, 5, 15, 30, 45, 90]
+
     var grid: Bool = true
     var gridType: GridType = .orthogonal
     var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
@@ -50,9 +56,13 @@ struct CanvasSettings: Codable, Hashable {
     var axesLabelStyle: AxisLabelStyle = AxisLabelStyle()
     var snap: Bool = false
     var showLabels: Bool = true
-    // Defaults read from the original's preference initialiser (routine):
-    // distance unit index 2 (inches), precision 2 (hundredths). The distance
-    // factor table there is [1, 72/2.54, 72], so index 2 is inches.
+    /// Guides that align a new point with existing points, midpoints,
+    /// intersections, parallels and perpendiculars.
+    var smartGuides: Bool = true
+    /// Degrees between snapped drawing directions; zero turns angle snapping off.
+    var angleSnap: Double = 0
+    // Defaults: inches, hundredths. The factor table is [1, 72/2.54, 72],
+    // so index 2 is inches.
     var lengthUnit: LengthUnit = .inches
     var angleUnit: AngleUnit = .degrees
     var precision: Int = 2
@@ -75,6 +85,9 @@ struct CanvasSettings: Codable, Hashable {
             ?? AxisLabelStyle()
         snap = try c.decodeIfPresent(Bool.self, forKey: .snap) ?? false
         showLabels = try c.decodeIfPresent(Bool.self, forKey: .showLabels) ?? true
+        smartGuides = try c.decodeIfPresent(Bool.self, forKey: .smartGuides) ?? true
+        let storedAngleSnap = try c.decodeIfPresent(Double.self, forKey: .angleSnap) ?? 0
+        angleSnap = CanvasSettings.angleSnapChoices.contains(storedAngleSnap) ? storedAngleSnap : 0
         lengthUnit = try c.decodeIfPresent(LengthUnit.self, forKey: .lengthUnit) ?? .inches
         angleUnit = try c.decodeIfPresent(AngleUnit.self, forKey: .angleUnit) ?? .degrees
         precision = try c.decodeIfPresent(Int.self, forKey: .precision) ?? 2
@@ -170,7 +183,79 @@ extension SketchDocument {
            let settings = try? decoder.decode(CanvasSettings.self, from: settingsData) {
             document.settings = settings
         }
+        if let rawMarks = root["marks"] as? [String: Any],
+           let marksData = try? JSONSerialization.data(withJSONObject: rawMarks),
+           let marks = try? decoder.decode(TransformMarks.self, from: marksData) {
+            document.marks = marks
+        }
         return SalvageResult(document: document, recovered: recovered.count,
                              total: rawObjects.count)
     }
+}
+
+// MARK: - Starter sample
+
+/// The one built-in sample offered by the welcome sheet. It is deliberately
+/// not a browsable gallery; a new sketch still starts blank by default.
+enum SketchTemplate {
+    case triangle
+
+    func document(settings: CanvasSettings) -> SketchDocument {
+        var document = SketchDocument()
+        document.settings = settings
+        document.title = "Triangle Sketch"
+        document.objects = SketchTemplate.triangleObjects()
+        return document
+    }
+
+    private static func triangleObjects() -> [SketchObject] {
+        func point(_ label: String, _ x: Double, _ y: Double, _ order: Int) -> SketchObject {
+            var object = SketchObject(kind: .freePoint)
+            object.label = label
+            object.position = Vec2(x, y)
+            object.order = order
+            return object
+        }
+        func segment(_ a: SketchObject, _ b: SketchObject, _ order: Int) -> SketchObject {
+            var object = SketchObject(kind: .segment(a: a.id, b: b.id))
+            object.order = order
+            return object
+        }
+        func midpoint(_ a: SketchObject, _ b: SketchObject, _ label: String, _ order: Int) -> SketchObject {
+            var object = SketchObject(kind: .midpoint(a: a.id, b: b.id))
+            object.label = label
+            object.order = order
+            return object
+        }
+
+        let a = point("A", -5, -3, 1)
+        let b = point("B", 5, -3, 2)
+        let c = point("C", 1, 4, 3)
+        var polygon = SketchObject(kind: .polygon(vertices: [a.id, b.id, c.id]))
+        polygon.order = 4
+        polygon.style.color = .accent
+        polygon.style.fillOpacity = 0.07
+        let ab = segment(a, b, 5)
+        let bc = segment(b, c, 6)
+        let ca = segment(c, a, 7)
+        let d = midpoint(a, b, "D", 8)
+        let e = midpoint(b, c, "E", 9)
+        let f = midpoint(c, a, "F", 10)
+        var de = segment(d, e, 11)
+        de.style.dash = .dashed
+        de.style.color = .secondaryInk
+        let caption = SketchObject(kind: .caption("Drag A, B or C — the midsegment follows."))
+        var note = caption
+        note.position = Vec2(-9, 7)
+        note.order = 12
+        note.style.color = .secondaryInk
+        return [a, b, c, polygon, ab, bc, ca, d, e, f, de, note]
+    }
+}
+
+/// A one-shot carrier for the starter sample chosen in the welcome sheet.
+/// `DocumentGroup` builds the new document synchronously after the sheet calls
+/// `newDocument`, so the choice only has to survive that call.
+enum TemplateLibrary {
+    static var pending: SketchTemplate?
 }

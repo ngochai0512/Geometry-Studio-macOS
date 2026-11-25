@@ -135,7 +135,7 @@ enum EvalPath {
         case .polyline(let points):
             return polylineNearestParam(points, closed: false, to: point)
         case .functionPlot:
-            return 0
+            return point.x
         }
     }
 
@@ -275,11 +275,10 @@ enum EvalPath {
         }
     }
 
-    /// Whether a point lies inside a closed polygon. The original
-    /// (`routine`) walks the vertices, sums `atan2(cross, dot)` for the
-    /// vectors seen from the point, divides by 2π and tests the fractional
-    /// part against 0 within 1e-12. That is the winding-number test; a
-    /// non-zero winding count means inside.
+    /// Whether a point lies inside a closed polygon, by the winding-number
+    /// rule: walk the vertices, sum `atan2(cross, dot)` for the vectors seen
+    /// from the point, divide by 2π and test the fractional part against 0
+    /// within 1e-12. A non-zero winding count means inside.
     func contains(_ p: Vec2) -> Bool {
         guard case .polygon(let points) = self, points.count >= 3 else {
             return false

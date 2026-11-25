@@ -201,7 +201,7 @@ struct VectorMark: Codable, Hashable {
     var to: UUID
 }
 
-/// The persistent transform parameters the original's Mark commands set.
+/// The persistent transform parameters the Mark commands set.
 /// Marks live in the document, not in a modal dialog, and transforms read the
 /// mark at the moment they run.
 struct TransformMarks: Codable, Hashable {
@@ -241,7 +241,7 @@ enum ObjectKind: Codable, Hashable {
     case functionPlot(String)
     case transformed(source: UUID, spec: TransformSpec)
     /// The sampled path of `target` as `driver` (a point on a path) sweeps
-    /// through its domain, as in the original's Locus command.
+    /// through its domain, as in the Locus command.
     case locus(driver: UUID, target: UUID)
     /// A numeric parameter displayed as a card and edited with a slider.
     case parameter(value: Double, minimum: Double, maximum: Double)

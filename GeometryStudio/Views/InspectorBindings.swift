@@ -10,7 +10,7 @@ extension InspectorView {
 
     func needsLabel(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .freePoint, .pointOnPath, .midpoint, .intersection, .caption, .angle, .parameter:
+        case .freePoint, .pointOnPath, .midpoint, .intersection, .angle, .parameter:
             return true
         case .graph(.table):
             return true
@@ -99,6 +99,20 @@ extension InspectorView {
 
     func isVectorObject(_ object: SketchObject) -> Bool {
         if case .vector = object.kind {
+            return true
+        }
+        return false
+    }
+
+    func isTransformedObject(_ object: SketchObject) -> Bool {
+        if case .transformed = object.kind {
+            return true
+        }
+        return false
+    }
+
+    func isLocusObject(_ object: SketchObject) -> Bool {
+        if case .locus = object.kind {
             return true
         }
         return false

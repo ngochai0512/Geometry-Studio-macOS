@@ -2,7 +2,6 @@ import AppKit
 import Observation
 import ServiceManagement
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct SettingsView: View {
     private enum Tab: Hashable {
@@ -13,7 +12,6 @@ struct SettingsView: View {
         case about
     }
 
-    @Environment(\.newDocument) private var newDocument
     @State private var settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
     @State private var launchAtLogin = LaunchAtLogin()
     @State private var tab: Tab = .general
@@ -59,7 +57,7 @@ struct SettingsView: View {
                     Spacer()
                     Button("Create New Sketch") {
                         persist(settings)
-                        newDocument(contentType: .geometryStudioSketch)
+                        NotificationCenter.default.post(name: .newSketchRequested, object: nil)
                     }
                 }
                 .padding(12)
@@ -196,6 +194,16 @@ struct SettingsView: View {
             Section {
                 ColorPicker("Canvas background", selection: backgroundColorBinding)
                 Toggle("Snap points to grid", isOn: $settings.snap)
+                Toggle("Smart guides", isOn: $settings.smartGuides)
+                LabeledContent("Angle snap") {
+                    Picker("Angle snap", selection: $settings.angleSnap) {
+                        ForEach(CanvasSettings.angleSnapChoices, id: \.self) { angle in
+                            Text(angleSnapTitle(angle)).tag(angle)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
                 Toggle("Show labels", isOn: $settings.showLabels)
             } header: {
                 Text("Canvas")
@@ -268,6 +276,10 @@ struct SettingsView: View {
     private func persist(_ value: CanvasSettings) {
         AppPreferences.save(value)
         ActiveSketch.model?.applyCanvasDefaults(value)
+    }
+
+    private func angleSnapTitle(_ value: Double) -> String {
+        value == 0 ? "Off" : "\(Int(value))°"
     }
 
     private var backgroundColorBinding: Binding<Color> {

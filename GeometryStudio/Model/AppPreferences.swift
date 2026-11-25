@@ -20,6 +20,9 @@ enum AppPreferences {
         static let axesLabelSerif = "newSketch.axesLabelSerif"
         static let snap = "newSketch.snap"
         static let showLabels = "newSketch.showLabels"
+        static let smartGuides = "newSketch.smartGuides"
+        static let angleSnap = "newSketch.angleSnap"
+        static let onboardingCompleted = "onboarding.completed"
     }
 
     static func canvasSettings(from defaults: UserDefaults = .standard) -> CanvasSettings {
@@ -77,6 +80,13 @@ enum AppPreferences {
         if defaults.object(forKey: Keys.showLabels) != nil {
             settings.showLabels = defaults.bool(forKey: Keys.showLabels)
         }
+        if defaults.object(forKey: Keys.smartGuides) != nil {
+            settings.smartGuides = defaults.bool(forKey: Keys.smartGuides)
+        }
+        if defaults.object(forKey: Keys.angleSnap) != nil {
+            let stored = defaults.double(forKey: Keys.angleSnap)
+            settings.angleSnap = CanvasSettings.angleSnapChoices.contains(stored) ? stored : 0
+        }
         return settings
     }
 
@@ -101,5 +111,16 @@ enum AppPreferences {
         defaults.set(settings.axesLabelStyle.serif, forKey: Keys.axesLabelSerif)
         defaults.set(settings.snap, forKey: Keys.snap)
         defaults.set(settings.showLabels, forKey: Keys.showLabels)
+        defaults.set(settings.smartGuides, forKey: Keys.smartGuides)
+        defaults.set(settings.angleSnap, forKey: Keys.angleSnap)
+    }
+
+    /// The welcome sheet runs once per install; Help > Tips brings it back.
+    static func hasCompletedOnboarding(from defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: Keys.onboardingCompleted)
+    }
+
+    static func markOnboardingCompleted(in defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: Keys.onboardingCompleted)
     }
 }
