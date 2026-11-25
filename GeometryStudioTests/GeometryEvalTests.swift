@@ -350,8 +350,8 @@ struct GeometryEvalTests {
 
     @Test("definitions name the parents of a construction")
     func definitions() {
-        let a = freePoint(Vec2(0, 0))
-        let b = freePoint(Vec2(4, 2))
+        var a = freePoint(Vec2(0, 0))
+        var b = freePoint(Vec2(4, 2))
         a.label = "A"
         b.label = "B"
         let midpoint = SketchObject(kind: .midpoint(a: a.id, b: b.id))

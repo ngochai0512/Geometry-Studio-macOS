@@ -20,7 +20,7 @@ struct SketchCommands: Commands {
             Divider()
             Button("Delete") {
                 if isEditingText {
-                    NSApp.sendAction(Selector(("deleteBackward:")), to: nil, from: nil)
+                    NSApp.sendAction(#selector(NSResponder.deleteBackward(_:)), to: nil, from: nil)
                 } else {
                     model?.deleteSelection()
                 }
@@ -29,7 +29,7 @@ struct SketchCommands: Commands {
             .disabled(model?.selection.isEmpty != false && !isEditingText)
             Button("Select All") {
                 if isEditingText {
-                    NSApp.sendAction(Selector(("selectAll:")), to: nil, from: nil)
+                    NSApp.sendAction(#selector(NSResponder.selectAll(_:)), to: nil, from: nil)
                 } else {
                     model?.selectAll()
                 }
