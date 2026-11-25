@@ -43,6 +43,12 @@ extension SVGExporter {
                                               ("stroke", gridColor),
                                               ("stroke-opacity", bold ? "0.16" : "0.08"),
                                               ("stroke-width", bold ? "1" : "0.7")]))
+            case .isometric:
+                parts.append(element("path", [("d", isometricGridPath(step: step)),
+                                              ("fill", "none"),
+                                              ("stroke", gridColor),
+                                              ("stroke-opacity", bold ? "0.16" : "0.08"),
+                                              ("stroke-width", bold ? "1" : "0.7")]))
             }
         }
 
@@ -104,6 +110,45 @@ extension SVGExporter {
                 let b = screen(Vec2(rect.maxX, family * rect.maxX + offset))
                 d += "M \(num(a.x)) \(num(a.y)) L \(num(b.x)) \(num(b.y)) "
                 offset += rootStep
+            }
+        }
+        return d
+    }
+
+    private func isometricGridPath(step: Double) -> String {
+        let rect = visibleRect
+        let height = step * sqrt(3) / 2
+        guard height > 0, height.isFinite else {
+            return ""
+        }
+        var d = ""
+        let firstColumn = Int(floor(rect.minX / height)) - 1
+        let lastColumn = Int(ceil(rect.maxX / height)) + 1
+        for column in firstColumn...lastColumn {
+            let x = Double(column) * height
+            let a = screen(Vec2(x, rect.minY))
+            let b = screen(Vec2(x, rect.maxY))
+            d += "M \(num(a.x)) \(num(a.y)) L \(num(b.x)) \(num(b.y)) "
+        }
+
+        let slope = 1 / sqrt(3.0)
+        let corners = [
+            Vec2(rect.minX, rect.minY),
+            Vec2(rect.minX, rect.maxY),
+            Vec2(rect.maxX, rect.minY),
+            Vec2(rect.maxX, rect.maxY)
+        ]
+        for family in [slope, -slope] {
+            let offsets = corners.map { $0.y - family * $0.x }
+            guard let minOffset = offsets.min(), let maxOffset = offsets.max() else {
+                continue
+            }
+            var offset = floor(minOffset / step) * step
+            while offset <= maxOffset + step {
+                let a = screen(Vec2(rect.minX, family * rect.minX + offset))
+                let b = screen(Vec2(rect.maxX, family * rect.maxX + offset))
+                d += "M \(num(a.x)) \(num(a.y)) L \(num(b.x)) \(num(b.y)) "
+                offset += step
             }
         }
         return d

@@ -2,7 +2,7 @@ import Foundation
 
 /// Grid spacing shared by the canvas and the SVG exporter.
 ///
-/// The original labels the grid in the chosen distance unit, so a one-inch
+/// The grid is labelled in the chosen distance unit, so a one-inch
 /// grid is one inch wide even though world coordinates are centimetres. Step
 /// the display-unit candidates until one is at least 50 screen points wide,
 /// matching `CanvasDrawing.drawGrid`.

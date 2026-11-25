@@ -39,7 +39,21 @@ extension SketchCanvas {
 
                     if model.tool == .select {
                         let tol = 9 / model.settings.scale
-                        if let hit = model.hitTest(world, tolerance: tol), let object = model.objectByID(hit) {
+                        if let handle = selectionHandleHit(value.startLocation, size: size) {
+                            selectionHandle = handle
+                            handleBasePositions = model.movableSelectionPositions()
+                            handleCenter = model.movableSelectionBounds()?.center ?? .zero
+                            handleStartVector = model.worldPoint(value.startLocation, size: size) - handleCenter
+                            pressHitID = nil
+                        } else if let labelHit = model.hitTestLabel(world, tolerance: tol),
+                                  let object = model.objectByID(labelHit) {
+                            pressHitID = labelHit
+                            dragLabelID = labelHit
+                            dragLabelBaseOffset = object.offset
+                            dragLabelBasePosition = object.position ?? .zero
+                            dragLabelIsCaption = isPositionCard(object)
+                        } else if let hit = model.hitTest(world, tolerance: tol),
+                                  let object = model.objectByID(hit) {
                             pressHitID = hit
                             if object.isPointLike || isTransformedPoint(object) {
                                 dragPointID = model.beginDrag(at: world, tolerance: tol)
@@ -47,25 +61,50 @@ extension SketchCanvas {
                                 dragLabelID = hit
                                 dragLabelBaseOffset = object.offset
                                 dragLabelBasePosition = object.position ?? .zero
-                                if case .caption = object.kind {
-                                    dragLabelIsCaption = true
-                                } else {
-                                    dragLabelIsCaption = false
-                                }
+                                dragLabelIsCaption = isPositionCard(object)
                             }
                         } else {
                             pressHitID = nil
                             marqueeStart = value.startLocation
                             marqueeCurrent = value.startLocation
                         }
+                    } else if isDrawingTool(model.tool) {
+                        dragPreviewStart = world
+                        dragPreviewCurrent = current
                     }
+                }
+
+                if isDrawingTool(model.tool), dragPreviewStart != nil {
+                    dragPreviewCurrent = current
                 }
 
                 if abs(value.translation.width) + abs(value.translation.height) > 2 {
                     didMove = true
                 }
 
-                if model.tool == .select {
+                if let handle = selectionHandle, didMove {
+                    if !dragCheckpointed {
+                        model.checkpoint(handle == .rotate ? "Rotate Selection" : "Scale Selection")
+                        dragCheckpointed = true
+                    }
+                    let vector = current - handleCenter
+                    switch handle {
+                    case .rotate:
+                        model.applyMovableSelection(handleBasePositions,
+                                                    around: handleCenter,
+                                                    scale: 1,
+                                                    rotation: vector.angle - handleStartVector.angle)
+                    case .scale:
+                        let factor = vector.length / max(handleStartVector.length, 1e-6)
+                        model.applyMovableSelection(handleBasePositions,
+                                                    around: handleCenter,
+                                                    scale: factor,
+                                                    rotation: 0)
+                    }
+                    return
+                }
+
+                if model.tool == .select, selectionHandle == nil {
                     if !holdReached, Date().timeIntervalSince(pressStartedAt) >= holdToDragDelay {
                         holdReached = true
                         if !holdSelectionDone, let id = dragPointID ?? dragLabelID ?? pressHitID {
@@ -88,15 +127,14 @@ extension SketchCanvas {
                         model.checkpoint(label.isEmpty ? "Move Point" : "Move \(label)")
                         dragCheckpointed = true
                     }
-                    if model.settings.snap, let object = model.objectByID(id),
-                       case .freePoint = object.kind {
-                        let snapped = model.snapped(current)
-                        if lastSnapWorld != snapped {
-                            lastSnapWorld = snapped
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-                        }
+                    let tolerance = 9 / model.settings.scale
+                    let applied = model.dragPoint(id, to: current, smartTolerance: tolerance)
+                    hudScreen = value.location
+                    if let applied, applied.distance(to: current) > 1e-6,
+                       lastSnapWorld != applied {
+                        lastSnapWorld = applied
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
                     }
-                    model.dragPoint(id, to: current)
                 } else if let id = dragLabelID, didMove {
                     if !dragCheckpointed {
                         model.checkpoint("Move Label")
@@ -137,6 +175,14 @@ extension SketchCanvas {
                     lastSnapWorld = nil
                     marqueeStart = nil
                     marqueeCurrent = nil
+                    hudScreen = nil
+                    selectionHandle = nil
+                    handleBasePositions = [:]
+                    dragPreviewStart = nil
+                    dragPreviewCurrent = nil
+                    if model.tool != .pan {
+                        model.clearSmartGuides()
+                    }
                 }
                 if model.tool == .pan {
                     return
@@ -146,6 +192,9 @@ extension SketchCanvas {
                 let tol = 9 / model.settings.scale
 
                 if model.tool == .select {
+                    if selectionHandle != nil {
+                        return
+                    }
                     if holdReached, dragPointID != nil || dragLabelID != nil {
                         return
                     }
@@ -159,13 +208,20 @@ extension SketchCanvas {
                     } else {
                         model.clearSelection()
                     }
+                    let clickCount = NSApp.currentEvent?.clickCount ?? 1
+                    if !didMove, clickCount >= 2,
+                       let id = pressHitID ?? model.hitTest(end, tolerance: tol) {
+                        beginLabelEditing(id)
+                    }
                     return
                 }
 
-                if model.settings.snap,
-                   [.point, .segment, .ray, .line, .circle, .polygon, .angle].contains(model.tool),
-                   model.snapped(start) != start {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                if model.tool != .pan,
+                   [.point, .segment, .ray, .line, .circle, .polygon, .angle].contains(model.tool) {
+                    let preview = model.smartSnappedPoint(start, tolerance: tol)
+                    if preview.point.distance(to: start) > 1e-6 || !preview.guides.isEmpty {
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                    }
                 }
 
                 if didMove {
@@ -174,7 +230,9 @@ extension SketchCanvas {
                         model.perform("Draw \(tool.title)") {
                             model.draft = []
                             let a = model.ensurePoint(at: start, tolerance: tol)
-                            let b = model.ensurePoint(at: end, tolerance: tol)
+                            var e = model.evaluator()
+                            let anchor = e.evaluate(a).point
+                            let b = model.ensurePoint(at: end, tolerance: tol, anchor: anchor)
                             guard a != b else {
                                 return
                             }
@@ -192,7 +250,9 @@ extension SketchCanvas {
                         model.perform("Draw Circle") {
                             model.draft = []
                             let center = model.ensurePoint(at: start, tolerance: tol)
-                            let edge = model.ensurePoint(at: end, tolerance: tol)
+                            var e = model.evaluator()
+                            let anchor = e.evaluate(center).point
+                            let edge = model.ensurePoint(at: end, tolerance: tol, anchor: anchor)
                             guard center != edge else {
                                 return
                             }
@@ -276,9 +336,49 @@ extension SketchCanvas {
         model.statusMessage = hits.isEmpty ? "" : "\(hits.count) selected"
     }
 
+    private func selectionHandleHit(_ point: CGPoint, size: CGSize) -> SelectionHandleKind? {
+        guard let box = model.movableSelectionBounds() else {
+            return nil
+        }
+        let a = model.screenPoint(Vec2(box.minX, box.minY), size: size)
+        let b = model.screenPoint(Vec2(box.maxX, box.maxY), size: size)
+        let rect = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
+                          width: abs(b.x - a.x), height: abs(b.y - a.y))
+        let rotate = CGPoint(x: rect.midX, y: rect.minY - 20)
+        if hypot(point.x - rotate.x, point.y - rotate.y) <= 9 {
+            return .rotate
+        }
+        let corners = [
+            CGPoint(x: rect.minX, y: rect.minY),
+            CGPoint(x: rect.maxX, y: rect.minY),
+            CGPoint(x: rect.maxX, y: rect.maxY),
+            CGPoint(x: rect.minX, y: rect.maxY)
+        ]
+        for (index, corner) in corners.enumerated()
+        where hypot(point.x - corner.x, point.y - corner.y) <= 9 {
+            return .scale(corner: index)
+        }
+        return nil
+    }
+
     private func isLabelLike(_ object: SketchObject) -> Bool {
         switch object.kind {
-        case .measurement, .calculation, .caption, .angle:
+        case .measurement, .calculation, .caption, .angle, .parameter:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func isDrawingTool(_ tool: SketchTool) -> Bool {
+        [.segment, .ray, .line, .circle, .polygon, .angle].contains(tool)
+    }
+
+    /// Captions and parameter cards move by their `position`; other cards move
+    /// by their label `offset`.
+    private func isPositionCard(_ object: SketchObject) -> Bool {
+        switch object.kind {
+        case .caption, .parameter:
             return true
         default:
             return false

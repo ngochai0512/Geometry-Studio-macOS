@@ -42,11 +42,13 @@ extension SketchCanvas {
         }
 
         drawDraft(context: &context, size: size)
+        drawSmartGuides(context: &context, size: size)
         drawVectors(context: &context, size: size, evaluator: &e)
         drawAngles(context: &context, size: size, evaluator: &e)
         drawPoints(context: &context, size: size, evaluator: &e)
         drawTexts(context: &context, size: size, evaluator: &e)
         drawParameters(context: &context, size: size)
+        drawSelectionHandles(context: &context, size: size)
         drawScaleBar(context: &context, size: size)
         drawMarquee(context: &context, size: size)
     }
@@ -58,15 +60,61 @@ extension SketchCanvas {
         drawCoordinateSystems(context: &context, size: size)
     }
 
+    /// The Metal layer is an enhancement, not the only copy of the geometry.
+    /// Drawing the same fills and strokes here keeps a sketch readable if the
+    /// GPU layer cannot present, which would otherwise leave only the points
+    /// that the foreground canvas draws.
+    private func drawMetalFallback(context: inout GraphicsContext, size: CGSize,
+                                   rect: WorldRect) {
+        var evaluator = model.evaluator()
+        let ordered = model.objects.sorted { $0.order < $1.order }
+        if !metalReady {
+            drawTraces(context: &context, size: size)
+            for object in ordered where object.visible {
+                let result = evaluator.evaluate(object.id)
+                if let fill = result.fill {
+                    drawFill(fill, style: object.style, alphaScale: 0.5,
+                             context: &context, size: size)
+                    continue
+                }
+                guard let path = result.path else {
+                    continue
+                }
+                drawFill(path, style: object.style, alphaScale: 0.5,
+                         context: &context, size: size)
+            }
+        }
+        // Opaque strokes are safe to overdraw when Metal is working; this
+        // keeps every path visible even if the GPU layer never presents.
+        for object in ordered where object.visible {
+            guard let path = evaluator.evaluate(object.id).path else {
+                continue
+            }
+            stroke(path: path,
+                   style: object.style,
+                   selected: model.isSelected(object.id),
+                   glow: false,
+                   context: &context,
+                   size: size,
+                   rect: rect)
+        }
+    }
+
     /// CPU layer above the Metal geometry: points, labels, draft and chrome.
     func drawForeground(context: inout GraphicsContext, size: CGSize) {
         var e = model.evaluator()
+        if usesMetal {
+            drawMetalFallback(context: &context, size: size,
+                              rect: model.visibleRect(size: size))
+        }
         drawDraft(context: &context, size: size)
+        drawSmartGuides(context: &context, size: size)
         drawVectors(context: &context, size: size, evaluator: &e)
         drawAngles(context: &context, size: size, evaluator: &e)
         drawPoints(context: &context, size: size, evaluator: &e)
         drawTexts(context: &context, size: size, evaluator: &e)
         drawParameters(context: &context, size: size)
+        drawSelectionHandles(context: &context, size: size)
         drawScaleBar(context: &context, size: size)
         drawMarquee(context: &context, size: size)
     }
@@ -81,7 +129,126 @@ extension SketchCanvas {
         context.stroke(Path(roundedRect: rect, cornerRadius: 2), with: .color(accent.opacity(0.7)), lineWidth: 1)
     }
 
-    private func drawFill(_ path: EvalPath, style: ObjectStyle,
+    // MARK: live overlays
+
+    @ViewBuilder
+    func canvasOverlay(size: CGSize) -> some View {
+        if let id = dragPointID, didMove, let screen = hudScreen {
+            let rows = model.dragReadout(for: id)
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(rows.indices, id: \.self) { index in
+                    HStack(spacing: 6) {
+                        Text(rows[index].0)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Text(rows[index].1)
+                            .monospacedDigit()
+                    }
+                    .font(.caption)
+                }
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(accent.opacity(0.25), lineWidth: 0.8)
+            }
+            .frame(width: 190)
+            .position(
+                x: min(max(screen.x + 106, 100), max(size.width - 100, 100)),
+                y: max(screen.y - 44, 34)
+            )
+            .allowsHitTesting(false)
+        }
+
+        if let id = editingLabelID,
+           let object = model.objectByID(id),
+           let anchor = model.labelAnchor(for: object) {
+            let point = model.screenPoint(anchor, size: size)
+            HStack(spacing: 5) {
+                TextField("Label", text: $labelDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($labelFieldFocused)
+                    .frame(width: 170)
+                    .onSubmit { commitLabelEdit() }
+                Button {
+                    commitLabelEdit()
+                } label: {
+                    Image(systemName: "checkmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Apply label")
+                .accessibilityLabel("Apply label")
+            }
+            .padding(6)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(accent.opacity(0.35), lineWidth: 0.8)
+            }
+            .position(
+                x: min(max(point.x + 90, 110), max(size.width - 110, 110)),
+                y: min(max(point.y - 26, 26), max(size.height - 26, 26))
+            )
+            .onAppear {
+                DispatchQueue.main.async {
+                    labelFieldFocused = true
+                }
+            }
+            .onChange(of: labelFieldFocused) { _, focused in
+                if !focused {
+                    commitLabelEdit()
+                }
+            }
+            .onExitCommand {
+                editingLabelID = nil
+                labelFieldFocused = false
+            }
+        }
+    }
+
+    func beginLabelEditing(_ id: UUID) {
+        guard let object = model.objectByID(id), !object.isLocked else {
+            return
+        }
+        switch object.kind {
+        case .measurement, .calculation, .functionPlot, .graph:
+            // These cards show a computed value, not an editable label.
+            return
+        default:
+            break
+        }
+        guard model.labelAnchor(for: object) != nil else {
+            return
+        }
+        model.selection = [id]
+        if case .caption(let text) = object.kind {
+            labelDraft = text
+        } else {
+            labelDraft = object.label
+        }
+        editingLabelID = id
+    }
+
+    func commitLabelEdit() {
+        guard let id = editingLabelID, let object = model.objectByID(id) else {
+            editingLabelID = nil
+            return
+        }
+        let trimmed = labelDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        var isCaption = false
+        if case .caption = object.kind {
+            isCaption = true
+        }
+        if !trimmed.isEmpty || !isCaption {
+            model.setLabelText(id, isCaption ? trimmed : labelDraft)
+        }
+        editingLabelID = nil
+        labelFieldFocused = false
+    }
+
+    private func drawFill(_ path: EvalPath, style: ObjectStyle, alphaScale: Double = 1,
                           context: inout GraphicsContext, size: CGSize) {
         switch path {
         case .polygon(let points):
@@ -94,7 +261,7 @@ extension SketchCanvas {
                 fill.addLine(to: model.screenPoint(point, size: size))
             }
             fill.closeSubpath()
-            context.fill(fill, with: .color(style.color.color.opacity(style.fillOpacity)))
+            context.fill(fill, with: .color(style.color.color.opacity(style.fillOpacity * alphaScale)))
         case .circle(let center, let radius):
             let point = model.screenPoint(center, size: size)
             let scaledRadius = radius * model.settings.scale
@@ -105,7 +272,7 @@ extension SketchCanvas {
                 height: scaledRadius * 2
             )
             context.fill(Path(ellipseIn: box),
-                         with: .color(style.color.color.opacity(style.fillOpacity * 0.7)))
+                         with: .color(style.color.color.opacity(style.fillOpacity * alphaScale * 0.7)))
         default:
             break
         }
@@ -153,6 +320,8 @@ extension SketchCanvas {
                 drawTriangularGrid(context: &context, size: size, rect: rect, step: step)
             case .polar:
                 drawPolarGrid(context: &context, size: size, rect: rect, step: step)
+            case .isometric:
+                drawIsometricGrid(context: &context, size: size, rect: rect, step: step)
             }
         }
 
@@ -249,6 +418,113 @@ extension SketchCanvas {
         }
         context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
                        lineWidth: model.settings.gridBold ? 1.0 : 0.7)
+    }
+
+    private func drawIsometricGrid(context: inout GraphicsContext, size: CGSize,
+                                   rect: WorldRect, step: Double) {
+        let height = step * sqrt(3) / 2
+        guard height > 0, height.isFinite else {
+            return
+        }
+        var path = Path()
+        let firstColumn = Int(floor(rect.minX / height)) - 1
+        let lastColumn = Int(ceil(rect.maxX / height)) + 1
+        for column in firstColumn...lastColumn {
+            let x = Double(column) * height
+            let a = model.screenPoint(Vec2(x, rect.minY), size: size)
+            let b = model.screenPoint(Vec2(x, rect.maxY), size: size)
+            path.move(to: a)
+            path.addLine(to: b)
+        }
+
+        let slope = 1 / sqrt(3.0)
+        let corners = [
+            Vec2(rect.minX, rect.minY),
+            Vec2(rect.minX, rect.maxY),
+            Vec2(rect.maxX, rect.minY),
+            Vec2(rect.maxX, rect.maxY)
+        ]
+        for family in [slope, -slope] {
+            let offsets = corners.map { $0.y - family * $0.x }
+            guard let minOffset = offsets.min(), let maxOffset = offsets.max() else {
+                continue
+            }
+            var offset = floor(minOffset / step) * step
+            while offset <= maxOffset + step {
+                let a = model.screenPoint(Vec2(rect.minX, family * rect.minX + offset), size: size)
+                let b = model.screenPoint(Vec2(rect.maxX, family * rect.maxX + offset), size: size)
+                path.move(to: a)
+                path.addLine(to: b)
+                offset += step
+            }
+        }
+        context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
+                       lineWidth: model.settings.gridBold ? 1.0 : 0.7)
+    }
+
+    private func drawSmartGuides(context: inout GraphicsContext, size: CGSize) {
+        guard !printing else {
+            return
+        }
+        drawGuides(model.smartGuides, context: &context, size: size)
+    }
+
+    private func drawGuides(_ guides: [SmartGuide], context: inout GraphicsContext, size: CGSize) {
+        for guide in guides {
+            switch guide.kind {
+            case .point, .midpoint, .intersection:
+                let center = Vec2((guide.from.x + guide.to.x) / 2,
+                                  (guide.from.y + guide.to.y) / 2)
+                let s = model.screenPoint(center, size: size)
+                let box = CGRect(x: s.x - 5, y: s.y - 5, width: 10, height: 10)
+                context.stroke(Path(ellipseIn: box),
+                               with: .color(accent.opacity(0.85)),
+                               lineWidth: 1.3)
+            case .alignment, .parallel, .perpendicular, .angle:
+                var path = Path()
+                path.move(to: model.screenPoint(guide.from, size: size))
+                path.addLine(to: model.screenPoint(guide.to, size: size))
+                context.stroke(path, with: .color(accent.opacity(0.45)),
+                               style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+            }
+        }
+    }
+
+    private func drawSelectionHandles(context: inout GraphicsContext, size: CGSize) {
+        guard !printing, let box = model.movableSelectionBounds() else {
+            return
+        }
+        let a = model.screenPoint(Vec2(box.minX, box.minY), size: size)
+        let b = model.screenPoint(Vec2(box.maxX, box.maxY), size: size)
+        let rect = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
+                          width: abs(b.x - a.x), height: abs(b.y - a.y))
+        context.stroke(Path(roundedRect: rect, cornerRadius: 2),
+                       with: .color(accent.opacity(0.45)),
+                       style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+
+        let corners = [
+            CGPoint(x: rect.minX, y: rect.minY),
+            CGPoint(x: rect.maxX, y: rect.minY),
+            CGPoint(x: rect.maxX, y: rect.maxY),
+            CGPoint(x: rect.minX, y: rect.maxY)
+        ]
+        for corner in corners {
+            let handle = CGRect(x: corner.x - 4, y: corner.y - 4, width: 8, height: 8)
+            context.fill(Path(roundedRect: handle, cornerRadius: 1.5),
+                         with: .color(Color.white))
+            context.stroke(Path(roundedRect: handle, cornerRadius: 1.5),
+                           with: .color(accent.opacity(0.8)), lineWidth: 1.2)
+        }
+
+        let rotate = CGPoint(x: rect.midX, y: rect.minY - 20)
+        var stem = Path()
+        stem.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        stem.addLine(to: rotate)
+        context.stroke(stem, with: .color(accent.opacity(0.6)), lineWidth: 1)
+        let rotateHandle = CGRect(x: rotate.x - 5, y: rotate.y - 5, width: 10, height: 10)
+        context.fill(Path(ellipseIn: rotateHandle), with: .color(Color.white))
+        context.stroke(Path(ellipseIn: rotateHandle),
+                       with: .color(accent.opacity(0.85)), lineWidth: 1.3)
     }
 
     private func drawPolarGrid(context: inout GraphicsContext, size: CGSize,
@@ -608,8 +884,9 @@ extension SketchCanvas {
 
     private func drawParameters(context: inout GraphicsContext, size: CGSize) {
         let precision = max(0, min(model.settings.precision, 6))
-        for object in model.objects where object.visible {
-            guard case .parameter(let value, let minimum, let maximum) = object.kind else {
+        for object in model.objects.sorted(by: { $0.order < $1.order })
+        where object.visible && object.showLabel {
+            guard case .parameter(let value, _, _) = object.kind else {
                 continue
             }
             let position = model.screenPoint(object.position ?? .zero, size: size)
@@ -628,17 +905,6 @@ extension SketchCanvas {
                            with: .color(model.isSelected(object.id) ? accent : ink.opacity(0.15)),
                            lineWidth: model.isSelected(object.id) ? 1.5 : 0.8)
             context.draw(text, at: CGPoint(x: rect.minX + 9, y: rect.minY + 7), anchor: .topLeading)
-
-            let track = CGRect(x: rect.minX + 9, y: rect.maxY - 10,
-                               width: rect.width - 18, height: 3)
-            context.fill(Path(roundedRect: track, cornerRadius: 1.5),
-                         with: .color(ink.opacity(0.15)))
-            let span = max(maximum - minimum, 1e-9)
-            let fraction = min(max((value - minimum) / span, 0), 1)
-            let knob = track.minX + track.width * CGFloat(fraction)
-            context.fill(Path(ellipseIn: CGRect(x: knob - 4, y: track.midY - 4,
-                                                width: 8, height: 8)),
-                         with: .color(accent))
         }
     }
 
@@ -791,10 +1057,16 @@ extension SketchCanvas {
             }
 
             if object.showLabel && model.settings.showLabels && !object.label.isEmpty {
+                let labelPoint = model.screenPoint(p + object.offset, size: size)
                 let text = Text(object.label)
                     .font(.system(.callout, design: .rounded, weight: .semibold))
                     .foregroundStyle(object.style.color.color.opacity(0.95))
-                context.draw(text, at: CGPoint(x: s.x + 7, y: s.y - 7), anchor: .bottomLeading)
+                context.draw(text, at: CGPoint(x: labelPoint.x + 7, y: labelPoint.y - 7),
+                             anchor: .bottomLeading)
+                if selected {
+                    let grip = CGRect(x: labelPoint.x + 5, y: labelPoint.y - 14, width: 5, height: 5)
+                    context.fill(Path(ellipseIn: grip), with: .color(accent.opacity(0.85)))
+                }
             }
         }
     }
@@ -802,7 +1074,7 @@ extension SketchCanvas {
     private func drawTexts(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
         let ordered = model.objects.sorted { $0.order < $1.order }
         var occupied: [CGRect] = []
-        for object in ordered where object.visible {
+        for object in ordered where object.visible && object.showLabel {
             if case .parameter = object.kind {
                 continue
             }
@@ -860,43 +1132,71 @@ extension SketchCanvas {
             }
             context.draw(resolved, at: CGPoint(x: rect.minX + padX, y: rect.minY + padY),
                          anchor: .topLeading)
+            if selected {
+                let grip = CGRect(x: rect.maxX - 6, y: rect.maxY - 6, width: 5, height: 5)
+                context.fill(Path(ellipseIn: grip), with: .color(accent.opacity(0.8)))
+            }
         }
     }
 
     private func drawDraft(context: inout GraphicsContext, size: CGSize) {
-        guard !model.draft.isEmpty else {
+        var evaluator = model.evaluator()
+        var pending = model.draft.compactMap { evaluator.evaluate($0).point }
+        var previewAnchor: Vec2?
+        if pending.isEmpty {
+            previewAnchor = dragPreviewStart
+            if let start = dragPreviewStart {
+                pending = [start]
+            }
+        }
+        guard let first = pending.first else {
             return
         }
-        var e = model.evaluator()
-        let pts = model.draft.compactMap { e.evaluate($0).point }
-        guard !pts.isEmpty else {
-            return
+
+        let anchor = previewAnchor ?? pending.last
+        let hover = dragPreviewStart == nil ? model.hoverWorld : dragPreviewCurrent
+        var target = hover
+        var guides: [SmartGuide] = []
+        if let hover {
+            let exclusions: Set<UUID> = (model.tool == .polygon || model.tool == .angle)
+                ? []
+                : Set(model.draft)
+            let snap = model.smartSnappedPoint(hover,
+                                               tolerance: 9 / model.settings.scale,
+                                               anchor: anchor,
+                                               excluding: exclusions,
+                                               includeIntersections: false)
+            target = snap.point
+            guides = snap.guides
         }
+        drawGuides(guides, context: &context, size: size)
+
         var p = Path()
-        p.move(to: model.screenPoint(pts[0], size: size))
-        for pt in pts.dropFirst() {
-            p.addLine(to: model.screenPoint(pt, size: size))
+        p.move(to: model.screenPoint(first, size: size))
+        for point in pending.dropFirst() {
+            p.addLine(to: model.screenPoint(point, size: size))
         }
-        if let hover = model.hoverWorld {
-            p.addLine(to: model.screenPoint(hover, size: size))
+        if let target {
+            p.addLine(to: model.screenPoint(target, size: size))
         }
         context.stroke(p, with: .color(accent.opacity(0.7)),
                        style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: [6, 4]))
 
-        if model.tool == .circle, let center = pts.first {
-            let c = model.screenPoint(center, size: size)
-            let edge = model.screenPoint(model.hoverWorld ?? center, size: size)
-            let r = hypot(edge.x - c.x, edge.y - c.y)
+        if model.tool == .circle {
+            let c = model.screenPoint(first, size: size)
+            let edge = target ?? first
+            let edgeScreen = model.screenPoint(edge, size: size)
+            let r = hypot(edgeScreen.x - c.x, edgeScreen.y - c.y)
             let box = CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)
             context.stroke(Path(ellipseIn: box), with: .color(accent.opacity(0.6)),
                            style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
         }
 
-        if pts.count >= 3 && model.tool == .polygon {
+        if pending.count >= 3 && model.tool == .polygon {
             var fill = Path()
-            fill.move(to: model.screenPoint(pts[0], size: size))
-            for pt in pts.dropFirst() {
-                fill.addLine(to: model.screenPoint(pt, size: size))
+            fill.move(to: model.screenPoint(pending[0], size: size))
+            for point in pending.dropFirst() {
+                fill.addLine(to: model.screenPoint(point, size: size))
             }
             fill.closeSubpath()
             context.fill(fill, with: .color(accent.opacity(0.07)))

@@ -26,6 +26,22 @@ struct SketchCanvas: View {
     @State var marqueeCurrent: CGPoint?
     @State var magnifyBase: Double?
     @State var lastClickAt: Date = .distantPast
+    @State var dragPreviewStart: Vec2?
+    @State var dragPreviewCurrent: Vec2?
+    @State var metalReady = false
+    @State var editingLabelID: UUID?
+    @State var labelDraft = ""
+    @FocusState var labelFieldFocused: Bool
+    @State var hudScreen: CGPoint?
+    @State var selectionHandle: SelectionHandleKind?
+    @State var handleBasePositions: [UUID: Vec2] = [:]
+    @State var handleCenter: Vec2 = .zero
+    @State var handleStartVector: Vec2 = .zero
+
+    enum SelectionHandleKind: Hashable {
+        case rotate
+        case scale(corner: Int)
+    }
 
     /// A click selects; the pointer must rest this long before a drag moves
     /// anything. The delay keeps click-selection from turning into an
@@ -42,7 +58,7 @@ struct SketchCanvas: View {
         Color.accentColor
     }
 
-    private var usesMetal: Bool {
+    var usesMetal: Bool {
         !printing && model.settings.useMetalRenderer && MetalCanvas.isSupported
     }
 
@@ -57,11 +73,12 @@ struct SketchCanvas: View {
         Vec2?,
         Set<UUID>,
         [UUID: [Vec2]],
-        SketchTool
+        SketchTool,
+        [SmartGuide]
     ) {
         let hover = model.draft.isEmpty ? nil : model.hoverWorld
         return (model.document, model.selection, model.draft, hover,
-                model.tracedIDs, model.tracePaths, model.tool)
+                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides)
     }
 
     var body: some View {
@@ -75,7 +92,9 @@ struct SketchCanvas: View {
                         }
                         .allowsHitTesting(false)
 
-                        MetalCanvas(model: model)
+                        MetalCanvas(model: model) {
+                            metalReady = true
+                        }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .allowsHitTesting(false)
 
@@ -99,6 +118,9 @@ struct SketchCanvas: View {
             }
             .contentShape(Rectangle())
             .gesture(dragGesture(size: geo.size))
+            .overlay(alignment: .topLeading) {
+                canvasOverlay(size: geo.size)
+            }
             .simultaneousGesture(magnification(size: geo.size))
             .onContinuousHover { phase in
                 switch phase {
@@ -110,6 +132,7 @@ struct SketchCanvas: View {
                     if model.hoverWorld != world {
                         model.hoverWorld = world
                     }
+                    model.lastPointerWorld = world
                     if model.tool == .pan, !isPanning {
                         NSCursor.openHand.set()
                     }
@@ -133,6 +156,9 @@ struct SketchCanvas: View {
                 } else if !isPanning {
                     NSCursor.arrow.set()
                 }
+            }
+            .onChange(of: model.settings.useMetalRenderer) { _, _ in
+                metalReady = false
             }
             .onDisappear {
                 NSCursor.arrow.set()
