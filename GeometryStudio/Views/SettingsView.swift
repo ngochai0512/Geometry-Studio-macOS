@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsView: View {
     private enum Tab: Hashable {
         case general
+        case appearance
         case units
         case canvas
         case update
@@ -13,6 +14,7 @@ struct SettingsView: View {
     }
 
     @State private var settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+    @State private var appearance = AppPreferences.appearance()
     @State private var launchAtLogin = LaunchAtLogin()
     @State private var tab: Tab = .general
 
@@ -24,6 +26,11 @@ struct SettingsView: View {
                         Label("General", systemImage: "gearshape")
                     }
                     .tag(Tab.general)
+                appearanceTab
+                    .tabItem {
+                        Label("Appearance", systemImage: "paintpalette")
+                    }
+                    .tag(Tab.appearance)
                 unitsTab
                     .tabItem {
                         Label("Units", systemImage: "ruler")
@@ -63,16 +70,20 @@ struct SettingsView: View {
                 .padding(12)
             }
         }
-        .frame(width: 480, height: 500)
+        .frame(width: 540, height: 540)
         .onAppear {
             settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+            appearance = AppPreferences.appearance()
             launchAtLogin.refresh()
         }
         .onChange(of: settings) { _, newValue in
             persist(newValue)
         }
+        .onChange(of: appearance) { _, newValue in
+            AppPreferences.saveAppearance(newValue)
+        }
         .onDisappear {
-            persist(settings)
+            AppPreferences.saveAppearance(appearance)
         }
     }
 
@@ -110,6 +121,49 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .padding(12)
+    }
+
+    private var appearanceTab: some View {
+        Form {
+            Section {
+                ForEach(AppearanceFamily.allCases) { family in
+                    LabeledContent(family.title) {
+                        ColorPicker(family.title,
+                                    selection: appearanceColorBinding(family))
+                            .labelsHidden()
+                            .accessibilityLabel(family.title)
+                    }
+                }
+            } header: {
+                Text("Default Object Colors")
+            } footer: {
+                Text("Applied to newly created objects. Existing objects keep their own colors.")
+            }
+
+            Section {
+                Button("Restore Default Colors") {
+                    appearance = AppearancePreferences()
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding(12)
+    }
+
+    private func appearanceColorBinding(_ family: AppearanceFamily) -> Binding<Color> {
+        Binding(
+            get: { appearance.color(for: family).color },
+            set: { newValue in
+                let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .black
+                var updated = appearance
+                updated.setColor(RGBA(Double(ns.redComponent),
+                                      Double(ns.greenComponent),
+                                      Double(ns.blueComponent),
+                                      Double(ns.alphaComponent)),
+                                 for: family)
+                appearance = updated
+            }
+        )
     }
 
     private var unitsTab: some View {
@@ -246,7 +300,7 @@ struct SettingsView: View {
         switch tab {
         case .general, .units, .canvas:
             return true
-        case .update, .about:
+        case .appearance, .update, .about:
             return false
         }
     }

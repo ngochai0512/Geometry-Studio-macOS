@@ -43,7 +43,7 @@ extension SketchModel {
         if let (id, _) = bestPath, let path = e.evaluate(id).path {
             checkpoint("Add Point")
             let param = path.nearestParam(to: target)
-            var object = SketchObject(kind: .pointOnPath(path: id, param: param))
+            var object = makeObject(kind: .pointOnPath(path: id, param: param))
             object.label = nextPointLabel()
             object.order = (objects.map(\.order).max() ?? 0) + 1
             objects.append(object)
@@ -55,7 +55,7 @@ extension SketchModel {
             return existing
         }
         checkpoint("Add Point")
-        var object = SketchObject(kind: .freePoint)
+        var object = makeObject(kind: .freePoint)
         object.position = target
         object.label = nextPointLabel()
         object.order = (objects.map(\.order).max() ?? 0) + 1
@@ -123,7 +123,7 @@ extension SketchModel {
                     default:
                         kind = .line(a: first, b: id)
                     }
-                    var object = SketchObject(kind: kind)
+                    var object = makeObject(kind: kind)
                     object.label = ""
                     object.order = (objects.map(\.order).max() ?? 0) + 1
                     objects.append(object)
@@ -146,7 +146,7 @@ extension SketchModel {
                     guard id != center else {
                         return
                     }
-                    var object = SketchObject(kind: .circle(center: center, through: id))
+                    var object = makeObject(kind: .circle(center: center, through: id))
                     object.order = (objects.map(\.order).max() ?? 0) + 1
                     objects.append(object)
                     selection = [object.id]
@@ -186,7 +186,7 @@ extension SketchModel {
                         return
                     }
                     draft.append(id)
-                    var object = SketchObject(kind: .angle(a: draft[0], vertex: draft[1], c: draft[2]))
+                    var object = makeObject(kind: .angle(a: draft[0], vertex: draft[1], c: draft[2]))
                     let firstLabel = objectByID(draft[0])?.label ?? ""
                     let vertexLabel = objectByID(draft[1])?.label ?? ""
                     let secondLabel = objectByID(draft[2])?.label ?? ""
@@ -210,7 +210,7 @@ extension SketchModel {
             return
         }
         checkpoint("Draw Polygon")
-        var object = SketchObject(kind: .polygon(vertices: draft))
+        var object = makeObject(kind: .polygon(vertices: draft))
         object.order = (objects.map(\.order).max() ?? 0) + 1
         objects.append(object)
         selection = [object.id]

@@ -61,9 +61,9 @@ struct CanvasSettings: Codable, Hashable {
     var smartGuides: Bool = true
     /// Degrees between snapped drawing directions; zero turns angle snapping off.
     var angleSnap: Double = 0
-    // Defaults: inches, hundredths. The factor table is [1, 72/2.54, 72],
-    // so index 2 is inches.
-    var lengthUnit: LengthUnit = .inches
+    // New sketches start in centimetres by product decision. The original
+    // defaulted to inches; the other observed defaults remain.
+    var lengthUnit: LengthUnit = .cm
     var angleUnit: AngleUnit = .degrees
     var precision: Int = 2
     var scale: Double = SketchMetrics.pixelsPerCentimetre
@@ -88,7 +88,7 @@ struct CanvasSettings: Codable, Hashable {
         smartGuides = try c.decodeIfPresent(Bool.self, forKey: .smartGuides) ?? true
         let storedAngleSnap = try c.decodeIfPresent(Double.self, forKey: .angleSnap) ?? 0
         angleSnap = CanvasSettings.angleSnapChoices.contains(storedAngleSnap) ? storedAngleSnap : 0
-        lengthUnit = try c.decodeIfPresent(LengthUnit.self, forKey: .lengthUnit) ?? .inches
+        lengthUnit = try c.decodeIfPresent(LengthUnit.self, forKey: .lengthUnit) ?? .cm
         angleUnit = try c.decodeIfPresent(AngleUnit.self, forKey: .angleUnit) ?? .degrees
         precision = try c.decodeIfPresent(Int.self, forKey: .precision) ?? 2
         scale = try c.decodeIfPresent(Double.self, forKey: .scale) ?? SketchMetrics.pixelsPerCentimetre
@@ -214,17 +214,20 @@ enum SketchTemplate {
             object.label = label
             object.position = Vec2(x, y)
             object.order = order
+            object.style.color = AppPreferences.appearance().color(for: .point)
             return object
         }
         func segment(_ a: SketchObject, _ b: SketchObject, _ order: Int) -> SketchObject {
             var object = SketchObject(kind: .segment(a: a.id, b: b.id))
             object.order = order
+            object.style.color = AppPreferences.appearance().color(for: .line)
             return object
         }
         func midpoint(_ a: SketchObject, _ b: SketchObject, _ label: String, _ order: Int) -> SketchObject {
             var object = SketchObject(kind: .midpoint(a: a.id, b: b.id))
             object.label = label
             object.order = order
+            object.style.color = AppPreferences.appearance().color(for: .point)
             return object
         }
 

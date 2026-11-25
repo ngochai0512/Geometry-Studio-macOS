@@ -487,32 +487,6 @@ extension InspectorView {
     var canvasSection: some View {
         Section("Canvas") {
             Group {
-                Toggle("Grid", isOn: $model.settings.grid)
-                LabeledContent("Grid style") {
-                    Picker("Grid style", selection: $model.settings.gridType) {
-                        ForEach(GridType.allCases) { type in
-                            Text(type.title).tag(type)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                LabeledContent("Grid color") {
-                    Picker("Grid color", selection: $model.settings.gridColor) {
-                        ForEach(RGBA.gridPalette, id: \.0) { name, color in
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 10, height: 10)
-                                Text(name)
-                            }
-                            .tag(color)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                Toggle("Bold grid", isOn: $model.settings.gridBold)
                 Toggle("GPU rendering", isOn: $model.settings.useMetalRenderer)
                     .disabled(!MetalCanvas.isSupported)
                     .help(MetalCanvas.isSupported
@@ -521,28 +495,6 @@ extension InspectorView {
                 LabeledContent("Background") {
                     ColorPicker("Background", selection: canvasBackgroundBinding)
                         .labelsHidden()
-                }
-                Toggle("Axes", isOn: $model.settings.axes)
-                Toggle("Axes numbers", isOn: $model.settings.axesLabels)
-                LabeledContent("Label style") {
-                    Picker("Label style", selection: $model.settings.axesLabelStyle) {
-                        ForEach(AxisLabelStyle.presets, id: \.self) { style in
-                            Text(style.title).tag(style)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                Toggle("Snap points to grid", isOn: $model.settings.snap)
-                Toggle("Smart guides", isOn: $model.settings.smartGuides)
-                LabeledContent("Angle snap") {
-                    Picker("Angle snap", selection: $model.settings.angleSnap) {
-                        ForEach(CanvasSettings.angleSnapChoices, id: \.self) { angle in
-                            Text(angle == 0 ? "Off" : "\(Int(angle))°").tag(angle)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
                 }
                 Toggle("Show labels", isOn: $model.settings.showLabels)
                 LabeledContent("Length") {
@@ -630,9 +582,14 @@ extension InspectorView {
     private var objectGroups: [(String, [SketchObject])] {
         [
             ("Points", filteredObjects.filter { $0.isPointLike }),
-            ("Lines", filteredObjects.filter { isLineObject($0) }),
+            ("Lines", filteredObjects.filter {
+                isLineObject($0) && !isVectorObject($0) && !isConstructionObject($0)
+                    && !isGraphObject($0)
+            }),
             ("Arcs", filteredObjects.filter { isArcObject($0) }),
-            ("Circles & Regions", filteredObjects.filter { isRegionObject($0) }),
+            ("Circles & Regions", filteredObjects.filter {
+                isRegionObject($0) && !isGraphObject($0)
+            }),
             ("Vectors & Constructions", filteredObjects.filter {
                 isVectorObject($0) || isConstructionObject($0)
             }),

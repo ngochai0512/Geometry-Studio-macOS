@@ -67,14 +67,14 @@ struct RGBA: Codable, Hashable {
 
     /// Neutral shades offered for the grid, darkest first.
     static let gridPalette: [(String, RGBA)] = [
-        ("#1C1C1F", RGBA(hex: 0x1C1C1F)),
-        ("#2F2F33", RGBA(hex: 0x2F2F33)),
-        ("#6E6D73", RGBA(hex: 0x6E6D73)),
-        ("#85848A", RGBA(hex: 0x85848A)),
-        ("#B4B3BA", RGBA(hex: 0xB4B3BA)),
-        ("#D1D0D6", RGBA(hex: 0xD1D0D6)),
-        ("#E6E6EB", RGBA(hex: 0xE6E6EB)),
-        ("#F3F2F7", RGBA(hex: 0xF3F2F7))
+        ("Charcoal", RGBA(hex: 0x1C1C1F)),
+        ("Graphite", RGBA(hex: 0x2F2F33)),
+        ("Slate", RGBA(hex: 0x6E6D73)),
+        ("Ash", RGBA(hex: 0x85848A)),
+        ("Silver", RGBA(hex: 0xB4B3BA)),
+        ("Mist", RGBA(hex: 0xD1D0D6)),
+        ("Cloud", RGBA(hex: 0xE6E6EB)),
+        ("Paper", RGBA(hex: 0xF3F2F7))
     ]
 }
 
@@ -131,33 +131,28 @@ enum AngleMarkerStyle: String, Codable, CaseIterable, Identifiable {
 
 struct AxisLabelStyle: Codable, Hashable {
     var bold = false
-    var italic = false
     var serif = false
 
     init() {}
 
-    init(bold: Bool, italic: Bool = false, serif: Bool = false) {
+    init(bold: Bool, serif: Bool = false) {
         self.bold = bold
-        self.italic = italic
         self.serif = serif
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         bold = try c.decodeIfPresent(Bool.self, forKey: .bold) ?? false
-        italic = try c.decodeIfPresent(Bool.self, forKey: .italic) ?? false
         serif = try c.decodeIfPresent(Bool.self, forKey: .serif) ?? false
     }
 
     var title: String {
-        switch (bold, italic, serif) {
-        case (false, false, false):
+        switch (bold, serif) {
+        case (false, false):
             return "Regular"
-        case (true, false, false):
+        case (true, false):
             return "Bold"
-        case (false, true, false):
-            return "Italic"
-        case (false, false, true):
+        case (false, true):
             return "Serif"
         default:
             return "Custom"
@@ -168,7 +163,6 @@ struct AxisLabelStyle: Codable, Hashable {
         [
             AxisLabelStyle(),
             AxisLabelStyle(bold: true),
-            AxisLabelStyle(bold: false, italic: true),
             AxisLabelStyle(bold: false, serif: true)
         ]
     }

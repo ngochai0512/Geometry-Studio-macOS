@@ -1,9 +1,111 @@
 import Foundation
 
+/// A coarse object family used by the appearance defaults.
+enum AppearanceFamily: String, CaseIterable, Identifiable {
+    case point
+    case line
+    case circle
+    case region
+    case measure
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .point:
+            return "Points"
+        case .line:
+            return "Lines & Segments"
+        case .circle:
+            return "Circles & Arcs"
+        case .region:
+            return "Polygons"
+        case .measure:
+            return "Measurements"
+        }
+    }
+
+    static func family(for kind: ObjectKind) -> AppearanceFamily? {
+        switch kind {
+        case .freePoint, .pointOnPath, .midpoint, .intersection:
+            return .point
+        case .segment, .ray, .line, .perpendicular, .parallel, .angleBisector,
+             .construction, .vector, .functionPlot, .coordinateSystem:
+            return .line
+        case .graph(.derivative), .graph(.tangent):
+            return .line
+        case .circle, .circleRadius, .arcOnCircle, .arcThroughPoints:
+            return .circle
+        case .polygon, .graph(.integral):
+            return .region
+        case .measurement, .calculation, .angle, .parameter, .graph(.table):
+            return .measure
+        default:
+            return nil
+        }
+    }
+}
+
+/// Default object colours for newly created geometry. Existing objects keep
+/// their stored style, so changing these never recolours an open sketch.
+struct AppearancePreferences: Codable, Hashable {
+    var pointColor: RGBA = .black
+    var lineColor: RGBA = .black
+    var circleColor: RGBA = .black
+    var regionColor: RGBA = .black
+    var measureColor: RGBA = .black
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        pointColor = try c.decodeIfPresent(RGBA.self, forKey: .pointColor) ?? .black
+        lineColor = try c.decodeIfPresent(RGBA.self, forKey: .lineColor) ?? .black
+        circleColor = try c.decodeIfPresent(RGBA.self, forKey: .circleColor) ?? .black
+        regionColor = try c.decodeIfPresent(RGBA.self, forKey: .regionColor) ?? .black
+        measureColor = try c.decodeIfPresent(RGBA.self, forKey: .measureColor) ?? .black
+    }
+
+    func color(for family: AppearanceFamily) -> RGBA {
+        switch family {
+        case .point:
+            return pointColor
+        case .line:
+            return lineColor
+        case .circle:
+            return circleColor
+        case .region:
+            return regionColor
+        case .measure:
+            return measureColor
+        }
+    }
+
+    mutating func setColor(_ color: RGBA, for family: AppearanceFamily) {
+        switch family {
+        case .point:
+            pointColor = color
+        case .line:
+            lineColor = color
+        case .circle:
+            circleColor = color
+        case .region:
+            regionColor = color
+        case .measure:
+            measureColor = color
+        }
+    }
+}
+
 /// Defaults for new sketches. A document keeps its own `CanvasSettings`, so
 /// changing these never rewrites a sketch that is already open.
 enum AppPreferences {
+    static let currentDefaultsVersion = 2
+
     enum Keys {
+        static let defaultsVersion = "defaults.version"
         static let lengthUnit = "newSketch.lengthUnit"
         static let angleUnit = "newSketch.angleUnit"
         static let precision = "newSketch.precision"
@@ -16,18 +118,20 @@ enum AppPreferences {
         static let axes = "newSketch.axes"
         static let axesLabels = "newSketch.axesLabels"
         static let axesLabelBold = "newSketch.axesLabelBold"
-        static let axesLabelItalic = "newSketch.axesLabelItalic"
         static let axesLabelSerif = "newSketch.axesLabelSerif"
         static let snap = "newSketch.snap"
         static let showLabels = "newSketch.showLabels"
         static let smartGuides = "newSketch.smartGuides"
         static let angleSnap = "newSketch.angleSnap"
+        static let appearance = "appearance.defaults"
         static let onboardingCompleted = "onboarding.completed"
     }
 
     static func canvasSettings(from defaults: UserDefaults = .standard) -> CanvasSettings {
         var settings = CanvasSettings()
-        if let raw = defaults.string(forKey: Keys.lengthUnit),
+        let version = defaults.integer(forKey: Keys.defaultsVersion)
+        if version >= currentDefaultsVersion,
+           let raw = defaults.string(forKey: Keys.lengthUnit),
            let unit = LengthUnit(rawValue: raw) {
             settings.lengthUnit = unit
         }
@@ -68,9 +172,6 @@ enum AppPreferences {
         if defaults.object(forKey: Keys.axesLabelBold) != nil {
             settings.axesLabelStyle.bold = defaults.bool(forKey: Keys.axesLabelBold)
         }
-        if defaults.object(forKey: Keys.axesLabelItalic) != nil {
-            settings.axesLabelStyle.italic = defaults.bool(forKey: Keys.axesLabelItalic)
-        }
         if defaults.object(forKey: Keys.axesLabelSerif) != nil {
             settings.axesLabelStyle.serif = defaults.bool(forKey: Keys.axesLabelSerif)
         }
@@ -93,6 +194,7 @@ enum AppPreferences {
     /// Writes the new-sketch defaults. Scale and centre are intentionally not
     /// stored: every new document starts at the standard zoom and origin.
     static func save(_ settings: CanvasSettings, to defaults: UserDefaults = .standard) {
+        defaults.set(currentDefaultsVersion, forKey: Keys.defaultsVersion)
         defaults.set(settings.lengthUnit.rawValue, forKey: Keys.lengthUnit)
         defaults.set(settings.angleUnit.rawValue, forKey: Keys.angleUnit)
         defaults.set(settings.precision, forKey: Keys.precision)
@@ -107,12 +209,26 @@ enum AppPreferences {
         defaults.set(settings.axes, forKey: Keys.axes)
         defaults.set(settings.axesLabels, forKey: Keys.axesLabels)
         defaults.set(settings.axesLabelStyle.bold, forKey: Keys.axesLabelBold)
-        defaults.set(settings.axesLabelStyle.italic, forKey: Keys.axesLabelItalic)
         defaults.set(settings.axesLabelStyle.serif, forKey: Keys.axesLabelSerif)
         defaults.set(settings.snap, forKey: Keys.snap)
         defaults.set(settings.showLabels, forKey: Keys.showLabels)
         defaults.set(settings.smartGuides, forKey: Keys.smartGuides)
         defaults.set(settings.angleSnap, forKey: Keys.angleSnap)
+    }
+
+    static func appearance(from defaults: UserDefaults = .standard) -> AppearancePreferences {
+        guard let data = defaults.data(forKey: Keys.appearance),
+              let value = try? JSONDecoder().decode(AppearancePreferences.self, from: data) else {
+            return AppearancePreferences()
+        }
+        return value
+    }
+
+    static func saveAppearance(_ appearance: AppearancePreferences,
+                               to defaults: UserDefaults = .standard) {
+        if let data = try? JSONEncoder().encode(appearance) {
+            defaults.set(data, forKey: Keys.appearance)
+        }
     }
 
     /// The welcome sheet runs once per install; Help > Tips brings it back.

@@ -909,13 +909,9 @@ extension SketchCanvas {
     }
 
     private func axisLabelFont(_ style: AxisLabelStyle) -> Font {
-        var font = Font.system(.caption2,
-                               design: style.serif ? .serif : .rounded,
-                               weight: style.bold ? .bold : .regular)
-        if style.italic {
-            font = font.italic()
-        }
-        return font
+        Font.system(.caption2,
+                    design: style.serif ? .serif : .rounded,
+                    weight: style.bold ? .bold : .regular)
     }
 
     private func drawTickMarks(_ a: Vec2, _ b: Vec2, count: Int, color: Color,

@@ -59,7 +59,6 @@ struct ContentView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SketchStatusBar(model: model)
         }
-        .navigationSubtitle("Dynamic Geometry")
         .toolbar {
             toolbarContent
         }
@@ -243,11 +242,7 @@ struct ContentView: View {
             constructMenu
             measureMenu
 
-            Toggle(isOn: $model.settings.grid) {
-                Label("Grid", systemImage: "squareshape.split.2x2")
-            }
-            .toggleStyle(.button)
-            .help("Show or hide the grid")
+            gridMenu
 
             Toggle(isOn: $model.inspectorVisible) {
                 Label("Inspector", systemImage: "sidebar.right")
@@ -269,6 +264,67 @@ struct ContentView: View {
                 }
             }
         )
+    }
+
+    /// Toolbar grid control: the current state plus the options that used to be
+    /// scattered between the Canvas inspector and the Display menu.
+    private var gridMenu: some View {
+        Menu {
+            Toggle("Show Grid", isOn: $model.settings.grid)
+
+            Picker("Grid Style", selection: $model.settings.gridType) {
+                ForEach(GridType.allCases) { type in
+                    Text(type.title).tag(type)
+                }
+            }
+
+            Picker("Grid Color", selection: $model.settings.gridColor) {
+                ForEach(RGBA.gridPalette, id: \.0) { name, color in
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(color.color)
+                            .frame(width: 10, height: 10)
+                        Text(name)
+                    }
+                    .tag(color)
+                }
+            }
+
+            Toggle("Bold Grid", isOn: $model.settings.gridBold)
+
+            Divider()
+
+            Toggle("Show Axes", isOn: $model.settings.axes)
+            Toggle("Axes Numbers", isOn: $model.settings.axesLabels)
+
+            Picker("Axis Label Style", selection: $model.settings.axesLabelStyle) {
+                ForEach(AxisLabelStyle.presets, id: \.self) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+
+            Divider()
+
+            Toggle("Snap to Grid", isOn: $model.settings.snap)
+            Toggle("Smart Guides", isOn: $model.settings.smartGuides)
+
+            Picker("Angle Snap", selection: $model.settings.angleSnap) {
+                ForEach(CanvasSettings.angleSnapChoices, id: \.self) { angle in
+                    Text(angle == 0 ? "Off" : "\(Int(angle))°").tag(angle)
+                }
+            }
+
+            Divider()
+
+            Button("Canvas Settings…") {
+                selectedTab = .sketch
+                model.inspectorVisible = true
+            }
+        } label: {
+            Label(model.settings.grid ? "Grid" : "Grid Off",
+                  systemImage: "squareshape.split.2x2")
+        }
+        .help("Grid, axes and snapping options")
     }
 
     private var constructMenu: some View {

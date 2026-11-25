@@ -211,7 +211,7 @@ extension SVGExporter {
     private func axisLabelParts(step: Double, origin: (x: Double, y: Double)) -> [String] {
         let unit = max(settings.lengthUnit.perUnit, 1e-6)
         let labelEvery = GridMetrics.labelEvery(step: step, scale: settings.scale)
-        var attributes: [(String, String)] = [
+        let attributes: [(String, String)] = [
             ("font-family", settings.axesLabelStyle.serif
                 ? "Georgia, 'Times New Roman', serif"
                 : svgFontFamily),
@@ -220,9 +220,6 @@ extension SVGExporter {
             ("fill", hex(RGBA.secondaryInk)),
             ("fill-opacity", "0.8")
         ]
-        if settings.axesLabelStyle.italic {
-            attributes.append(("font-style", "italic"))
-        }
         let rect = visibleRect
         var parts: [String] = []
 
