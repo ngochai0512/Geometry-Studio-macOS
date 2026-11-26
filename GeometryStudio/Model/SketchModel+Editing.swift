@@ -529,6 +529,20 @@ extension SketchModel {
         }
     }
 
+    /// Precise placement from the inspector or the inline coordinate field.
+    /// Only free points have an editable position; constructed points follow
+    /// their parents.
+    func moveFreePoint(_ id: UUID, to p: Vec2, coalescing key: String? = nil) {
+        guard let i = index(of: id), !objects[i].isLocked,
+              case .freePoint = objects[i].kind,
+              p.x.isFinite, p.y.isFinite else {
+            return
+        }
+        checkpoint("Move Point", coalescing: key)
+        objects[i].position = p
+        recordTraceSamples()
+    }
+
     @discardableResult
     func dragPoint(_ id: UUID, to p: Vec2, smartTolerance: Double = 0) -> Vec2? {
         guard let i = index(of: id), !objects[i].isLocked else {

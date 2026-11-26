@@ -49,6 +49,7 @@ extension SketchCanvas {
                     holdSelectionDone = false
                     pressStartedAt = Date()
                     lastSnapWorld = nil
+                    dragNeedsHold = false
 
                     if model.tool == .select {
                         let tol = 9 / model.settings.scale
@@ -59,9 +60,11 @@ extension SketchCanvas {
                             handleStartVector = model.worldPoint(value.startLocation, size: size) - handleCenter
                             lastRotationDetent = nil
                             pressHitID = nil
+                            dragNeedsHold = false
                         } else if let labelHit = model.hitTestLabel(world, tolerance: tol),
                                   let object = model.objectByID(labelHit) {
                             pressHitID = labelHit
+                            dragNeedsHold = !model.selection.contains(labelHit)
                             dragLabelID = labelHit
                             dragLabelBaseOffset = object.offset
                             dragLabelBasePosition = object.position ?? .zero
@@ -69,6 +72,7 @@ extension SketchCanvas {
                         } else if let hit = model.hitTest(world, tolerance: tol),
                                   let object = model.objectByID(hit) {
                             pressHitID = hit
+                            dragNeedsHold = !model.selection.contains(hit)
                             if object.isPointLike || isTransformedPoint(object) {
                                 dragPointID = model.beginDrag(at: world, tolerance: tol)
                             } else if isLabelLike(object) {
@@ -90,6 +94,7 @@ extension SketchCanvas {
                             }
                         } else {
                             pressHitID = nil
+                            dragNeedsHold = false
                             marqueeStart = value.startLocation
                             marqueeCurrent = value.startLocation
                         }
@@ -146,20 +151,16 @@ extension SketchCanvas {
                     return
                 }
 
-                if model.tool == .select, selectionHandle == nil {
+                if model.tool == .select, selectionHandle == nil, dragNeedsHold {
                     if !holdReached, Date().timeIntervalSince(pressStartedAt) >= holdToDragDelay {
                         holdReached = true
-                        if !holdSelectionDone, let id = dragPointID ?? dragObjectID ?? dragLabelID ?? pressHitID {
+                        if !holdSelectionDone,
+                           let id = dragPointID ?? dragObjectID ?? dragLabelID ?? pressHitID {
                             model.select(id, additive: NSEvent.modifierFlags.contains(.shift))
                             holdSelectionDone = true
                         }
-                        if dragPointID == nil && dragLabelID == nil
-                            && dragObjectID == nil && pressHitID == nil {
-                            marqueeStart = value.startLocation
-                            marqueeCurrent = value.location
-                        }
                     }
-                    guard holdReached || pressHitID == nil else {
+                    guard holdReached else {
                         return
                     }
                 }
@@ -238,6 +239,7 @@ extension SketchCanvas {
                     pressStartedAt = .distantPast
                     holdReached = false
                     holdSelectionDone = false
+                    dragNeedsHold = false
                     lastSnapWorld = nil
                     lastRotationDetent = nil
                     marqueeStart = nil
@@ -262,7 +264,7 @@ extension SketchCanvas {
                     if selectionHandle != nil {
                         return
                     }
-                    if holdReached, dragPointID != nil || dragObjectID != nil || dragLabelID != nil {
+                    if dragCheckpointed, dragPointID != nil || dragObjectID != nil || dragLabelID != nil {
                         return
                     }
                     if didMove, let ms = marqueeStart, let mc = marqueeCurrent {
@@ -278,7 +280,11 @@ extension SketchCanvas {
                     let clickCount = NSApp.currentEvent?.clickCount ?? 1
                     if !didMove, clickCount >= 2,
                        let id = pressHitID ?? model.hitTest(end, tolerance: tol) {
-                        beginLabelEditing(id)
+                        if let object = model.objectByID(id), case .freePoint = object.kind {
+                            beginCoordinateEditing(id)
+                        } else {
+                            beginLabelEditing(id)
+                        }
                     }
                     return
                 }
@@ -365,32 +371,24 @@ extension SketchCanvas {
     }
 
     private func marqueeSelect(from: CGPoint, to: CGPoint, size: CGSize) {
-        let rect = CGRect(x: min(from.x, to.x), y: min(from.y, to.y),
-                          width: abs(to.x - from.x), height: abs(to.y - from.y))
+        let a = model.worldPoint(CGPoint(x: min(from.x, to.x), y: min(from.y, to.y)), size: size)
+        let b = model.worldPoint(CGPoint(x: max(from.x, to.x), y: max(from.y, to.y)), size: size)
+        let rect = WorldRect(minX: min(a.x, b.x), minY: min(a.y, b.y),
+                             maxX: max(a.x, b.x), maxY: max(a.y, b.y))
         var e = model.evaluator()
         var hits: [UUID] = []
         for object in model.objects where object.visible {
             let r = e.evaluate(object.id)
-            if let p = r.point {
-                if rect.contains(model.screenPoint(p, size: size)) {
-                    hits.append(object.id)
-                    continue
-                }
+            if let p = r.point, rect.contains(p) {
+                hits.append(object.id)
+                continue
             }
-            if let box = r.path?.boundingBox {
-                let a = model.screenPoint(Vec2(box.minX, box.minY), size: size)
-                let b = model.screenPoint(Vec2(box.maxX, box.maxY), size: size)
-                let screenBox = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
-                                       width: abs(a.x - b.x), height: abs(a.y - b.y))
-                if rect.intersects(screenBox) {
-                    hits.append(object.id)
-                    continue
-                }
+            if let path = r.path, path.intersects(rect) {
+                hits.append(object.id)
+                continue
             }
-            if let anchor = r.anchor {
-                if rect.contains(model.screenPoint(anchor, size: size)) {
-                    hits.append(object.id)
-                }
+            if let anchor = r.anchor, rect.contains(anchor) {
+                hits.append(object.id)
             }
         }
         if NSEvent.modifierFlags.contains(.shift) {
@@ -445,7 +443,7 @@ extension SketchCanvas {
         }
     }
 
-    private func isDrawingTool(_ tool: SketchTool) -> Bool {
+    func isDrawingTool(_ tool: SketchTool) -> Bool {
         [.segment, .ray, .line, .circle, .polygon, .angle].contains(tool)
     }
 
@@ -465,5 +463,24 @@ extension SketchCanvas {
             return model.evaluated(object.id).point != nil
         }
         return false
+    }
+}
+
+extension SketchCanvas {
+    /// Drawing tools show a crosshair, geometry a hand, and everything else
+    /// the arrow. Panning manages its own open/closed hand.
+    func updateCursor(for hit: UUID?) {
+        guard !isPanning else {
+            return
+        }
+        if model.tool == .pan {
+            NSCursor.openHand.set()
+        } else if isDrawingTool(model.tool) {
+            NSCursor.crosshair.set()
+        } else if hit != nil {
+            NSCursor.openHand.set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 }
