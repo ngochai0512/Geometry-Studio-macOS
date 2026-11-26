@@ -71,6 +71,7 @@ struct SketchCanvas: View {
     /// the state it depends on here to keep redraws tied to model changes.
     /// Hover is only a drawing input while a draft is being placed; otherwise
     /// it belongs to the status bar and must not redraw the whole canvas.
+    /// `metalReady` is read so the CPU-stroked markers hand over in one pass.
     private var observedDrawingState: (
         SketchDocument,
         [UUID],
@@ -79,11 +80,13 @@ struct SketchCanvas: View {
         Set<UUID>,
         [UUID: [Vec2]],
         SketchTool,
-        [SmartGuide]
+        [SmartGuide],
+        Bool
     ) {
         let hover = model.draft.isEmpty ? nil : model.hoverWorld
         return (model.document, model.selection, model.draft, hover,
-                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides)
+                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides,
+                metalReady)
     }
 
     var body: some View {

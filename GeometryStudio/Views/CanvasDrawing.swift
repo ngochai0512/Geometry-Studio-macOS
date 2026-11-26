@@ -107,10 +107,13 @@ extension SketchCanvas {
             drawMetalFallback(context: &context, size: size,
                               rect: model.visibleRect(size: size))
         }
+        // Vectors and angle markers live in the Metal pass once it presents.
         drawDraft(context: &context, size: size)
         drawSmartGuides(context: &context, size: size)
-        drawVectors(context: &context, size: size, evaluator: &e)
-        drawAngles(context: &context, size: size, evaluator: &e)
+        if !metalReady {
+            drawVectors(context: &context, size: size, evaluator: &e)
+            drawAngles(context: &context, size: size, evaluator: &e)
+        }
         drawPoints(context: &context, size: size, evaluator: &e)
         drawTexts(context: &context, size: size, evaluator: &e)
         drawParameters(context: &context, size: size)
