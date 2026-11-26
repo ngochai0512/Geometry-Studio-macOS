@@ -19,21 +19,12 @@ struct ContentView: View {
     @State private var welcomeFirstRun = true
     @State private var showPalette = false
     @State private var showHistory = false
+    @State private var recentPalette: [String] = []
     @State private var circleRadius: Double = 2
     @State private var functionText = "sin(x)"
     @State private var calculationText = ""
     @State private var scrollMonitor: Any?
     @State private var keyMonitor: Any?
-    @State private var selectedTab: InspectorTab = .object
-
-    enum InspectorTab: String, CaseIterable, Identifiable {
-        case object = "Object"
-        case sketch = "Sketch"
-        var id: String {
-            rawValue
-        }
-    }
-
     init(model: SketchModel, presentsOnboarding: Bool = true) {
         _model = Bindable(wrappedValue: model)
         self.presentsOnboarding = presentsOnboarding
@@ -48,7 +39,6 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .inspector(isPresented: $model.inspectorVisible) {
             InspectorView(model: model,
-                          tab: $selectedTab,
                           onTextAnnotation: { point in
                               textAnchor = point
                               textDraft = ""
@@ -62,9 +52,13 @@ struct ContentView: View {
         .toolbar {
             toolbarContent
         }
-        .onChange(of: model.tool) { _, newValue in
+        .overlay(alignment: .top) {
+            if showPalette {
+                paletteOverlay
+            }
+        }
+        .onChange(of: model.tool) { _, _ in
             model.draft = []
-            model.statusMessage = newValue.hint
         }
         .onChange(of: controlActiveState) { _, state in
             if state != .inactive {
@@ -74,6 +68,17 @@ struct ContentView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear(perform: installScrollMonitor)
         .onAppear(perform: installKeyMonitor)
+        .onChange(of: showPalette) { _, open in
+            // Tool letters belong to the palette search while it is open.
+            if open {
+                if let monitor = keyMonitor {
+                    NSEvent.removeMonitor(monitor)
+                    keyMonitor = nil
+                }
+            } else {
+                installKeyMonitor()
+            }
+        }
         .onAppear {
             ActiveSketch.model = model
         }
@@ -96,6 +101,11 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openProtocol)) { _ in
             showProtocol = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openTextAnnotation)) { _ in
+            textAnchor = model.settings.center
+            textDraft = ""
+            showTextSheet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .openFunction)) { _ in
             showFunction = true
@@ -162,9 +172,6 @@ struct ContentView: View {
                              openTemplate(template)
                          })
         }
-        .sheet(isPresented: $showPalette) {
-            CommandPaletteSheet(commands: paletteCommands)
-        }
         .sheet(isPresented: $showHistory) {
             UndoHistorySheet(model: model)
         }
@@ -222,6 +229,8 @@ struct ContentView: View {
                 Button("200%") { model.setZoom(124) }
                 Divider()
                 Button("Fit Sketch") { model.fitCanvas(size: model.canvasSize) }
+                Button("Zoom to Selection") { model.zoomToSelection(size: model.canvasSize) }
+                    .disabled(model.selection.isEmpty)
                 Button("Actual Size") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
             } label: {
                 Text("\(Int(model.settings.scale / SketchMetrics.pixelsPerCentimetre * 100))%")
@@ -266,8 +275,22 @@ struct ContentView: View {
         )
     }
 
-    /// Toolbar grid control: the current state plus the options that used to be
-    /// scattered between the Canvas inspector and the Display menu.
+    /// Floating command palette, pinned near the top of the canvas.
+    @ViewBuilder
+    private var paletteOverlay: some View {
+        ZStack(alignment: .top) {
+            Color.black.opacity(0.12)
+                .ignoresSafeArea()
+                .onTapGesture { showPalette = false }
+            CommandPalettePanel(commands: paletteCommands,
+                                recents: $recentPalette,
+                                onClose: { showPalette = false })
+                .padding(.top, 64)
+        }
+    }
+
+    /// Toolbar grid control: the current state plus the grid, axis and snap
+    /// options that used to live in the inspector.
     private var gridMenu: some View {
         Menu {
             Toggle("Show Grid", isOn: $model.settings.grid)
@@ -317,8 +340,7 @@ struct ContentView: View {
             Divider()
 
             Button("Canvas Settings…") {
-                selectedTab = .sketch
-                model.inspectorVisible = true
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
         } label: {
             Label(model.settings.grid ? "Grid" : "Grid Off",
@@ -393,19 +415,9 @@ struct ContentView: View {
             Divider()
             Button("Measure All") { model.measureAll() }
             Divider()
-            Button("Plot Derivative") { model.addDerivativePlot() }
-            Button("Shade Integral") { model.addIntegralPlot() }
-            Button("Tangent at x") { model.addTangentAt() }
-            Button("Value Table") { model.addValueTable() }
-            Button("Find Roots") { model.findFunctionRoots() }
-            Button("Find Intersections") { model.findFunctionIntersections() }
-            Divider()
             Button("Calculate…") {
                 calculationText = ""
                 showCalculation = true
-            }
-            Button("Plot Function…") {
-                showFunction = true
             }
         } label: {
             Label("Measure", systemImage: "ruler")
@@ -496,15 +508,15 @@ struct ContentView: View {
     private var paletteCommands: [PaletteCommand] {
         [
             PaletteCommand(title: "Duplicate Selection", category: "Edit",
-                           symbol: "plus.square.on.square") { model.duplicateSelection() },
+                           symbol: "plus.square.on.square", shortcut: "⌘D") { model.duplicateSelection() },
             PaletteCommand(title: "Copy Objects", category: "Edit",
-                           symbol: "doc.on.doc") { model.copySelection() },
+                           symbol: "doc.on.doc", shortcut: "⌘C") { model.copySelection() },
             PaletteCommand(title: "Cut Objects", category: "Edit",
-                           symbol: "scissors") { model.cutSelection() },
+                           symbol: "scissors", shortcut: "⌘X") { model.cutSelection() },
             PaletteCommand(title: "Paste Objects", category: "Edit",
-                           symbol: "doc.on.clipboard") { model.pasteObjects() },
+                           symbol: "doc.on.clipboard", shortcut: "⌘V") { model.pasteObjects() },
             PaletteCommand(title: "Paste in Place", category: "Edit",
-                           symbol: "doc.on.clipboard") { model.pasteObjects(inPlace: true) },
+                           symbol: "doc.on.clipboard", shortcut: "⇧⌘V") { model.pasteObjects(inPlace: true) },
             PaletteCommand(title: "Lock or Unlock Selection", category: "Edit",
                            symbol: "lock") { model.toggleLockSelection() },
             PaletteCommand(title: "Send to Back", category: "Edit",
@@ -588,10 +600,18 @@ struct ContentView: View {
                 calculationText = ""
                 showCalculation = true
             },
-            PaletteCommand(title: "Plot Function…", category: "Measure",
+            PaletteCommand(title: "Plot Function…", category: "Graph",
                            symbol: "function") { showFunction = true },
-            PaletteCommand(title: "Fit Sketch", category: "View",
+            PaletteCommand(title: "Zoom to Selection", category: "View",
                            symbol: "arrow.up.left.and.arrow.down.right") {
+                model.zoomToSelection(size: model.canvasSize)
+            },
+            PaletteCommand(title: "Actual Size", category: "View",
+                           symbol: "1.magnifyingglass", shortcut: "⌘0") {
+                model.setZoom(SketchMetrics.pixelsPerCentimetre)
+            },
+            PaletteCommand(title: "Fit Sketch", category: "View",
+                           symbol: "arrow.up.left.and.arrow.down.right", shortcut: "⇧⌘F") {
                 model.fitCanvas(size: model.canvasSize)
             },
             PaletteCommand(title: "Toggle Grid", category: "View",
@@ -601,11 +621,11 @@ struct ContentView: View {
             PaletteCommand(title: "Toggle Grid Snapping", category: "View",
                            symbol: "grid.circle") { model.settings.snap.toggle() },
             PaletteCommand(title: "Toggle Inspector", category: "View",
-                           symbol: "sidebar.right") { model.inspectorVisible.toggle() },
+                           symbol: "sidebar.right", shortcut: "⌥⌘I") { model.inspectorVisible.toggle() },
             PaletteCommand(title: "Undo", category: "Edit",
-                           symbol: "arrow.uturn.backward") { model.undo() },
+                           symbol: "arrow.uturn.backward", shortcut: "⌘Z") { model.undo() },
             PaletteCommand(title: "Redo", category: "Edit",
-                           symbol: "arrow.uturn.forward") { model.redo() }
+                           symbol: "arrow.uturn.forward", shortcut: "⇧⌘Z") { model.redo() }
         ]
     }
 
