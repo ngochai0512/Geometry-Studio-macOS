@@ -870,13 +870,14 @@ extension SketchCanvas {
             guard length > 1 else {
                 continue
             }
-            let head = 8.0
+            let head = SketchMetrics.arrowHeadLength(for: length)
+            let spread = SketchMetrics.arrowHalfAngle
             var path = Path()
             path.move(to: to)
-            path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle - 0.4) * head),
-                                     y: to.y - CGFloat(sin(angle - 0.4) * head)))
-            path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle + 0.4) * head),
-                                     y: to.y - CGFloat(sin(angle + 0.4) * head)))
+            path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle - spread) * head),
+                                     y: to.y - CGFloat(sin(angle - spread) * head)))
+            path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle + spread) * head),
+                                     y: to.y - CGFloat(sin(angle + spread) * head)))
             path.closeSubpath()
             context.fill(path, with: .color(object.style.color.color))
         }

@@ -52,6 +52,17 @@ enum SketchMetrics {
     static let centimetresPerInch = 2.54
     /// 100% zoom: 72 points per inch ÷ 2.54 cm per inch.
     static let pixelsPerCentimetre = pointsPerInch / centimetresPerInch
+
+    /// Vector arrowheads on the canvas: screen length range and half-angle.
+    /// One set of values so the printed and on-screen heads stay identical.
+    static let arrowMinimumLength = 10.0
+    static let arrowMaximumLength = 15.0
+    static let arrowHalfAngle = 0.45
+
+    /// Short vectors get a proportionally smaller head, never under the minimum.
+    static func arrowHeadLength(for length: Double) -> Double {
+        min(arrowMaximumLength, max(arrowMinimumLength, length * 0.5))
+    }
 }
 
 enum AngleUnit: String, Codable, CaseIterable, Identifiable {
