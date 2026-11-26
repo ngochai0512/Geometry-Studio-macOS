@@ -4,7 +4,7 @@ import SwiftUI
 
 /// A Metal-backed geometry layer. Grid, labels, points and interaction chrome
 /// stay in the SwiftUI canvases above and below this view; fills, paths,
-/// traces and ticks are drawn here with one triangle pipeline.
+/// arrows, angle markers, traces and ticks are drawn here.
 struct MetalCanvas: NSViewRepresentable {
     let model: SketchModel
     var onFirstFrame: () -> Void = {}
@@ -48,6 +48,13 @@ struct MetalCanvas: NSViewRepresentable {
         }
         renderer.update(model: model, size: view.bounds.size)
         view.setNeedsDisplay(view.bounds)
+        if view.bounds.width <= 1 || view.bounds.height <= 1 {
+            // SwiftUI can update before layout; retry once with the real frame.
+            DispatchQueue.main.async {
+                renderer.update(model: model, size: view.bounds.size)
+                view.setNeedsDisplay(view.bounds)
+            }
+        }
     }
 
     final class Coordinator {
@@ -70,6 +77,8 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
     private let queue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
     private var vertices: [MetalVertex] = []
+    private var lastModel: SketchModel?
+    private var builtSize: CGSize = .zero
     var onFirstFrame: (() -> Void)?
     private var reportedFirstFrame = false
 
@@ -123,6 +132,15 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
     }
 
     func update(model: SketchModel, size: CGSize) {
+        lastModel = model
+        rebuild(model: model, size: size)
+    }
+
+    /// SwiftUI can hand the view a zero frame before layout; rebuilding from
+    /// `draw` or from a drawable size change gives the layer a second chance
+    /// at the real bounds instead of staying empty for the whole session.
+    private func rebuild(model: SketchModel, size: CGSize) {
+        builtSize = size
         guard size.width > 1, size.height > 1 else {
             vertices.removeAll()
             return
@@ -131,9 +149,22 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
         vertices = builder.build()
     }
 
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+    private func sizeMatches(_ a: CGSize, _ b: CGSize) -> Bool {
+        abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
+    }
+
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        guard let model = lastModel else {
+            return
+        }
+        rebuild(model: model, size: view.bounds.size)
+        view.setNeedsDisplay(view.bounds)
+    }
 
     func draw(in view: MTKView) {
+        if let model = lastModel, !sizeMatches(view.bounds.size, builtSize) {
+            rebuild(model: model, size: view.bounds.size)
+        }
         guard let descriptor = view.currentRenderPassDescriptor,
               let drawable = view.currentDrawable,
               let commandBuffer = queue.makeCommandBuffer(),
@@ -160,6 +191,8 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
         encoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        // Only hand the CPU layers over once this layer has real content;
+        // an empty pass means SwiftUI has not given us usable bounds yet.
         if !reportedFirstFrame, !vertices.isEmpty {
             reportedFirstFrame = true
             let ready = onFirstFrame
@@ -219,7 +252,78 @@ private struct MetalSceneBuilder {
                        alpha: 1,
                        ticks: object.style.tickCount)
         }
+
+        // Vectors and angle markers sit above the strokes and below the points,
+        // matching drawVectors and drawAngles on the CPU canvas.
+        for object in ordered where object.visible {
+            guard let arrow = evaluator.evaluate(object.id).arrow else {
+                continue
+            }
+            appendArrow(from: screen(arrow.from), to: screen(arrow.to),
+                        color: object.style.color)
+        }
+
+        for object in ordered where object.visible {
+            guard let (a, v, c) = evaluator.evaluate(object.id).anglePoints else {
+                continue
+            }
+            appendAngleMarker(a, v, c,
+                              style: object.style,
+                              selected: model.isSelected(object.id))
+        }
         return vertices
+    }
+
+    private mutating func appendArrow(from: CGPoint, to: CGPoint, color: RGBA) {
+        let angle = atan2(Double(to.y - from.y), Double(to.x - from.x))
+        let length = hypot(Double(to.x - from.x), Double(to.y - from.y))
+        guard length > 1 else {
+            return
+        }
+        let head = 8.0
+        let left = CGPoint(x: to.x - CGFloat(cos(angle - 0.4) * head),
+                           y: to.y - CGFloat(sin(angle - 0.4) * head))
+        let right = CGPoint(x: to.x - CGFloat(cos(angle + 0.4) * head),
+                            y: to.y - CGFloat(sin(angle + 0.4) * head))
+        appendTriangle(to, left, right, color: color, alpha: 1)
+    }
+
+    private mutating func appendAngleMarker(_ a: Vec2, _ v: Vec2, _ c: Vec2,
+                                            style: ObjectStyle, selected: Bool) {
+        let color = selected ? RGBA.accent : style.color
+        let start = atan2(a.y - v.y, a.x - v.x)
+        var delta = atan2(c.y - v.y, c.x - v.x) - start
+        while delta > .pi {
+            delta -= .pi * 2
+        }
+        while delta < -.pi {
+            delta += .pi * 2
+        }
+        let width = selected ? 2.0 : 1.3
+        switch style.angleMarker {
+        case .none:
+            return
+
+        case .rightAngle:
+            let markerSize = 0.22
+            let first = v + Vec2(cos(start), sin(start)) * markerSize
+            let second = v + Vec2(cos(start + delta), sin(start + delta)) * markerSize
+            let corner = first + second - v
+            appendPolyline([screen(v), screen(first), screen(corner), screen(second)],
+                           color: color, width: width, alpha: 0.9, closed: true)
+
+        case .arc, .doubleArc:
+            let radii: [Double] = style.angleMarker == .doubleArc ? [0.62, 0.74] : [0.62]
+            for radius in radii {
+                var points: [CGPoint] = []
+                for index in 0...30 {
+                    let t = Double(index) / 30.0
+                    let angle = start + delta * t
+                    points.append(screen(v + Vec2(cos(angle), sin(angle)) * radius))
+                }
+                appendPolyline(points, color: color, width: width, alpha: 0.9)
+            }
+        }
     }
 
     private func dashPattern(_ style: ObjectStyle) -> [CGFloat] {
