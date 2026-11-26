@@ -224,25 +224,69 @@ struct PaletteCommand: Identifiable {
     var title: String
     var category: String
     var symbol: String
+    var shortcut: String = ""
     var action: () -> Void
 }
 
-struct CommandPaletteSheet: View {
+/// A floating command palette: fuzzy search, arrow keys, a highlighted row and
+/// a Recent section, rather than a modal list of every command.
+struct CommandPalettePanel: View {
     var commands: [PaletteCommand]
+    @Binding var recents: [String]
+    var onClose: () -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    @State private var selectedIndex = 0
+    @State private var visible: [PaletteRow] = []
+    @State private var keyMonitor: Any?
     @FocusState private var searchFocused: Bool
 
-    private var filtered: [PaletteCommand] {
+    private struct PaletteRow: Identifiable {
+        let id: String
+        let command: PaletteCommand
+        let section: String
+    }
+
+    private func refreshRows() {
+        visible = computeRows()
+        if selectedIndex >= visible.count {
+            selectedIndex = max(0, visible.count - 1)
+        }
+    }
+
+    private func computeRows() -> [PaletteRow] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return commands
+        if trimmed.isEmpty {
+            var result: [PaletteRow] = []
+            for title in recents {
+                if let command = commands.first(where: { $0.title == title }) {
+                    result.append(PaletteRow(id: "recent-\(command.id)", command: command,
+                                             section: "Recent"))
+                }
+            }
+            let recentTitles = Set(result.map(\.command.title))
+            for command in commands where !recentTitles.contains(command.title) {
+                result.append(PaletteRow(id: "\(command.id)", command: command,
+                                         section: "All Commands"))
+            }
+            return result
         }
-        return commands.filter {
-            $0.title.localizedCaseInsensitiveContains(trimmed)
-                || $0.category.localizedCaseInsensitiveContains(trimmed)
+        var scored: [(PaletteCommand, Int)] = []
+        for command in commands {
+            let score = fuzzyScore(command.title, needle: trimmed)
+                ?? fuzzyScore(command.category, needle: trimmed).map { $0 - 6 }
+            if let score {
+                scored.append((command, score))
+            }
         }
+        return scored
+            .sorted {
+                $0.1 == $1.1 ? $0.0.title < $1.0.title : $0.1 > $1.1
+            }
+            .map {
+                PaletteRow(id: "\($0.0.id)", command: $0.0,
+                           section: "Results")
+            }
     }
 
     var body: some View {
@@ -250,65 +294,203 @@ struct CommandPaletteSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search constructions, measurements and commands", text: $query)
+                TextField("Search commands", text: $query)
                     .textFieldStyle(.plain)
+                    .font(.body)
                     .focused($searchFocused)
-                    .onSubmit {
-                        runFirst()
-                    }
+                Text("esc")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.tertiary)
             }
-            .padding(14)
+            .padding(12)
 
             Divider()
 
-            if filtered.isEmpty {
+            if visible.isEmpty {
                 Text("No commands match.")
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(28)
             } else {
-                List(filtered) { command in
-                    Button {
-                        run(command)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: command.symbol)
-                                .foregroundStyle(.tint)
-                                .frame(width: 18)
-                            Text(command.title)
-                            Spacer()
-                            Text(command.category)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(visible.enumerated()), id: \.element.id) { index, row in
+                                if index == 0 || visible[index - 1].section != row.section {
+                                    Text(row.section)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 10)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, 2)
+                                }
+                                paletteRow(row, index: index)
+                                    .id(row.id)
+                            }
                         }
-                        .contentShape(Rectangle())
+                        .padding(.vertical, 4)
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxHeight: 360)
+                    .onChange(of: selectedIndex) { _, index in
+                        guard visible.indices.contains(index) else {
+                            return
+                        }
+                        proxy.scrollTo(visible[index].id)
+                    }
                 }
-                .listStyle(.inset)
             }
+
+            Divider()
+
+            HStack {
+                Text("↑↓ to move   ↵ to run")
+                Spacer()
+                Text("\(visible.count) results")
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
         }
-        .frame(minWidth: 520, minHeight: 420)
+        .frame(width: 560)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.quaternary, lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.28), radius: 26, y: 12)
         .onAppear {
+            refreshRows()
             searchFocused = true
+            installKeyMonitor()
         }
-        .onExitCommand {
-            dismiss()
+        .onDisappear {
+            if let monitor = keyMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
+            keyMonitor = nil
+        }
+        .onChange(of: query) { _, _ in
+            selectedIndex = 0
+            refreshRows()
         }
     }
 
-    private func runFirst() {
-        guard let first = filtered.first else {
+    private func paletteRow(_ row: PaletteRow, index: Int) -> some View {
+        Button {
+            run(row.command)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: row.command.symbol)
+                    .foregroundStyle(.tint)
+                    .frame(width: 18)
+                Text(row.command.title)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 12)
+                if !row.command.shortcut.isEmpty {
+                    Text(row.command.shortcut)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+                Text(row.command.category)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(index == selectedIndex ? Color.accentColor.opacity(0.18)
+                        : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering {
+                selectedIndex = index
+            }
+        }
+        .padding(.horizontal, 6)
+    }
+
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else {
             return
         }
-        run(first)
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            switch event.keyCode {
+            case 53:
+                onClose()
+                return nil
+            case 125:
+                moveSelection(1)
+                return nil
+            case 126:
+                moveSelection(-1)
+                return nil
+            case 36, 76:
+                runSelected()
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+
+    private func moveSelection(_ delta: Int) {
+        guard !visible.isEmpty else {
+            return
+        }
+        selectedIndex = min(max(selectedIndex + delta, 0), visible.count - 1)
+    }
+
+    private func runSelected() {
+        guard visible.indices.contains(selectedIndex) else {
+            return
+        }
+        run(visible[selectedIndex].command)
     }
 
     private func run(_ command: PaletteCommand) {
-        dismiss()
-        // Let the sheet finish dismissing before a command opens another one.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        recents.removeAll { $0 == command.title }
+        recents.insert(command.title, at: 0)
+        if recents.count > 6 {
+            recents.removeLast(recents.count - 6)
+        }
+        onClose()
+        // Let the panel close before a command opens another sheet.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             command.action()
         }
+    }
+
+    /// Subsequence match with word-start and consecutive-run bonuses; nil when
+    /// the needle does not appear in order.
+    private func fuzzyScore(_ text: String, needle: String) -> Int? {
+        guard !needle.isEmpty else {
+            return 0
+        }
+        let haystack = text.lowercased()
+        let query = needle.lowercased()
+        var score = 0
+        var cursor = haystack.startIndex
+        var previous: String.Index?
+        for character in query {
+            guard let found = haystack[cursor...].firstIndex(of: character) else {
+                return nil
+            }
+            score += 1
+            if found == haystack.startIndex
+                || haystack[haystack.index(before: found)] == " " {
+                score += 5
+            }
+            if let previous, haystack.index(after: previous) == found {
+                score += 3
+            }
+            previous = found
+            cursor = haystack.index(after: found)
+        }
+        return score + max(0, 12 - haystack.count / 5)
     }
 }
 
@@ -466,12 +648,15 @@ private struct SheetFooter: View {
 }
 
 #Preview("Command Palette") {
-    CommandPaletteSheet(commands: [
+    CommandPalettePanel(commands: [
         PaletteCommand(title: "Midpoint", category: "Construct", symbol: "circle.dotted") {},
         PaletteCommand(title: "Measure All", category: "Measure", symbol: "ruler") {},
         PaletteCommand(title: "Fit Sketch", category: "View",
-                       symbol: "arrow.up.left.and.arrow.down.right") {}
-    ])
+                       symbol: "arrow.up.left.and.arrow.down.right",
+                       shortcut: "⇧⌘F") {}
+    ],
+                       recents: .constant([]),
+                       onClose: {})
 }
 
 #Preview("Undo History") {
