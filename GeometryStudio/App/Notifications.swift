@@ -11,5 +11,6 @@ extension Notification.Name {
     static let openCommandPalette = Notification.Name("openCommandPalette")
     static let openUndoHistory = Notification.Name("openUndoHistory")
     static let openTips = Notification.Name("openTips")
+    static let openTextAnnotation = Notification.Name("openTextAnnotation")
     static let newSketchRequested = Notification.Name("newSketchRequested")
 }

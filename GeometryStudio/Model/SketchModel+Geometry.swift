@@ -423,6 +423,7 @@ extension SketchModel {
         current.gridColor = new.gridColor
         current.gridBold = new.gridBold
         current.backgroundColor = new.backgroundColor
+        current.theme = new.theme
         current.useMetalRenderer = new.useMetalRenderer
         current.axes = new.axes
         current.axesLabels = new.axesLabels
@@ -457,8 +458,42 @@ extension SketchModel {
             settings.scale = SketchMetrics.pixelsPerCentimetre
             return
         }
-        var box = WorldRect(minX: pts[0].x, minY: pts[0].y, maxX: pts[0].x, maxY: pts[0].y)
-        for p in pts {
+        frame(points: pts, size: size)
+    }
+
+    /// Frames the current selection, leaving the zoom alone when nothing is
+    /// selected.
+    func zoomToSelection(size: CGSize) {
+        guard !selection.isEmpty, size.width > 40, size.height > 40 else {
+            return
+        }
+        var e = evaluator()
+        var pts: [Vec2] = []
+        for id in selection {
+            guard let object = objectByID(id), object.visible else {
+                continue
+            }
+            let r = e.evaluate(id)
+            if let p = r.point {
+                pts.append(p)
+            }
+            if let b = r.path?.boundingBox {
+                if b.width.isFinite && b.height.isFinite && b.width < 1_000 && b.height < 1_000 {
+                    pts.append(Vec2(b.minX, b.minY))
+                    pts.append(Vec2(b.maxX, b.maxY))
+                }
+            }
+        }
+        frame(points: pts, size: size)
+    }
+
+    private func frame(points: [Vec2], size: CGSize) {
+        guard !points.isEmpty else {
+            return
+        }
+        var box = WorldRect(minX: points[0].x, minY: points[0].y,
+                            maxX: points[0].x, maxY: points[0].y)
+        for p in points {
             box.minX = min(box.minX, p.x)
             box.maxX = max(box.maxX, p.x)
             box.minY = min(box.minY, p.y)

@@ -72,10 +72,10 @@ app-bundle binary does not carry it.
   0–5 decimal places, with centimetres, hundredths and degrees as the defaults.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
 - **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
-- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback.
+- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback; light, dark and paper canvas themes flip ink, labels, cards, axes and halos together, and a dark custom background inverts them automatically.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
-- **Inspector** — object browser, label, definition, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
+- **Inspector** — one panel with the selected object above a persistent, collapsible layer list: label, definition, editable X/Y, radius, length and angle, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
 - **Construction protocol** — a sheet listing every construction step in order.
 - **Documents** — a document-based app: new, open, save and save as (`.gsp`, JSON document format),
   autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,
@@ -118,12 +118,14 @@ app-bundle binary does not carry it.
 | T | Text |
 
 `⌘Z` / `⇧⌘Z` undo and redo, `⌘A` select all, `⌘P` prints the sketch, Delete removes the
-selection. Scroll to pan, pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a
+selection. Scroll to pan, pinch or `⌘`-scroll to zoom; `⌘+` / `⌘−` zoom, `⌘0` is actual size,
+`⇧⌘F` fits the sketch and `⇧⌘0` frames the selection. Return closes a polygon; Escape cancels a
 draft.
 
-`⌘K` opens the command palette, `⌘D` duplicates the selection, `⌥⌘C` / `⌥⌘X` / `⌥⌘V` copy,
-cut and paste objects across documents, `⌃⌘V` pastes in place, and `⌥⌘Z` opens the undo
-history. Double-click a label to edit it in place.
+`⌘K` opens the command palette, `⌘D` duplicates the selection, `⌘C` / `⌘X` / `⌘V` copy, cut
+and paste objects across documents (text fields keep the native clipboard), `⇧⌘V` pastes in
+place, `⌥⌘P` plays or pauses the animation, and `⌥⌘Z` opens the undo history. Double-click a
+free point to type its coordinates, or a label to edit it in place.
 
 ## Design notes
 

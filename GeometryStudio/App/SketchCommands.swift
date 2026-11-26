@@ -11,13 +11,45 @@ struct SketchCommands: Commands {
         return responder is NSTextView
     }
 
+    /// Text fields keep the native clipboard; the canvas gets the object
+    /// clipboard. A menu item is built once, so this reads the live responder.
+    private func forwardToText(_ selector: Selector, or action: @escaping () -> Void) {
+        if isEditingText, NSApp.sendAction(selector, to: nil, from: nil) {
+            return
+        }
+        action()
+    }
+
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button("About Geometry Studio") { model?.showAbout = true }
         }
 
-        CommandGroup(after: .pasteboard) {
+        CommandGroup(replacing: .pasteboard) {
+            Button("Cut") {
+                forwardToText(#selector(NSText.cut(_:))) { model?.cutSelection() }
+            }
+            .keyboardShortcut("x", modifiers: .command)
+            .disabled(model?.selection.isEmpty != false && !isEditingText)
+
+            Button("Copy") {
+                forwardToText(#selector(NSText.copy(_:))) { model?.copySelection() }
+            }
+            .keyboardShortcut("c", modifiers: .command)
+            .disabled(model?.selection.isEmpty != false && !isEditingText)
+
+            Button("Paste") {
+                forwardToText(#selector(NSText.paste(_:))) { model?.pasteObjects() }
+            }
+            .keyboardShortcut("v", modifiers: .command)
+            .disabled(model?.canPasteObjects != true && !isEditingText)
+
+            Button("Paste in Place") { model?.pasteObjects(inPlace: true) }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+                .disabled(model?.canPasteObjects != true)
+
             Divider()
+
             Button("Delete") {
                 if isEditingText {
                     NSApp.sendAction(#selector(NSResponder.deleteBackward(_:)), to: nil, from: nil)
@@ -27,6 +59,7 @@ struct SketchCommands: Commands {
             }
             .keyboardShortcut(.delete, modifiers: [])
             .disabled(model?.selection.isEmpty != false && !isEditingText)
+
             Button("Select All") {
                 if isEditingText {
                     NSApp.sendAction(#selector(NSResponder.selectAll(_:)), to: nil, from: nil)
@@ -36,22 +69,13 @@ struct SketchCommands: Commands {
             }
             .keyboardShortcut("a", modifiers: .command)
             .disabled(model == nil)
+
             Divider()
+
             Button("Duplicate") { model?.duplicateSelection() }
                 .keyboardShortcut("d", modifiers: .command)
                 .disabled(model?.selection.isEmpty != false)
-            Button("Copy Objects") { model?.copySelection() }
-                .keyboardShortcut("c", modifiers: [.command, .option])
-                .disabled(model?.selection.isEmpty != false)
-            Button("Cut Objects") { model?.cutSelection() }
-                .keyboardShortcut("x", modifiers: [.command, .option])
-                .disabled(model?.selection.isEmpty != false)
-            Button("Paste Objects") { model?.pasteObjects() }
-                .keyboardShortcut("v", modifiers: [.command, .option])
-                .disabled(model?.canPasteObjects != true)
-            Button("Paste in Place") { model?.pasteObjects(inPlace: true) }
-                .keyboardShortcut("v", modifiers: [.command, .control])
-                .disabled(model?.canPasteObjects != true)
+
             Button("Undo History…") {
                 NotificationCenter.default.post(name: .openUndoHistory, object: nil)
             }
@@ -139,6 +163,10 @@ struct SketchCommands: Commands {
             Divider()
             Button("Locus from Selection") { model?.constructLocus() }
                 .disabled(model == nil)
+            Button("Add Caption") {
+                NotificationCenter.default.post(name: .openTextAnnotation, object: nil)
+            }
+            .disabled(model == nil)
             Divider()
             Button("Construction Protocol…") {
                 NotificationCenter.default.post(name: .openProtocol, object: nil)
@@ -192,10 +220,6 @@ struct SketchCommands: Commands {
                 NotificationCenter.default.post(name: .openCalculation, object: nil)
             }
             .disabled(model == nil)
-            Button("Plot Function…") {
-                NotificationCenter.default.post(name: .openFunction, object: nil)
-            }
-            .disabled(model == nil)
         }
 
         CommandMenu("Transform") {
@@ -241,7 +265,6 @@ struct SketchCommands: Commands {
                 NotificationCenter.default.post(name: .openFunction, object: nil)
             }
             .disabled(model == nil)
-            Divider()
             Button("Plot Derivative") { model?.addDerivativePlot() }
                 .disabled(model == nil)
             Button("Shade Integral") { model?.addIntegralPlot() }
@@ -256,7 +279,31 @@ struct SketchCommands: Commands {
                 .disabled(model == nil)
         }
 
-        CommandMenu("Display") {
+        CommandMenu("View") {
+            Button("Zoom In") { model?.zoom(by: 1.19) }
+                .keyboardShortcut("+", modifiers: .command)
+                .disabled(model == nil)
+            Button("Zoom Out") { model?.zoom(by: 0.84) }
+                .keyboardShortcut("-", modifiers: .command)
+                .disabled(model == nil)
+            Button("Actual Size") { model?.setZoom(SketchMetrics.pixelsPerCentimetre) }
+                .keyboardShortcut("0", modifiers: .command)
+                .disabled(model == nil)
+            Button("Fit Sketch") {
+                if let model {
+                    model.fitCanvas(size: model.canvasSize)
+                }
+            }
+            .keyboardShortcut("f", modifiers: [.command, .shift])
+            .disabled(model == nil)
+            Button("Zoom to Selection") {
+                if let model {
+                    model.zoomToSelection(size: model.canvasSize)
+                }
+            }
+            .keyboardShortcut("0", modifiers: [.command, .shift])
+            .disabled(model?.selection.isEmpty != false)
+            Divider()
             Button("Show Labels") { model?.settings.showLabels = true }
                 .disabled(model == nil)
             Button("Hide Labels") { model?.settings.showLabels = false }
@@ -270,20 +317,15 @@ struct SketchCommands: Commands {
             Button(model?.animationPointID == nil ? "Animate" : "Pause Animation") {
                 model?.toggleAnimation()
             }
-            .keyboardShortcut("`", modifiers: [])
+            .keyboardShortcut("p", modifiers: [.command, .option])
             .disabled(model == nil)
             Button("Trace Selection") { model?.toggleTrace() }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
                 .disabled(model == nil)
             Button("Erase Traces") { model?.eraseTraces() }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
                 .disabled(model == nil)
             Divider()
-            Button("Fit Sketch") {
-                if let model {
-                    model.fitCanvas(size: model.canvasSize)
-                }
-            }
-            .disabled(model == nil)
             Button(model?.inspectorVisible == true ? "Hide Inspector" : "Show Inspector") {
                 model?.inspectorVisible.toggle()
             }
