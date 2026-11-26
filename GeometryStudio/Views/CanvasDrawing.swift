@@ -206,6 +206,89 @@ extension SketchCanvas {
                 labelFieldFocused = false
             }
         }
+
+        if let id = editingCoordinateID,
+           let object = model.objectByID(id),
+           let position = object.position {
+            let point = model.screenPoint(position, size: size)
+            HStack(spacing: 5) {
+                TextField("x", text: $coordinateDraftX)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 62)
+                    .focused($coordinateFieldFocused)
+                    .onSubmit { commitCoordinateEdit() }
+                TextField("y", text: $coordinateDraftY)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 62)
+                    .onSubmit { commitCoordinateEdit() }
+                Button {
+                    commitCoordinateEdit()
+                } label: {
+                    Image(systemName: "checkmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Apply coordinates")
+                .accessibilityLabel("Apply coordinates")
+            }
+            .padding(6)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(accent.opacity(0.35), lineWidth: 0.8)
+            }
+            .position(
+                x: min(max(point.x + 110, 130), max(size.width - 130, 130)),
+                y: min(max(point.y - 26, 26), max(size.height - 26, 26))
+            )
+            .onAppear {
+                DispatchQueue.main.async {
+                    coordinateFieldFocused = true
+                }
+            }
+            .onExitCommand {
+                editingCoordinateID = nil
+                coordinateFieldFocused = false
+            }
+        }
+    }
+
+    func beginCoordinateEditing(_ id: UUID) {
+        guard let object = model.objectByID(id), !object.isLocked,
+              case .freePoint = object.kind,
+              let position = object.position else {
+            return
+        }
+        let unit = model.settings.lengthUnit.perUnit
+        let digits = max(0, min(model.settings.precision, 6))
+        coordinateDraftX = String(format: "%.\(digits)f", position.x / unit)
+        coordinateDraftY = String(format: "%.\(digits)f", position.y / unit)
+        model.selection = [id]
+        editingLabelID = nil
+        editingCoordinateID = id
+    }
+
+    func commitCoordinateEdit() {
+        guard let id = editingCoordinateID, let object = model.objectByID(id),
+              case .freePoint = object.kind else {
+            editingCoordinateID = nil
+            return
+        }
+        func number(_ text: String) -> Double? {
+            let normalized = text
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .replacingOccurrences(of: ",", with: ".")
+            guard let value = Double(normalized), value.isFinite else {
+                return nil
+            }
+            return value
+        }
+        guard let x = number(coordinateDraftX), let y = number(coordinateDraftY) else {
+            return
+        }
+        let unit = model.settings.lengthUnit.perUnit
+        model.moveFreePoint(id, to: Vec2(x * unit, y * unit), coalescing: "inline-point-\(id)")
+        editingCoordinateID = nil
+        coordinateFieldFocused = false
     }
 
     func beginLabelEditing(_ id: UUID) {
@@ -228,6 +311,7 @@ extension SketchCanvas {
         } else {
             labelDraft = object.label
         }
+        editingCoordinateID = nil
         editingLabelID = id
     }
 
@@ -261,7 +345,7 @@ extension SketchCanvas {
                 fill.addLine(to: model.screenPoint(point, size: size))
             }
             fill.closeSubpath()
-            context.fill(fill, with: .color(style.color.color.opacity(style.fillOpacity * alphaScale)))
+            context.fill(fill, with: .color(palette.resolve(style.color).color.opacity(style.fillOpacity * alphaScale)))
         case .circle(let center, let radius):
             let point = model.screenPoint(center, size: size)
             let scaledRadius = radius * model.settings.scale
@@ -272,7 +356,7 @@ extension SketchCanvas {
                 height: scaledRadius * 2
             )
             context.fill(Path(ellipseIn: box),
-                         with: .color(style.color.color.opacity(style.fillOpacity * alphaScale * 0.7)))
+                         with: .color(palette.resolve(style.color).color.opacity(style.fillOpacity * alphaScale * 0.7)))
         default:
             break
         }
@@ -288,7 +372,7 @@ extension SketchCanvas {
             for pt in points.dropFirst() {
                 p.addLine(to: model.screenPoint(pt, size: size))
             }
-            context.stroke(p, with: .color(object.style.color.color.opacity(0.5)),
+            context.stroke(p, with: .color(palette.resolve(object.style.color).color.opacity(0.5)),
                            style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
         }
     }
@@ -352,7 +436,7 @@ extension SketchCanvas {
             minor.addLine(to: CGPoint(x: size.width, y: sy))
             y += step
         }
-        let gridColor = model.settings.gridColor.color
+        let gridColor = palette.grid.color
         let bold = model.settings.gridBold
         context.stroke(minor, with: .color(gridColor.opacity(bold ? 0.16 : 0.08)),
                        lineWidth: bold ? 1.0 : 0.7)
@@ -416,7 +500,7 @@ extension SketchCanvas {
                 offset += rootStep
             }
         }
-        context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
+        context.stroke(path, with: .color(palette.grid.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
                        lineWidth: model.settings.gridBold ? 1.0 : 0.7)
     }
 
@@ -458,7 +542,7 @@ extension SketchCanvas {
                 offset += step
             }
         }
-        context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
+        context.stroke(path, with: .color(palette.grid.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
                        lineWidth: model.settings.gridBold ? 1.0 : 0.7)
     }
 
@@ -511,7 +595,7 @@ extension SketchCanvas {
         for corner in corners {
             let handle = CGRect(x: corner.x - 4, y: corner.y - 4, width: 8, height: 8)
             context.fill(Path(roundedRect: handle, cornerRadius: 1.5),
-                         with: .color(Color.white))
+                         with: .color(palette.card.color))
             context.stroke(Path(roundedRect: handle, cornerRadius: 1.5),
                            with: .color(accent.opacity(0.8)), lineWidth: 1.2)
         }
@@ -522,7 +606,7 @@ extension SketchCanvas {
         stem.addLine(to: rotate)
         context.stroke(stem, with: .color(accent.opacity(0.6)), lineWidth: 1)
         let rotateHandle = CGRect(x: rotate.x - 5, y: rotate.y - 5, width: 10, height: 10)
-        context.fill(Path(ellipseIn: rotateHandle), with: .color(Color.white))
+        context.fill(Path(ellipseIn: rotateHandle), with: .color(palette.card.color))
         context.stroke(Path(ellipseIn: rotateHandle),
                        with: .color(accent.opacity(0.85)), lineWidth: 1.3)
     }
@@ -560,7 +644,7 @@ extension SketchCanvas {
             path.addLine(to: CGPoint(x: center.x + cos(angle) * spokeLength,
                                      y: center.y - sin(angle) * spokeLength))
         }
-        context.stroke(path, with: .color(model.settings.gridColor.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
+        context.stroke(path, with: .color(palette.grid.color.opacity(model.settings.gridBold ? 0.16 : 0.08)),
                        lineWidth: model.settings.gridBold ? 1.0 : 0.7)
     }
 
@@ -594,7 +678,7 @@ extension SketchCanvas {
                 if abs(x) > 1e-9 && p.y >= 0 && p.y <= size.height {
                     let label = Text(GridMetrics.cleanNumber(x / unit))
                         .font(font)
-                        .foregroundStyle(secondaryInk.opacity(0.8))
+                        .foregroundStyle(palette.axisLabel.color)
                     context.draw(label, at: CGPoint(x: p.x, y: min(max(p.y + 13, 12), size.height - 10)),
                                  anchor: .top)
                 }
@@ -609,7 +693,7 @@ extension SketchCanvas {
                 if abs(y) > 1e-9 && p.x >= 0 && p.x <= size.width {
                     let label = Text(GridMetrics.cleanNumber(y / unit))
                         .font(font)
-                        .foregroundStyle(secondaryInk.opacity(0.8))
+                        .foregroundStyle(palette.axisLabel.color)
                     context.draw(label, at: CGPoint(x: min(max(p.x - 8, 10), size.width - 10), y: p.y),
                                  anchor: .trailing)
                 }
@@ -619,14 +703,14 @@ extension SketchCanvas {
         if origin.x > 8 && origin.x < size.width - 8 && origin.y > 8 && origin.y < size.height - 8 {
             context.draw(Text("0")
                 .font(font)
-                .foregroundStyle(secondaryInk.opacity(0.75)),
+                .foregroundStyle(palette.axisLabel.color.opacity(0.9)),
                          at: CGPoint(x: origin.x - 7, y: origin.y + 7), anchor: .topTrailing)
         }
     }
 
     private func stroke(path: EvalPath, style: ObjectStyle, selected: Bool, glow: Bool,
                         context: inout GraphicsContext, size: CGSize, rect: WorldRect) {
-        let color = glow ? accent : (selected ? accent : style.color.color)
+        let color = glow ? accent : (selected ? accent : palette.resolve(style.color).color)
         let width = glow ? style.lineWidth + 5 : (selected ? style.lineWidth + 1.2 : style.lineWidth)
         let dash: [CGFloat] = style.dash == .dashed ? [7, 4] : style.dash == .dotted ? [1.2, 3.5] : []
         let strokeStyle = StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round, dash: dash)
@@ -755,7 +839,7 @@ extension SketchCanvas {
         guard let final = current else {
             return
         }
-        let color = glow ? accent : (selected ? accent : style.color.color)
+        let color = glow ? accent : (selected ? accent : palette.resolve(style.color).color)
         context.stroke(final, with: .color(color.opacity(glow ? 0.2 : 1)),
                        style: StrokeStyle(lineWidth: glow ? style.lineWidth + 4 : style.lineWidth,
                                           lineCap: .round, lineJoin: .round))
@@ -772,7 +856,7 @@ extension SketchCanvas {
             guard stepPixels >= 8, stepPixels < 4_000 else {
                 continue
             }
-            let color = object.style.color.color
+            let color = palette.resolve(object.style.color).color
             let center = model.screenPoint(origin, size: size)
             var path = Path()
 
@@ -879,7 +963,7 @@ extension SketchCanvas {
             path.addLine(to: CGPoint(x: to.x - CGFloat(cos(angle + spread) * head),
                                      y: to.y - CGFloat(sin(angle + spread) * head)))
             path.closeSubpath()
-            context.fill(path, with: .color(object.style.color.color))
+            context.fill(path, with: .color(palette.resolve(object.style.color).color))
         }
     }
 
@@ -895,15 +979,15 @@ extension SketchCanvas {
             let valueText = String(format: "%.\(precision)f", value)
             let text = Text("\(name) = \(valueText)")
                 .font(.system(.callout, design: .rounded, weight: .semibold))
-                .foregroundStyle(object.style.color.color)
+                .foregroundStyle(palette.resolve(object.style.color).color)
             let width: CGFloat = 128
             let height: CGFloat = 38
             let rect = CGRect(x: position.x - width / 2, y: position.y - height / 2,
                               width: width, height: height)
             context.fill(Path(roundedRect: rect, cornerRadius: 7),
-                         with: .color(Color.white.opacity(0.92)))
+                         with: .color(palette.card.color))
             context.stroke(Path(roundedRect: rect, cornerRadius: 7),
-                           with: .color(model.isSelected(object.id) ? accent : ink.opacity(0.15)),
+                           with: .color(model.isSelected(object.id) ? accent : palette.cardBorder.color),
                            lineWidth: model.isSelected(object.id) ? 1.5 : 0.8)
             context.draw(text, at: CGPoint(x: rect.minX + 9, y: rect.minY + 7), anchor: .topLeading)
         }
@@ -954,7 +1038,7 @@ extension SketchCanvas {
                 delta += .pi * 2
             }
             let selected = model.isSelected(object.id)
-            let color = selected ? accent : object.style.color.color
+            let color = selected ? accent : palette.resolve(object.style.color).color
             switch object.style.angleMarker {
             case .none:
                 continue
@@ -1004,19 +1088,25 @@ extension SketchCanvas {
             let s = model.screenPoint(p, size: size)
             let selected = model.isSelected(object.id)
             let r = object.style.pointSize
-            let color = selected ? accent : object.style.color.color
+            let color = selected ? accent : palette.resolve(object.style.color).color
 
             if selected {
                 let ring = CGRect(x: s.x - r - 4.5, y: s.y - r - 4.5,
                                   width: (r + 4.5) * 2, height: (r + 4.5) * 2)
                 context.fill(Path(ellipseIn: ring), with: .color(accent.opacity(0.18)))
                 context.stroke(Path(ellipseIn: ring), with: .color(accent.opacity(0.85)), lineWidth: 1.2)
+            } else if object.id == hoveredObjectID {
+                let ring = CGRect(x: s.x - r - 3, y: s.y - r - 3,
+                                  width: (r + 3) * 2, height: (r + 3) * 2)
+                context.stroke(Path(ellipseIn: ring),
+                               with: .color(accent.opacity(0.4)),
+                               lineWidth: 1)
             }
 
             // A small white halo keeps points legible where many objects meet.
             let halo = CGRect(x: s.x - r - 1.5, y: s.y - r - 1.5,
                               width: (r + 1.5) * 2, height: (r + 1.5) * 2)
-            context.fill(Path(ellipseIn: halo), with: .color(Color.white.opacity(0.9)))
+            context.fill(Path(ellipseIn: halo), with: .color(palette.halo.color))
 
             switch object.style.pointShape {
             case .filled:
@@ -1024,7 +1114,7 @@ extension SketchCanvas {
                 context.fill(Path(ellipseIn: box), with: .color(color))
             case .hollow:
                 let box = CGRect(x: s.x - r / 2, y: s.y - r / 2, width: r, height: r)
-                context.fill(Path(ellipseIn: box), with: .color(Color.white))
+                context.fill(Path(ellipseIn: box), with: .color(palette.halo.color))
                 context.stroke(Path(ellipseIn: box), with: .color(color), lineWidth: 1.5)
             case .square:
                 let box = CGRect(x: s.x - r / 2, y: s.y - r / 2, width: r, height: r)
@@ -1060,7 +1150,7 @@ extension SketchCanvas {
                 // dragged away from its point.
                 let text = Text(object.label)
                     .font(.system(.callout, design: .rounded, weight: .semibold))
-                    .foregroundStyle(selected ? accent : object.style.color.color.opacity(0.95))
+                    .foregroundStyle(selected ? accent : palette.resolve(object.style.color).color.opacity(0.95))
                 context.draw(text, at: CGPoint(x: labelPoint.x + 7, y: labelPoint.y - 7),
                              anchor: .bottomLeading)
             }
@@ -1091,7 +1181,7 @@ extension SketchCanvas {
             if case .caption = object.kind {
                 font = font.italic()
             }
-            let fg = selected ? accent : (isCaption ? secondaryInk : object.style.color.color)
+            let fg = selected ? accent : (isCaption ? secondaryInk : palette.resolve(object.style.color).color)
             let resolved = context.resolve(
                 Text(text)
                     .font(font)
@@ -1118,13 +1208,16 @@ extension SketchCanvas {
 
             if !isCaption {
                 context.fill(Path(roundedRect: rect, cornerRadius: 6),
-                             with: .color(Color.white.opacity(0.92)))
+                             with: .color(palette.card.color))
+                let border = selected ? accent.opacity(0.75)
+                    : (object.id == hoveredObjectID ? accent.opacity(0.45)
+                       : palette.cardBorder.color)
                 context.stroke(Path(roundedRect: rect, cornerRadius: 6),
-                               with: .color(selected ? accent.opacity(0.75) : ink.opacity(0.10)),
-                               lineWidth: selected ? 1.2 : 0.8)
+                               with: .color(border),
+                               lineWidth: selected || object.id == hoveredObjectID ? 1.2 : 0.8)
             } else {
                 context.fill(Path(roundedRect: rect.insetBy(dx: -2, dy: 0), cornerRadius: 5),
-                             with: .color(Color.white.opacity(0.55)))
+                             with: .color(palette.card.color.opacity(0.7)))
             }
             context.draw(resolved, at: CGPoint(x: rect.minX + padX, y: rect.minY + padY),
                          anchor: .topLeading)
@@ -1197,6 +1290,65 @@ extension SketchCanvas {
             fill.closeSubpath()
             context.fill(fill, with: .color(accent.opacity(0.07)))
         }
+
+        if let target {
+            let readout: String?
+            switch model.tool {
+            case .segment, .ray, .line, .polygon:
+                let origin = pending.last ?? first
+                readout = evaluator.formatLength(origin.distance(to: target))
+            case .circle:
+                readout = "r " + evaluator.formatLength(first.distance(to: target))
+            case .angle where pending.count >= 2:
+                let vertex = pending[pending.count - 1]
+                let start = pending[pending.count - 2]
+                var delta = atan2(target.y - vertex.y, target.x - vertex.x)
+                    - atan2(start.y - vertex.y, start.x - vertex.x)
+                while delta > .pi {
+                    delta -= .pi * 2
+                }
+                while delta < -.pi {
+                    delta += .pi * 2
+                }
+                readout = evaluator.formatAngle(abs(delta))
+            default:
+                readout = nil
+            }
+            if let readout, !readout.isEmpty {
+                drawDraftReadout(readout,
+                                 at: model.screenPoint(target, size: size),
+                                 context: &context,
+                                 size: size)
+            }
+        }
+    }
+
+    /// The live dimension chip shown while a tool is drawing.
+    private func drawDraftReadout(_ text: String, at point: CGPoint,
+                                  context: inout GraphicsContext, size: CGSize) {
+        let resolved = context.resolve(
+            Text(text)
+                .font(.system(.caption, design: .monospaced, weight: .medium))
+                .foregroundStyle(palette.ink.color)
+        )
+        let measured = resolved.measure(in: CGSize(width: 240, height: 40))
+        let width = measured.width + 14
+        let height = measured.height + 8
+        var origin = CGPoint(x: point.x + 14, y: point.y - 14 - height)
+        if origin.x + width > size.width - 6 {
+            origin.x = point.x - 14 - width
+        }
+        if origin.y < 6 {
+            origin.y = point.y + 16
+        }
+        let rect = CGRect(origin: origin, size: CGSize(width: width, height: height))
+        context.fill(Path(roundedRect: rect, cornerRadius: 5),
+                     with: .color(palette.card.color))
+        context.stroke(Path(roundedRect: rect, cornerRadius: 5),
+                       with: .color(palette.cardBorder.color),
+                       lineWidth: 0.8)
+        context.draw(resolved, at: CGPoint(x: rect.minX + 7, y: rect.minY + 4),
+                     anchor: .topLeading)
     }
 
     private func drawScaleBar(context: inout GraphicsContext, size: CGSize) {

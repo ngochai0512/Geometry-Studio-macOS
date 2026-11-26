@@ -202,6 +202,20 @@ struct SettingsView: View {
     private var canvasTab: some View {
         Form {
             Section {
+                Picker("Theme", selection: themeBinding) {
+                    ForEach(CanvasTheme.allCases) { theme in
+                        Text(theme.title).tag(theme)
+                    }
+                }
+                .pickerStyle(.segmented)
+                ColorPicker("Canvas background", selection: backgroundColorBinding)
+            } header: {
+                Text("Background")
+            } footer: {
+                Text("A dark background switches ink, labels, cards and halos to their light tokens automatically.")
+            }
+
+            Section {
                 Toggle("Show grid", isOn: $settings.grid)
                 Picker("Grid style", selection: gridTypeBinding) {
                     ForEach(GridType.allCases) { type in
@@ -246,7 +260,6 @@ struct SettingsView: View {
             }
 
             Section {
-                ColorPicker("Canvas background", selection: backgroundColorBinding)
                 Toggle("Snap points to grid", isOn: $settings.snap)
                 Toggle("Smart guides", isOn: $settings.smartGuides)
                 LabeledContent("Angle snap") {
@@ -334,6 +347,18 @@ struct SettingsView: View {
 
     private func angleSnapTitle(_ value: Double) -> String {
         value == 0 ? "Off" : "\(Int(value))°"
+    }
+
+    private var themeBinding: Binding<CanvasTheme> {
+        Binding(
+            get: { settings.theme },
+            set: { theme in
+                var updated = settings
+                updated.theme = theme
+                updated.backgroundColor = theme.background
+                settings = updated
+            }
+        )
     }
 
     private var backgroundColorBinding: Binding<Color> {

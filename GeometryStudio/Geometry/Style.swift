@@ -45,6 +45,12 @@ struct RGBA: Codable, Hashable {
         NSColor(srgbRed: r, green: g, blue: b, alpha: a)
     }
 
+    /// Perceptual luminance of the RGB channels, ignoring alpha. Used to pick
+    /// a light or dark set of canvas tokens from the background colour.
+    var luminance: Double {
+        0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+
     static let ink = RGBA(0.12, 0.13, 0.16)
     static let black = RGBA(0, 0, 0)
     static let secondaryInk = RGBA(0.35, 0.37, 0.42)
@@ -191,5 +197,66 @@ struct ObjectStyle: Codable, Hashable {
         fillOpacity = try c.decodeIfPresent(Double.self, forKey: .fillOpacity) ?? 0.12
         tickCount = try c.decodeIfPresent(Int.self, forKey: .tickCount) ?? 0
         angleMarker = try c.decodeIfPresent(AngleMarkerStyle.self, forKey: .angleMarker) ?? .arc
+    }
+}
+
+/// Canvas colour scheme. Selecting a theme proposes its background; a custom
+/// background still wins, and the palette flips to the opposite ink set when
+/// that custom background is dark.
+enum CanvasTheme: String, Codable, CaseIterable, Identifiable {
+    case light
+    case dark
+    case paper
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .light:
+            return "Light"
+        case .dark:
+            return "Dark"
+        case .paper:
+            return "Paper"
+        }
+    }
+
+    var background: RGBA {
+        switch self {
+        case .light:
+            return RGBA(1, 1, 1)
+        case .dark:
+            return RGBA(0.07, 0.08, 0.10)
+        case .paper:
+            return RGBA(0.97, 0.95, 0.90)
+        }
+    }
+}
+
+/// Screen tokens derived from the theme and the actual background. Ink, label,
+/// card, axis and halo colours change together, so a dark canvas never leaves
+/// black text on black or white chips on white.
+struct CanvasPalette {
+    var isDark: Bool
+    var ink: RGBA
+    var secondaryInk: RGBA
+    var halo: RGBA
+    var card: RGBA
+    var cardBorder: RGBA
+    var axisLabel: RGBA
+    var grid: RGBA
+
+    /// Near-black strokes on a dark canvas (and near-white on a light one)
+    /// follow the ink token; coloured objects keep their own colour.
+    func resolve(_ color: RGBA) -> RGBA {
+        if isDark, color.luminance < 0.32 {
+            return ink
+        }
+        if !isDark, color.luminance > 0.92 {
+            return ink
+        }
+        return color
     }
 }

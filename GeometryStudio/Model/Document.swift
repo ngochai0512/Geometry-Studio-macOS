@@ -50,6 +50,7 @@ struct CanvasSettings: Codable, Hashable {
     var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
     var gridBold: Bool = false
     var backgroundColor: RGBA = RGBA(1, 1, 1)
+    var theme: CanvasTheme = .light
     var useMetalRenderer: Bool = false
     var axes: Bool = true
     var axesLabels: Bool = true
@@ -78,6 +79,7 @@ struct CanvasSettings: Codable, Hashable {
         gridColor = try c.decodeIfPresent(RGBA.self, forKey: .gridColor) ?? RGBA(hex: 0x1C1C1F)
         gridBold = try c.decodeIfPresent(Bool.self, forKey: .gridBold) ?? false
         backgroundColor = try c.decodeIfPresent(RGBA.self, forKey: .backgroundColor) ?? RGBA(1, 1, 1)
+        theme = try c.decodeIfPresent(CanvasTheme.self, forKey: .theme) ?? .light
         useMetalRenderer = try c.decodeIfPresent(Bool.self, forKey: .useMetalRenderer) ?? false
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true
         axesLabels = try c.decodeIfPresent(Bool.self, forKey: .axesLabels) ?? true
@@ -261,4 +263,52 @@ enum SketchTemplate {
 /// `newDocument`, so the choice only has to survive that call.
 enum TemplateLibrary {
     static var pending: SketchTemplate?
+}
+
+extension CanvasSettings {
+    /// Display tokens for the canvas. The background decides light or dark;
+    /// the theme supplies the paper tint. A dark custom background flips the
+    /// light tokens, and an unreadable grid colour is replaced by a neutral
+    /// with the same alpha.
+    var palette: CanvasPalette {
+        let dark = backgroundColor.luminance < 0.45
+        let warm = theme == .paper
+        let ink = dark ? RGBA(0.92, 0.93, 0.95)
+            : (warm ? RGBA(0.24, 0.20, 0.15) : RGBA.ink)
+        let secondary = dark ? RGBA(0.68, 0.70, 0.76)
+            : (warm ? RGBA(0.42, 0.36, 0.28) : RGBA.secondaryInk)
+        var effectiveGrid = gridColor
+        if dark, gridColor.luminance < 0.45 {
+            effectiveGrid = RGBA(0.82, 0.84, 0.88, gridColor.a)
+        } else if !dark, gridColor.luminance > 0.82 {
+            effectiveGrid = RGBA(0.35, 0.36, 0.40, gridColor.a)
+        }
+        return CanvasPalette(
+            isDark: dark,
+            ink: ink,
+            secondaryInk: secondary,
+            halo: dark ? RGBA(0.10, 0.11, 0.14, 0.9) : RGBA(1, 1, 1, 0.9),
+            card: dark ? RGBA(0.14, 0.15, 0.18, 0.94) : RGBA(1, 1, 1, 0.92),
+            cardBorder: RGBA(ink.r, ink.g, ink.b, 0.14),
+            axisLabel: dark ? RGBA(0.80, 0.82, 0.86, 0.85) : secondary,
+            grid: effectiveGrid
+        )
+    }
+
+    /// The white-page token set used by print and export. It keeps the
+    /// document's grid colour unless that colour would vanish on paper.
+    var paperPalette: CanvasPalette {
+        var result = palette
+        result.isDark = false
+        result.ink = .ink
+        result.secondaryInk = .secondaryInk
+        result.halo = RGBA(1, 1, 1, 0.9)
+        result.card = RGBA(1, 1, 1, 0.92)
+        result.cardBorder = RGBA(0.12, 0.13, 0.16, 0.14)
+        result.axisLabel = .secondaryInk
+        result.grid = gridColor.luminance > 0.82
+            ? RGBA(0.35, 0.36, 0.40, gridColor.a)
+            : gridColor
+        return result
+    }
 }

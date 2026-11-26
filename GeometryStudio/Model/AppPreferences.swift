@@ -114,6 +114,7 @@ enum AppPreferences {
         static let gridColor = "newSketch.gridColor"
         static let gridBold = "newSketch.gridBold"
         static let backgroundColor = "newSketch.backgroundColor"
+        static let theme = "newSketch.theme"
         static let useMetalRenderer = "newSketch.useMetalRenderer"
         static let axes = "newSketch.axes"
         static let axesLabels = "newSketch.axesLabels"
@@ -160,6 +161,10 @@ enum AppPreferences {
            let color = try? JSONDecoder().decode(RGBA.self, from: data) {
             settings.backgroundColor = color
         }
+        if let raw = defaults.string(forKey: Keys.theme),
+           let theme = CanvasTheme(rawValue: raw) {
+            settings.theme = theme
+        }
         if defaults.object(forKey: Keys.useMetalRenderer) != nil {
             settings.useMetalRenderer = defaults.bool(forKey: Keys.useMetalRenderer)
         }
@@ -205,6 +210,7 @@ enum AppPreferences {
         if let data = try? JSONEncoder().encode(settings.backgroundColor) {
             defaults.set(data, forKey: Keys.backgroundColor)
         }
+        defaults.set(settings.theme.rawValue, forKey: Keys.theme)
         defaults.set(settings.useMetalRenderer, forKey: Keys.useMetalRenderer)
         defaults.set(settings.axes, forKey: Keys.axes)
         defaults.set(settings.axesLabels, forKey: Keys.axesLabels)

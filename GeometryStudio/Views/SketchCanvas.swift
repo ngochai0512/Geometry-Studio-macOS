@@ -37,6 +37,12 @@ struct SketchCanvas: View {
     @State var editingLabelID: UUID?
     @State var labelDraft = ""
     @FocusState var labelFieldFocused: Bool
+    @State var editingCoordinateID: UUID?
+    @State var coordinateDraftX = ""
+    @State var coordinateDraftY = ""
+    @FocusState var coordinateFieldFocused: Bool
+    @State var hoveredObjectID: UUID?
+    @State var dragNeedsHold = false
     @State var hudScreen: CGPoint?
     @State var selectionHandle: SelectionHandleKind?
     @State var handleBasePositions: [UUID: Vec2] = [:]
@@ -48,16 +54,20 @@ struct SketchCanvas: View {
         case scale(corner: Int)
     }
 
-    /// A click selects; the pointer must rest this long before a drag moves
-    /// anything. The delay keeps click-selection from turning into an
-    /// accidental micro-drag.
+    /// A press on an unselected object waits this long before it drags, so the
+    /// click can select instead. Already-selected geometry drags immediately.
     let holdToDragDelay: TimeInterval = 0.16
 
+    /// Printing always uses the paper palette, so a dark-canvas sketch does
+    /// not print light ink on a white page.
+    var palette: CanvasPalette {
+        printing ? model.settings.paperPalette : model.settings.palette
+    }
     var ink: Color {
-        RGBA.ink.color
+        palette.ink.color
     }
     var secondaryInk: Color {
-        RGBA.secondaryInk.color
+        palette.secondaryInk.color
     }
     var accent: Color {
         Color.accentColor
@@ -79,11 +89,13 @@ struct SketchCanvas: View {
         Set<UUID>,
         [UUID: [Vec2]],
         SketchTool,
-        [SmartGuide]
+        [SmartGuide],
+        UUID?
     ) {
         let hover = model.draft.isEmpty ? nil : model.hoverWorld
         return (model.document, model.selection, model.draft, hover,
-                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides)
+                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides,
+                hoveredObjectID)
     }
 
     var body: some View {
@@ -138,8 +150,14 @@ struct SketchCanvas: View {
                         model.hoverWorld = world
                     }
                     model.lastPointerWorld = world
-                    if model.tool == .pan, !isPanning {
-                        NSCursor.openHand.set()
+                    if dragStartScreen == nil {
+                        let tolerance = 9 / model.settings.scale
+                        let hit = model.hitTestLabel(world, tolerance: tolerance)
+                            ?? model.hitTest(world, tolerance: tolerance)
+                        if hoveredObjectID != hit {
+                            hoveredObjectID = hit
+                        }
+                        updateCursor(for: hit)
                     }
                 case .ended:
                     if model.isPointerOverCanvas {
@@ -148,18 +166,17 @@ struct SketchCanvas: View {
                     if model.hoverWorld != nil {
                         model.hoverWorld = nil
                     }
+                    if hoveredObjectID != nil {
+                        hoveredObjectID = nil
+                    }
                     if !isPanning {
                         NSCursor.arrow.set()
                     }
                 }
             }
-            .onChange(of: model.tool) { _, tool in
-                if tool == .pan {
-                    if model.isPointerOverCanvas, !isPanning {
-                        NSCursor.openHand.set()
-                    }
-                } else if !isPanning {
-                    NSCursor.arrow.set()
+            .onChange(of: model.tool) { _, _ in
+                if !isPanning {
+                    updateCursor(for: hoveredObjectID)
                 }
             }
             .onChange(of: model.settings.useMetalRenderer) { _, _ in
