@@ -1,4 +1,6 @@
 import AppKit
+import CoreTransferable
+import UniformTypeIdentifiers
 
 /// Drives File ▸ Export: one save panel per format, then writes the file.
 /// The last directory and format are remembered, and the result is posted so
@@ -25,7 +27,7 @@ enum SketchExporter {
         panel.allowedContentTypes = [format.contentType]
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
-        panel.nameFieldStringValue = "\(fileName(for: model)).\(format.fileExtension)"
+        panel.nameFieldStringValue = "\(suggestedName(for: model)).\(format.fileExtension)"
         if let directory = UserDefaults.standard.url(forKey: directoryKey) {
             panel.directoryURL = directory
         }
@@ -78,11 +80,73 @@ enum SketchExporter {
         }
     }
 
-    private static func fileName(for model: SketchModel) -> String {
+    static func suggestedName(for model: SketchModel) -> String {
         let title = model.document.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleaned = title
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
         return cleaned.isEmpty ? "Sketch" : cleaned
     }
+}
+
+/// Lazily rendered exports for ShareLink. Building one is cheap; the PDF or PNG
+/// is rendered and written to a temporary file only when the share sheet asks.
+enum SketchShareError: Error {
+    case renderFailed
+    case writeFailed
+}
+
+struct SketchPDFShare: Transferable {
+    let document: SketchDocument
+    let name: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .pdf) { item in
+            let url = try await writeTemporaryExport(named: item.name,
+                                                     pathExtension: "pdf") {
+                SketchRenderOutput.pdf(for: item.document,
+                                       fitting: SketchExportMetrics.size)
+            }
+            return SentTransferredFile(url)
+        }
+    }
+}
+
+struct SketchPNGShare: Transferable {
+    let document: SketchDocument
+    let name: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .png) { item in
+            let url = try await writeTemporaryExport(named: item.name,
+                                                     pathExtension: "png") {
+                SketchRenderOutput.png(for: item.document,
+                                       fitting: SketchExportMetrics.size)
+            }
+            return SentTransferredFile(url)
+        }
+    }
+}
+
+private func writeTemporaryExport(
+    named name: String,
+    pathExtension: String,
+    data: @escaping @MainActor () -> Data?
+) async throws -> URL {
+    let rendered = await MainActor.run { data() }
+    guard let rendered else {
+        throw SketchShareError.renderFailed
+    }
+    let base = name.isEmpty ? "Sketch" : name
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("GeometryStudioShare-\(UUID().uuidString)", isDirectory: true)
+    let url = directory.appendingPathComponent("\(base).\(pathExtension)")
+    do {
+        try FileManager.default.createDirectory(at: directory,
+                                                withIntermediateDirectories: true)
+        try rendered.write(to: url, options: .atomic)
+    } catch {
+        throw SketchShareError.writeFailed
+    }
+    return url
 }
