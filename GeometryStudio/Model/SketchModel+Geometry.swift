@@ -437,6 +437,8 @@ extension SketchModel {
         current.gridColor = new.gridColor
         current.gridBold = new.gridBold
         current.backgroundColor = new.backgroundColor
+        current.customBackground = new.customBackground
+        current.paperBackground = new.paperBackground
         current.theme = new.theme
         current.useMetalRenderer = new.useMetalRenderer
         current.axes = new.axes

@@ -50,6 +50,10 @@ struct CanvasSettings: Codable, Hashable {
     var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
     var gridBold: Bool = false
     var backgroundColor: RGBA = RGBA(1, 1, 1)
+    /// The remembered Custom colour and Paper tint, kept when another preset
+    /// takes over the canvas background.
+    var customBackground: RGBA = RGBA(1, 1, 1)
+    var paperBackground: RGBA = RGBA(0.97, 0.95, 0.90)
     var theme: CanvasTheme = .automatic
     var useMetalRenderer: Bool = false
     var axes: Bool = true
@@ -79,6 +83,10 @@ struct CanvasSettings: Codable, Hashable {
         gridColor = try c.decodeIfPresent(RGBA.self, forKey: .gridColor) ?? RGBA(hex: 0x1C1C1F)
         gridBold = try c.decodeIfPresent(Bool.self, forKey: .gridBold) ?? false
         backgroundColor = try c.decodeIfPresent(RGBA.self, forKey: .backgroundColor) ?? RGBA(1, 1, 1)
+        customBackground = try c.decodeIfPresent(RGBA.self, forKey: .customBackground)
+            ?? backgroundColor
+        paperBackground = try c.decodeIfPresent(RGBA.self, forKey: .paperBackground)
+            ?? backgroundColor
         theme = try c.decodeIfPresent(CanvasTheme.self, forKey: .theme) ?? .automatic
         useMetalRenderer = try c.decodeIfPresent(Bool.self, forKey: .useMetalRenderer) ?? false
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true

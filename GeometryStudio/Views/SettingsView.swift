@@ -196,7 +196,7 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                ColorPicker("Canvas background", selection: backgroundColorBinding)
+                backgroundControl
             } header: {
                 Text("Background")
             } footer: {
@@ -318,13 +318,73 @@ struct SettingsView: View {
             set: { theme in
                 var updated = settings
                 updated.theme = theme
-                // Automatic and Custom keep the stored colour.
-                if theme == .light || theme == .dark || theme == .paper {
+                switch theme {
+                case .light, .dark:
                     updated.backgroundColor = theme.background
+                case .paper:
+                    updated.backgroundColor = updated.paperBackground
+                case .custom:
+                    updated.backgroundColor = updated.customBackground
+                case .automatic:
+                    break
                 }
                 settings = updated
             }
         )
+    }
+
+    /// The background control only appears where the user can change it: a
+    /// fixed preset hides it, Custom shows the colour well, Paper shows tints.
+    @ViewBuilder
+    private var backgroundControl: some View {
+        switch settings.theme {
+        case .automatic:
+            Text("Follows the system appearance.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .light, .dark:
+            Text("This theme has a fixed background.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .custom:
+            ColorPicker("Background colour", selection: backgroundColorBinding)
+        case .paper:
+            LabeledContent("Paper") {
+                HStack(spacing: 8) {
+                    ForEach(CanvasTheme.paperTints, id: \.0) { name, colour in
+                        paperSwatch(name: name, colour: colour)
+                    }
+                }
+            }
+        }
+    }
+
+    private func paperSwatch(name: String, colour: RGBA) -> some View {
+        let selected = settings.backgroundColor == colour
+        return Button {
+            applyPaperTint(colour)
+        } label: {
+            Circle()
+                .fill(colour.color)
+                .frame(width: 20, height: 20)
+                .overlay {
+                    Circle()
+                        .stroke(selected ? Color.accentColor
+                                : Color.secondary.opacity(0.35),
+                                lineWidth: selected ? 2 : 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .help(name)
+        .accessibilityLabel(selected ? "\(name), selected" : name)
+    }
+
+    private func applyPaperTint(_ tint: RGBA) {
+        var updated = settings
+        updated.theme = .paper
+        updated.paperBackground = tint
+        updated.backgroundColor = tint
+        settings = updated
     }
 
     private var backgroundColorBinding: Binding<Color> {
@@ -332,15 +392,14 @@ struct SettingsView: View {
             get: { settings.backgroundColor.color },
             set: { newValue in
                 let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .white
+                let colour = RGBA(Double(ns.redComponent),
+                                  Double(ns.greenComponent),
+                                  Double(ns.blueComponent),
+                                  Double(ns.alphaComponent))
                 var updated = settings
-                // A custom tint is only visible when Automatic is not in charge.
-                if updated.theme == .automatic {
-                    updated.theme = .custom
-                }
-                updated.backgroundColor = RGBA(Double(ns.redComponent),
-                                               Double(ns.greenComponent),
-                                               Double(ns.blueComponent),
-                                               Double(ns.alphaComponent))
+                updated.theme = .custom
+                updated.customBackground = colour
+                updated.backgroundColor = colour
                 settings = updated
             }
         )

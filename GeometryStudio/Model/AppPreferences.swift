@@ -114,6 +114,8 @@ enum AppPreferences {
         static let gridColor = "newSketch.gridColor"
         static let gridBold = "newSketch.gridBold"
         static let backgroundColor = "newSketch.backgroundColor"
+        static let customBackground = "newSketch.customBackground"
+        static let paperBackground = "newSketch.paperBackground"
         static let theme = "newSketch.theme"
         static let useMetalRenderer = "newSketch.useMetalRenderer"
         static let axes = "newSketch.axes"
@@ -160,6 +162,22 @@ enum AppPreferences {
         if let data = defaults.data(forKey: Keys.backgroundColor),
            let color = try? JSONDecoder().decode(RGBA.self, from: data) {
             settings.backgroundColor = color
+        }
+        if let data = defaults.data(forKey: Keys.customBackground),
+           let color = try? JSONDecoder().decode(RGBA.self, from: data) {
+            settings.customBackground = color
+        }
+        if let data = defaults.data(forKey: Keys.paperBackground),
+           let color = try? JSONDecoder().decode(RGBA.self, from: data) {
+            settings.paperBackground = color
+        }
+        // Older defaults have only the effective background; remember it as
+        // both tints until the user picks a new one.
+        if defaults.data(forKey: Keys.customBackground) == nil {
+            settings.customBackground = settings.backgroundColor
+        }
+        if defaults.data(forKey: Keys.paperBackground) == nil {
+            settings.paperBackground = settings.backgroundColor
         }
         if let raw = defaults.string(forKey: Keys.theme),
            let theme = CanvasTheme(rawValue: raw) {
@@ -209,6 +227,12 @@ enum AppPreferences {
         defaults.set(settings.gridBold, forKey: Keys.gridBold)
         if let data = try? JSONEncoder().encode(settings.backgroundColor) {
             defaults.set(data, forKey: Keys.backgroundColor)
+        }
+        if let data = try? JSONEncoder().encode(settings.customBackground) {
+            defaults.set(data, forKey: Keys.customBackground)
+        }
+        if let data = try? JSONEncoder().encode(settings.paperBackground) {
+            defaults.set(data, forKey: Keys.paperBackground)
         }
         defaults.set(settings.theme.rawValue, forKey: Keys.theme)
         defaults.set(settings.useMetalRenderer, forKey: Keys.useMetalRenderer)

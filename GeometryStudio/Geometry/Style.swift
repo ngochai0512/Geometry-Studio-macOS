@@ -225,7 +225,7 @@ enum CanvasTheme: String, Codable, CaseIterable, Identifiable {
         case .paper:
             return "Paper"
         case .custom:
-            return "Custom"
+            return "Colour"
         }
     }
 
@@ -239,6 +239,18 @@ enum CanvasTheme: String, Codable, CaseIterable, Identifiable {
             return RGBA(0.97, 0.95, 0.90)
         }
     }
+
+    /// Common paper and notebook tints offered for the Paper theme.
+    static let paperTints: [(String, RGBA)] = [
+        ("Paper", RGBA(0.97, 0.95, 0.90)),
+        ("White", RGBA(1, 1, 1)),
+        ("Cream", RGBA(0.99, 0.94, 0.84)),
+        ("Legal", RGBA(1.00, 0.97, 0.74)),
+        ("Manila", RGBA(0.96, 0.90, 0.76)),
+        ("Grey", RGBA(0.94, 0.94, 0.94)),
+        ("Blue", RGBA(0.91, 0.95, 0.99)),
+        ("Green", RGBA(0.92, 0.96, 0.92))
+    ]
 
     /// Automatic follows the system appearance; every other preset is fixed.
     func resolved(systemDark: Bool) -> CanvasTheme {
