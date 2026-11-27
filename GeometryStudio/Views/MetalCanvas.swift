@@ -9,32 +9,29 @@ struct MetalCanvas: NSViewRepresentable {
     let model: SketchModel
     var onFirstFrame: () -> Void = {}
 
-    static let isSupported: Bool = {
-        // A device alone is not enough: the runtime shader/pipeline must also
-        // build, or the layer stays empty while SwiftUI still draws the points.
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            return false
-        }
-        return MetalSceneRenderer(device: device, pixelFormat: .bgra8Unorm) != nil
-    }()
+    static let isSupported: Bool = MetalPipeline.state != nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
     func makeNSView(context: Context) -> MTKView {
-        let view = MTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        let view = MTKView(frame: .zero, device: MetalPipeline.device)
         view.isPaused = true
         view.enableSetNeedsDisplay = true
         view.framebufferOnly = true
         view.colorPixelFormat = .bgra8Unorm
         view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         view.wantsLayer = true
+        // Two drawables are enough for a paused, on-demand view and halve the
+        // swapchain the layer keeps alive.
+        (view.layer as? CAMetalLayer)?.maximumDrawableCount = 2
         view.layer?.isOpaque = false
         view.layer?.backgroundColor = NSColor.clear.cgColor
 
         if let device = view.device,
-           let renderer = MetalSceneRenderer(device: device, pixelFormat: view.colorPixelFormat) {
+           let pipeline = MetalPipeline.state,
+           let renderer = MetalSceneRenderer(device: device, pipeline: pipeline) {
             renderer.onFirstFrame = onFirstFrame
             view.delegate = renderer
             context.coordinator.renderer = renderer
@@ -46,12 +43,31 @@ struct MetalCanvas: NSViewRepresentable {
         guard let renderer = context.coordinator.renderer else {
             return
         }
-        renderer.update(model: model, size: view.bounds.size)
+        let size = view.bounds.size
+        // SwiftUI calls this for every observable change, including ones the
+        // geometry layer does not draw. Rebuilding vertices only when the
+        // sketch, the selection or the size actually changed keeps zoom-free
+        // updates from re-tessellating everything.
+        guard model.geometryRevision != context.coordinator.lastRevision
+            || model.traceRevision != context.coordinator.lastTraceRevision
+            || model.selection != context.coordinator.lastSelection
+            || size != context.coordinator.lastSize else {
+            return
+        }
+        context.coordinator.lastRevision = model.geometryRevision
+        context.coordinator.lastTraceRevision = model.traceRevision
+        context.coordinator.lastSelection = model.selection
+        context.coordinator.lastSize = size
+        renderer.update(model: model, size: size)
         view.setNeedsDisplay(view.bounds)
     }
 
     final class Coordinator {
         var renderer: MetalSceneRenderer?
+        var lastRevision = -1
+        var lastTraceRevision = -1
+        var lastSelection: [UUID] = []
+        var lastSize: CGSize = .zero
     }
 }
 
@@ -65,16 +81,16 @@ struct MetalVertex {
     var a: Float
 }
 
-final class MetalSceneRenderer: NSObject, MTKViewDelegate {
-    private let device: MTLDevice
-    private let queue: MTLCommandQueue
-    private let pipeline: MTLRenderPipelineState
-    private var vertices: [MetalVertex] = []
-    var onFirstFrame: (() -> Void)?
-    private var reportedFirstFrame = false
+/// The device, shader library and pipeline are process-wide. Building them per
+/// view compiled the same shader twice — once to probe support and once for
+/// the view — and kept a debug-instrumented shader library alive per renderer.
+enum MetalPipeline {
+    static let device: MTLDevice? = MTLCreateSystemDefaultDevice()
 
-    init?(device: MTLDevice, pixelFormat: MTLPixelFormat) {
-        guard let queue = device.makeCommandQueue() else {
+    static let state: MTLRenderPipelineState? = makeState()
+
+    private static func makeState() -> MTLRenderPipelineState? {
+        guard let device else {
             return nil
         }
         let shader = """
@@ -107,13 +123,33 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
         descriptor.vertexFunction = vertexFunction
         descriptor.fragmentFunction = fragmentFunction
         let attachment = descriptor.colorAttachments[0]
-        attachment?.pixelFormat = pixelFormat
+        attachment?.pixelFormat = .bgra8Unorm
         attachment?.isBlendingEnabled = true
         attachment?.sourceRGBBlendFactor = .sourceAlpha
         attachment?.destinationRGBBlendFactor = .oneMinusSourceAlpha
         attachment?.sourceAlphaBlendFactor = .sourceAlpha
         attachment?.destinationAlphaBlendFactor = .oneMinusSourceAlpha
-        guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else {
+        return try? device.makeRenderPipelineState(descriptor: descriptor)
+    }
+}
+
+final class MetalSceneRenderer: NSObject, MTKViewDelegate {
+    private let device: MTLDevice
+    private let queue: MTLCommandQueue
+    private let pipeline: MTLRenderPipelineState
+    private var vertices: [MetalVertex] = []
+    /// Smallest reusable vertex buffer, in bytes. A typical sketch is far
+    /// smaller, so the first frame sizes the buffer once for the session.
+    private static let minimumBufferBytes = 16_384
+    private var vertexBuffer: MTLBuffer?
+    private var vertexBufferCapacity = 0
+    /// True while the GPU may still be reading the reusable buffer.
+    private var bufferInFlight = false
+    var onFirstFrame: (() -> Void)?
+    private var reportedFirstFrame = false
+
+    init?(device: MTLDevice, pipeline: MTLRenderPipelineState) {
+        guard let queue = device.makeCommandQueue() else {
             return nil
         }
         self.device = device
@@ -141,17 +177,12 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
             return
         }
         encoder.setRenderPipelineState(pipeline)
+        var reusedBuffer = false
         if !vertices.isEmpty {
             let length = vertices.count * MemoryLayout<MetalVertex>.stride
-            var buffer: MTLBuffer?
-            vertices.withUnsafeBytes { raw in
-                guard let base = raw.baseAddress else {
-                    return
-                }
-                buffer = device.makeBuffer(bytes: base, length: length,
-                                           options: .storageModeShared)
-            }
-            if let buffer {
+            let reusable = takeReusableBuffer(length: length)
+            reusedBuffer = reusable != nil
+            if let buffer = reusable ?? transientBuffer(length: length) {
                 encoder.setVertexBuffer(buffer, offset: 0, index: 0)
                 encoder.drawPrimitives(type: .triangle, vertexStart: 0,
                                        vertexCount: vertices.count)
@@ -159,6 +190,15 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
         }
         encoder.endEncoding()
         commandBuffer.present(drawable)
+        if reusedBuffer {
+            // The CPU must not overwrite the buffer until the GPU is done with
+            // it; until then the next frame allocates a one-off buffer.
+            commandBuffer.addCompletedHandler { [weak self] _ in
+                DispatchQueue.main.async {
+                    self?.bufferInFlight = false
+                }
+            }
+        }
         commandBuffer.commit()
         if !reportedFirstFrame, !vertices.isEmpty {
             reportedFirstFrame = true
@@ -167,6 +207,49 @@ final class MetalSceneRenderer: NSObject, MTKViewDelegate {
                 ready?()
             }
         }
+    }
+
+    /// Grabs the reusable buffer when the GPU is not reading it.
+    private func takeReusableBuffer(length: Int) -> MTLBuffer? {
+        guard !bufferInFlight else {
+            return nil
+        }
+        guard let buffer = reusableBuffer(length: length) else {
+            return nil
+        }
+        bufferInFlight = true
+        return buffer
+    }
+
+    /// A previous frame is still on the GPU; a throwaway buffer keeps the
+    /// reusable one intact while it is read.
+    private func transientBuffer(length: Int) -> MTLBuffer? {
+        vertices.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else {
+                return nil
+            }
+            return device.makeBuffer(bytes: base, length: length, options: .storageModeShared)
+        }
+    }
+
+    private func reusableBuffer(length: Int) -> MTLBuffer? {
+        if vertexBuffer == nil || vertexBufferCapacity < length {
+            let capacity = max(length, Self.minimumBufferBytes)
+            guard let created = device.makeBuffer(length: capacity, options: .storageModeShared) else {
+                return nil
+            }
+            vertexBuffer = created
+            vertexBufferCapacity = capacity
+        }
+        guard let vertexBuffer else {
+            return nil
+        }
+        vertices.withUnsafeBytes { raw in
+            if let base = raw.baseAddress {
+                vertexBuffer.contents().copyMemory(from: base, byteCount: length)
+            }
+        }
+        return vertexBuffer
     }
 }
 
@@ -184,7 +267,7 @@ private struct MetalSceneBuilder {
 
     mutating func build() -> [MetalVertex] {
         var evaluator = model.evaluator()
-        let ordered = model.objects.sorted { $0.order < $1.order }
+        let ordered = model.orderedObjects()
 
         for (id, points) in model.tracePaths where points.count > 1 {
             guard let object = model.objectByID(id), object.visible else {

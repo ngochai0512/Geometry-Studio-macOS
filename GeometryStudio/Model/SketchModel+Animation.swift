@@ -78,7 +78,12 @@ extension SketchModel {
             }
         }
         objects[i].kind = .pointOnPath(path: parent, param: next)
-        recordTraceSamples()
+        // Sampling must see the position just written, so it gets a fresh
+        // evaluator and only when something is actually traced.
+        if !tracedIDs.isEmpty {
+            var tracer = evaluator()
+            recordTraceSamples(using: &tracer)
+        }
     }
 
     func toggleTrace() {
@@ -101,16 +106,17 @@ extension SketchModel {
 
     func eraseTraces() {
         tracePaths.removeAll()
+        invalidateTraces()
         statusMessage = "Traces erased"
     }
 
-    func recordTraceSamples() {
+    func recordTraceSamples(using evaluator: inout GeometryEval) {
         guard !tracedIDs.isEmpty else {
             return
         }
-        var e = evaluator()
+        invalidateTraces()
         for id in tracedIDs {
-            guard let p = e.evaluate(id).point else {
+            guard let p = evaluator.evaluate(id).point else {
                 continue
             }
             var points = tracePaths[id] ?? []
@@ -122,6 +128,12 @@ extension SketchModel {
             }
             tracePaths[id] = points
         }
+    }
+
+    /// Dragging a traced object samples it without an animation tick.
+    func recordTraceSamples() {
+        var e = evaluator()
+        recordTraceSamples(using: &e)
     }
 
     /// A locus is the set of positions of a driven object as its driver

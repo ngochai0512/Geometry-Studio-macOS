@@ -44,7 +44,14 @@ struct GeometryEval {
     private var visiting: Set<UUID> = []
 
     init(objects: [SketchObject], settings: CanvasSettings) {
-        self.objects = Dictionary(uniqueKeysWithValues: objects.map { ($0.id, $0) })
+        self.init(index: Dictionary(uniqueKeysWithValues: objects.map { ($0.id, $0) }),
+                  settings: settings)
+    }
+
+    /// Takes an index the caller already built, so a frame that evaluates the
+    /// same sketch several times pays for the dictionary once.
+    init(index: [UUID: SketchObject], settings: CanvasSettings) {
+        self.objects = index
         self.settings = settings
     }
 
@@ -578,16 +585,13 @@ struct GeometryEval {
         } else {
             closed = false
         }
-        var base = Array(objects.values)
-        guard let index = base.firstIndex(where: { $0.id == driver }) else {
-            return nil
-        }
+        var base = objects
         var points: [Vec2] = []
         for step in 0...Metrics.locusSamples {
             let unit = Double(step) / Double(Metrics.locusSamples)
             let param = closed ? unit * 2 * .pi : unit
-            base[index].kind = .pointOnPath(path: pathID, param: param)
-            var sample = GeometryEval(objects: base, settings: settings)
+            base[driver]?.kind = .pointOnPath(path: pathID, param: param)
+            var sample = GeometryEval(index: base, settings: settings)
             guard let p = sample.evaluate(target).point else {
                 continue
             }

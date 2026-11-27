@@ -22,7 +22,7 @@ extension SketchModel {
     // MARK: geometry access
 
     func evaluator() -> GeometryEval {
-        GeometryEval(objects: objects, settings: settings)
+        GeometryEval(index: objectIndex(), settings: settings)
     }
 
     func evaluated(_ id: UUID) -> EvalResult {

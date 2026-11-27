@@ -57,6 +57,11 @@ final class SketchModel {
     @ObservationIgnored
     private var lastCheckpointAt = Date.distantPast
     private let undoLimit = 80
+    /// Undo snapshots copy the whole object array, so a large sketch keeps a
+    /// shorter history: past this count, 80 snapshots cost more than the
+    /// history is worth.
+    private let largeSketchObjectCount = 400
+    private let largeSketchUndoLimit = 40
     /// The window's undo manager. It is the only undo stack: the document
     /// architecture observes it for the edited dot, the native save sheet and
     /// autosave, so nothing else has to mirror change counts.
@@ -67,8 +72,8 @@ final class SketchModel {
                 return
             }
             MainActor.assumeIsolated {
-                if manager.levelsOfUndo != undoLimit {
-                    manager.levelsOfUndo = undoLimit
+                if manager.levelsOfUndo != undoDepth {
+                    manager.levelsOfUndo = undoDepth
                 }
                 // Each registration is its own top-level group, so one ⌘Z
                 // always takes back exactly one step.
@@ -83,6 +88,21 @@ final class SketchModel {
     private var undoObservers: [NSObjectProtocol] = []
     @ObservationIgnored
     private var undoRefreshPending = false
+    /// Bumped when the object array or canvas settings change. Render paths use
+    /// it to reuse the object index, the paint order and Metal vertices instead
+    /// of rebuilding them several times per frame.
+    private(set) var geometryRevision = 0
+    /// Traces change without touching the object array; the Metal layer needs
+    /// its own signal so erased or extended traces are picked up.
+    private(set) var traceRevision = 0
+    @ObservationIgnored
+    private var cachedIndex: [UUID: SketchObject]?
+    @ObservationIgnored
+    private var cachedIndexRevision = -1
+    @ObservationIgnored
+    private var cachedOrder: [SketchObject] = []
+    @ObservationIgnored
+    private var cachedOrderRevision = -1
     /// Bumped when the undo manager changes so views that read canUndo or
     /// the action names have an observable dependency to refresh on.
     private var undoRevision = 0
@@ -93,6 +113,12 @@ final class SketchModel {
 
     deinit {
         animationTimer?.invalidate()
+        // NotificationCenter outlives the model and keeps block observers until
+        // they are removed by hand, so every closed document would leave two
+        // registrations behind.
+        for observer in undoObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: animation clock
@@ -127,6 +153,13 @@ final class SketchModel {
         }
         set {
             document.objects = newValue
+            invalidateGeometry()
+        }
+        _modify {
+            // Yielding the stored array in place keeps a drag or animation tick
+            // from copying the whole array back through the setter.
+            yield &document.objects
+            invalidateGeometry()
         }
     }
     var settings: CanvasSettings {
@@ -135,6 +168,7 @@ final class SketchModel {
         }
         set {
             document.settings = newValue
+            invalidateGeometry()
         }
     }
     var marks: TransformMarks {
@@ -213,6 +247,7 @@ final class SketchModel {
         stopAnimationClock()
         animationPointID = nil
         document = newDocument
+        invalidateGeometry()
         selection = []
         draft = []
         smartGuides = []
@@ -327,7 +362,11 @@ final class SketchModel {
         guard let undoManager else {
             return
         }
+        let depth = undoDepth
         MainActor.assumeIsolated {
+            if undoManager.levelsOfUndo != depth {
+                undoManager.levelsOfUndo = depth
+            }
             undoManager.beginUndoGrouping()
             undoManager.registerUndo(withTarget: self) { model in
                 model.restore(snapshot, action: action)
@@ -340,9 +379,20 @@ final class SketchModel {
         }
         undoHistory.append(UndoHistoryEntry(name: action))
         undoHistoryIndex = undoHistory.count
+        let overflow = undoHistory.count - depth
+        if overflow > 0 {
+            undoHistory.removeFirst(overflow)
+            undoHistoryIndex -= overflow
+        }
         lastCoalescingKey = nil
         lastCheckpointAt = Date()
         scheduleUndoRefresh()
+    }
+
+    /// How many snapshots the manager keeps. A snapshot holds the whole object
+    /// array, so a big sketch trades history depth for memory.
+    private var undoDepth: Int {
+        objects.count > largeSketchObjectCount ? largeSketchUndoLimit : undoLimit
     }
 
     /// Applies a snapshot and registers its inverse. `NSUndoManager` routes
@@ -463,6 +513,42 @@ final class SketchModel {
     }
 
     // MARK: object helpers
+
+    /// Called on every geometry change; the caches below rebuild on the next
+    /// read. Wrapping add keeps a long session from ever reusing a stale value.
+    private func invalidateGeometry() {
+        geometryRevision &+= 1
+    }
+
+    /// Traces are drawn geometry but live outside the object array, so they get
+    /// their own signal for the Metal layer.
+    func invalidateTraces() {
+        traceRevision &+= 1
+    }
+
+    /// The evaluator's object index, shared by every call in a frame instead of
+    /// being rebuilt as a dictionary of the whole sketch per call.
+    func objectIndex() -> [UUID: SketchObject] {
+        if let cachedIndex, cachedIndexRevision == geometryRevision {
+            return cachedIndex
+        }
+        let index = Dictionary(uniqueKeysWithValues: objects.map { ($0.id, $0) })
+        cachedIndex = index
+        cachedIndexRevision = geometryRevision
+        return index
+    }
+
+    /// Objects in paint order. The Canvas and Metal layers each walk this list
+    /// several times per frame; sorting once per revision is enough.
+    func orderedObjects() -> [SketchObject] {
+        if cachedOrderRevision == geometryRevision {
+            return cachedOrder
+        }
+        let ordered = objects.sorted { $0.order < $1.order }
+        cachedOrder = ordered
+        cachedOrderRevision = geometryRevision
+        return ordered
+    }
 
     func index(of id: UUID) -> Int? {
         objects.firstIndex(where: { $0.id == id })

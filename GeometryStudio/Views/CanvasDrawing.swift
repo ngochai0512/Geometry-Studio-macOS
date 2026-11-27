@@ -12,7 +12,7 @@ extension SketchCanvas {
         drawTraces(context: &context, size: size)
 
         var e = model.evaluator()
-        let ordered = model.objects.sorted { $0.order < $1.order }
+        let ordered = model.orderedObjects()
 
         // Fills first: polygons, circles and filled arcs sit under the lines.
         for object in ordered where object.visible {
@@ -41,7 +41,7 @@ extension SketchCanvas {
                    context: &context, size: size, rect: rect)
         }
 
-        drawDraft(context: &context, size: size)
+        drawDraft(context: &context, size: size, evaluator: &e)
         drawSmartGuides(context: &context, size: size)
         drawVectors(context: &context, size: size, evaluator: &e)
         drawAngles(context: &context, size: size, evaluator: &e)
@@ -65,9 +65,8 @@ extension SketchCanvas {
     /// GPU layer cannot present, which would otherwise leave only the points
     /// that the foreground canvas draws.
     private func drawMetalFallback(context: inout GraphicsContext, size: CGSize,
-                                   rect: WorldRect) {
-        var evaluator = model.evaluator()
-        let ordered = model.objects.sorted { $0.order < $1.order }
+                                   rect: WorldRect, evaluator: inout GeometryEval) {
+        let ordered = model.orderedObjects()
         if !metalReady {
             drawTraces(context: &context, size: size)
             for object in ordered where object.visible {
@@ -105,9 +104,9 @@ extension SketchCanvas {
         var e = model.evaluator()
         if usesMetal {
             drawMetalFallback(context: &context, size: size,
-                              rect: model.visibleRect(size: size))
+                              rect: model.visibleRect(size: size), evaluator: &e)
         }
-        drawDraft(context: &context, size: size)
+        drawDraft(context: &context, size: size, evaluator: &e)
         drawSmartGuides(context: &context, size: size)
         drawVectors(context: &context, size: size, evaluator: &e)
         drawAngles(context: &context, size: size, evaluator: &e)
@@ -884,7 +883,7 @@ extension SketchCanvas {
 
     private func drawParameters(context: inout GraphicsContext, size: CGSize) {
         let precision = max(0, min(model.settings.precision, 6))
-        for object in model.objects.sorted(by: { $0.order < $1.order })
+        for object in model.orderedObjects()
         where object.visible && object.showLabel {
             guard case .parameter(let value, _, _) = object.kind else {
                 continue
@@ -942,7 +941,7 @@ extension SketchCanvas {
     }
 
     private func drawAngles(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
-        let ordered = model.objects.sorted { $0.order < $1.order }
+        let ordered = model.orderedObjects()
         for object in ordered where object.visible {
             let result = evaluator.evaluate(object.id)
             guard let (a, v, c) = result.anglePoints else {
@@ -999,7 +998,7 @@ extension SketchCanvas {
     }
 
     private func drawPoints(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
-        let ordered = model.objects.sorted { $0.order < $1.order }
+        let ordered = model.orderedObjects()
         for object in ordered where object.visible {
             guard let p = evaluator.evaluate(object.id).point else {
                 continue
@@ -1072,7 +1071,7 @@ extension SketchCanvas {
     }
 
     private func drawTexts(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
-        let ordered = model.objects.sorted { $0.order < $1.order }
+        let ordered = model.orderedObjects()
         var occupied: [CGRect] = []
         for object in ordered where object.visible && object.showLabel {
             if case .parameter = object.kind {
@@ -1139,8 +1138,8 @@ extension SketchCanvas {
         }
     }
 
-    private func drawDraft(context: inout GraphicsContext, size: CGSize) {
-        var evaluator = model.evaluator()
+    private func drawDraft(context: inout GraphicsContext, size: CGSize,
+                           evaluator: inout GeometryEval) {
         var pending = model.draft.compactMap { evaluator.evaluate($0).point }
         var previewAnchor: Vec2?
         if pending.isEmpty {
