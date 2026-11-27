@@ -9,8 +9,6 @@ struct SettingsView: View {
         case appearance
         case units
         case canvas
-        case update
-        case about
     }
 
     @State private var settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
@@ -41,16 +39,6 @@ struct SettingsView: View {
                         Label("Canvas", systemImage: "squareshape.split.2x2")
                     }
                     .tag(Tab.canvas)
-                updateTab
-                    .tabItem {
-                        Label("Update", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .tag(Tab.update)
-                aboutTab
-                    .tabItem {
-                        Label("About", systemImage: "info.circle")
-                    }
-                    .tag(Tab.about)
             }
 
             if showsSketchActions {
@@ -282,38 +270,13 @@ struct SettingsView: View {
         .padding(12)
     }
 
-    private var updateTab: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Text("Updates")
-                .font(.headline)
-            Text("This build does not check for updates yet.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var aboutTab: some View {
-        ScrollView {
-            AboutContent()
-                .padding(26)
-                .frame(maxWidth: .infinity)
-        }
-    }
-
     /// The sketch footer only makes sense while editing canvas preferences;
-    /// the Update and About panes have nothing to restore or create.
+    /// the Appearance pane has nothing to restore or create.
     private var showsSketchActions: Bool {
         switch tab {
         case .general, .units, .canvas:
             return true
-        case .appearance, .update, .about:
+        case .appearance:
             return false
         }
     }
