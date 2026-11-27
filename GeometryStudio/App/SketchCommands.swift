@@ -93,6 +93,14 @@ struct SketchCommands: Commands {
                         }
                     }
                 }
+                Divider()
+                Button("Export Again…") {
+                    if let model {
+                        SketchExporter.exportAgain(model: model)
+                    }
+                }
+                .keyboardShortcut("e", modifiers: [.command, .option])
+                .disabled(model == nil)
             }
             .disabled(model == nil)
         }
@@ -304,10 +312,11 @@ struct SketchCommands: Commands {
             .keyboardShortcut("0", modifiers: [.command, .shift])
             .disabled(model?.selection.isEmpty != false)
             Divider()
-            Button("Show Labels") { model?.settings.showLabels = true }
-                .disabled(model == nil)
-            Button("Hide Labels") { model?.settings.showLabels = false }
-                .disabled(model == nil)
+            Toggle("Show Labels", isOn: Binding(
+                get: { model?.settings.showLabels ?? true },
+                set: { model?.settings.showLabels = $0 }
+            ))
+            .disabled(model == nil)
             Divider()
             Button("Hide Selected") { model?.hideSelection() }
                 .disabled(model?.selection.isEmpty != false)

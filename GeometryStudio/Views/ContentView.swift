@@ -20,11 +20,17 @@ struct ContentView: View {
     @State private var showPalette = false
     @State private var showHistory = false
     @State private var recentPalette: [String] = []
+    @State private var exportNotice: ExportNotice?
     @State private var circleRadius: Double = 2
     @State private var functionText = "sin(x)"
     @State private var calculationText = ""
     @State private var scrollMonitor: Any?
     @State private var keyMonitor: Any?
+    private struct ExportNotice: Equatable {
+        var message: String
+        var url: URL?
+    }
+
     init(model: SketchModel, presentsOnboarding: Bool = true) {
         _model = Bindable(wrappedValue: model)
         self.presentsOnboarding = presentsOnboarding
@@ -57,12 +63,18 @@ struct ContentView: View {
                 paletteOverlay
             }
         }
+        .overlay(alignment: .bottom) {
+            exportToast
+        }
+        .animation(.easeInOut(duration: 0.2), value: exportNotice)
         .onChange(of: model.tool) { _, _ in
             model.draft = []
         }
         .onChange(of: controlActiveState) { _, state in
             if state != .inactive {
                 ActiveSketch.model = model
+            } else {
+                model.spacePanning = false
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -70,6 +82,7 @@ struct ContentView: View {
         .onAppear(perform: installKeyMonitor)
         .onChange(of: showPalette) { _, open in
             // Tool letters belong to the palette search while it is open.
+            model.spacePanning = false
             if open {
                 if let monitor = keyMonitor {
                     NSEvent.removeMonitor(monitor)
@@ -95,12 +108,29 @@ struct ContentView: View {
                 ActiveSketch.model = nil
             }
         }
-        .onExitCommand { model.cancelDraft() }
+        .onExitCommand {
+            if model.draft.isEmpty {
+                model.tool = .select
+            } else {
+                model.cancelDraft()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openCircleRadius)) { _ in
             showCircleRadius = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .openProtocol)) { _ in
             showProtocol = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .exportFinished)) { note in
+            guard note.object as? SketchModel === model else {
+                return
+            }
+            if let url = note.userInfo?["url"] as? URL {
+                exportNotice = ExportNotice(message: "Exported \(url.lastPathComponent)",
+                                            url: url)
+            } else if let message = note.userInfo?["message"] as? String {
+                exportNotice = ExportNotice(message: message, url: nil)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openTextAnnotation)) { _ in
             textAnchor = model.settings.center
@@ -134,7 +164,6 @@ struct ContentView: View {
             if presentsOnboarding, !AppPreferences.hasCompletedOnboarding() {
                 welcomeFirstRun = true
                 showWelcome = true
-                AppPreferences.markOnboardingCompleted()
             }
         }
         .sheet(isPresented: $showTextSheet) {
@@ -286,6 +315,51 @@ struct ContentView: View {
                                 recents: $recentPalette,
                                 onClose: { showPalette = false })
                 .padding(.top, 64)
+        }
+    }
+
+    /// Export result, with a path to the file in Finder. Clears itself after
+    /// a few seconds or when dismissed.
+    @ViewBuilder
+    private var exportToast: some View {
+        if let notice = exportNotice {
+            HStack(spacing: 10) {
+                Image(systemName: notice.url == nil
+                      ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(notice.url == nil ? .orange : .green)
+                Text(notice.message)
+                    .font(.callout)
+                    .lineLimit(1)
+                if let url = notice.url {
+                    Button("Show in Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    }
+                    .buttonStyle(.link)
+                }
+                Button {
+                    exportNotice = nil
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Dismiss")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(.regularMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(.quaternary, lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+            .padding(.bottom, 36)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .task(id: notice.message) {
+                try? await Task.sleep(for: .seconds(5))
+                if exportNotice?.message == notice.message {
+                    exportNotice = nil
+                }
+            }
         }
     }
 
@@ -448,14 +522,21 @@ struct ContentView: View {
         }
     }
 
-    /// Tool letters and Return for the polygon draft. Text fields, command
-    /// shortcuts and sheets keep their normal keyboard behavior.
+    /// Tool letters, Return for the polygon draft, arrow-key nudging and
+    /// Space-to-pan. Text fields, command shortcuts and sheets keep their
+    /// normal keyboard behavior.
     private func installKeyMonitor() {
         guard keyMonitor == nil else {
             return
         }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { event in
             guard let window = NSApp.keyWindow, event.window === window else {
+                return event
+            }
+            if event.type == .keyUp {
+                if event.keyCode == 49 {
+                    model.spacePanning = false
+                }
                 return event
             }
             if window is NSPanel {
@@ -472,6 +553,35 @@ struct ContentView: View {
             }
             if !event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
                 return event
+            }
+            if event.keyCode == 49 {
+                model.spacePanning = true
+                return nil
+            }
+            if [123, 124, 125, 126].contains(event.keyCode) {
+                guard !model.selection.isEmpty else {
+                    return event
+                }
+                let step = (event.modifierFlags.contains(.shift) ? 10.0 : 1.0)
+                    / model.settings.scale
+                let dx: Double
+                let dy: Double
+                switch event.keyCode {
+                case 123:
+                    dx = -step
+                    dy = 0
+                case 124:
+                    dx = step
+                    dy = 0
+                case 125:
+                    dx = 0
+                    dy = -step
+                default:
+                    dx = 0
+                    dy = step
+                }
+                model.nudgeSelection(by: Vec2(dx, dy))
+                return nil
             }
             if event.keyCode == 36 || event.keyCode == 76 {
                 guard model.tool == .polygon, !model.draft.isEmpty else {

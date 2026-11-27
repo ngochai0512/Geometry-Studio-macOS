@@ -12,5 +12,6 @@ extension Notification.Name {
     static let openUndoHistory = Notification.Name("openUndoHistory")
     static let openTips = Notification.Name("openTips")
     static let openTextAnnotation = Notification.Name("openTextAnnotation")
+    static let exportFinished = Notification.Name("exportFinished")
     static let newSketchRequested = Notification.Name("newSketchRequested")
 }
