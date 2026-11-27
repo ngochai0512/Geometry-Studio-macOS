@@ -317,15 +317,35 @@ extension InspectorView {
                 .buttonStyle(.borderless)
                 .selectionDisabled()
 
-                Button {
-                    onTextAnnotation(model.settings.center)
-                } label: {
-                    Label("Add Caption", systemImage: "textformat")
+                // Four labelled buttons do not fit one inspector row; two
+                // columns keep every word visible at the narrowest width.
+                LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading),
+                                    GridItem(.flexible(), alignment: .leading)],
+                          alignment: .leading, spacing: 6) {
+                    actionButton("Duplicate", "plus.square.on.square") {
+                        model.duplicateSelection()
+                    }
+                    actionButton(lockLabel, selectionIsLocked ? "lock.open" : "lock") {
+                        model.toggleLockSelection()
+                    }
+                    actionButton("Front", "chevron.up.square") {
+                        model.bringSelectionToFront()
+                    }
+                    actionButton("Back", "chevron.down.square") {
+                        model.sendSelectionToBack()
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .selectionDisabled()
+            }
+        }
+    }
 
+    @ViewBuilder
+    var animationSection: some View {
+        if !model.selection.isEmpty {
+            Section("Animation") {
                 HStack(spacing: 8) {
                     Button {
                         model.toggleAnimation()
@@ -338,33 +358,6 @@ extension InspectorView {
                     } label: {
                         Label(traceLabel,
                               systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .selectionDisabled()
-
-                HStack(spacing: 8) {
-                    Button {
-                        model.duplicateSelection()
-                    } label: {
-                        Label("Duplicate", systemImage: "plus.square.on.square")
-                    }
-                    Button {
-                        model.toggleLockSelection()
-                    } label: {
-                        Label(lockLabel,
-                              systemImage: selectionIsLocked ? "lock.open" : "lock")
-                    }
-                    Button {
-                        model.bringSelectionToFront()
-                    } label: {
-                        Label("Front", systemImage: "chevron.up.square")
-                    }
-                    Button {
-                        model.sendSelectionToBack()
-                    } label: {
-                        Label("Back", systemImage: "chevron.down.square")
                     }
                 }
                 .buttonStyle(.bordered)
@@ -659,6 +652,16 @@ extension InspectorView {
                 selectForRow(object.id)
                 model.deleteSelection()
             }
+        }
+    }
+
+    private func actionButton(_ title: String, _ symbol: String,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
