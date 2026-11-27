@@ -50,10 +50,6 @@ struct SettingsView: View {
                         persist(settings)
                     }
                     Spacer()
-                    Button("Create New Sketch") {
-                        persist(settings)
-                        NotificationCenter.default.post(name: .newSketchRequested, object: nil)
-                    }
                 }
                 .padding(12)
             }

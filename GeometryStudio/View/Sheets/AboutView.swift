@@ -42,18 +42,12 @@ struct AboutContent: View {
 
             VStack(alignment: .leading, spacing: 7) {
                 Label("Native Swift and SwiftUI", systemImage: "swift")
-                Label("Built for Apple silicon", systemImage: "cpu")
-                Label("Drag a free point and every construction follows", systemImage: "hand.draw")
+                Label("Built for Apple Silicon", systemImage: "cpu")
+				Label("Fast and reliable", systemImage: "bolt")
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
 
-            Text("Every object is a plain value type, and every construction is recomputed from its parents as you drag. Written from scratch in Swift, with no borrowed code.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 26)
         }
     }
 

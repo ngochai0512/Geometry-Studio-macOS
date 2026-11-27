@@ -13,5 +13,4 @@ extension Notification.Name {
     static let openTips = Notification.Name("openTips")
     static let openTextAnnotation = Notification.Name("openTextAnnotation")
     static let exportFinished = Notification.Name("exportFinished")
-    static let newSketchRequested = Notification.Name("newSketchRequested")
 }

@@ -191,12 +191,6 @@ struct ContentView: View {
                 welcomeFirstRun = false
                 showWelcome = true
             }
-            .onReceive(NotificationCenter.default.publisher(for: .newSketchRequested)) { _ in
-                guard ActiveSketch.model === model else {
-                    return
-                }
-                newDocument(contentType: .geometryStudioSketch)
-            }
     }
 
     func dialogs<V: View>(_ content: V) -> some View {
