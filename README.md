@@ -119,8 +119,9 @@ app-bundle binary does not carry it.
 
 `⌘Z` / `⇧⌘Z` undo and redo, `⌘A` select all, `⌘P` prints the sketch, Delete removes the
 selection. Scroll to pan, pinch or `⌘`-scroll to zoom; `⌘+` / `⌘−` zoom, `⌘0` is actual size,
-`⇧⌘F` fits the sketch and `⇧⌘0` frames the selection. Return closes a polygon; Escape cancels a
-draft.
+`⇧⌘F` fits the sketch and `⇧⌘0` frames the selection. Arrow keys nudge the selection (hold Shift
+for 10× steps), holding Space pans without changing tools, and Return closes a polygon. Escape
+cancels a draft or returns to the Select tool.
 
 `⌘K` opens the command palette, `⌘D` duplicates the selection, `⌘C` / `⌘X` / `⌘V` copy, cut
 and paste objects across documents (text fields keep the native clipboard), `⇧⌘V` pastes in

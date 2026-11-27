@@ -40,7 +40,7 @@ struct InspectorView: View {
         VStack(alignment: .leading, spacing: 1) {
             Text("Inspector")
                 .font(.title3.weight(.semibold))
-            Text("\(model.objects.filter(\.visible).count) visible objects")
+            Text("\(model.objects.filter(\.visible).count) objects")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
