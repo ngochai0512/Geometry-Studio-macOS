@@ -50,7 +50,7 @@ struct CanvasSettings: Codable, Hashable {
     var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
     var gridBold: Bool = false
     var backgroundColor: RGBA = RGBA(1, 1, 1)
-    var theme: CanvasTheme = .light
+    var theme: CanvasTheme = .automatic
     var useMetalRenderer: Bool = false
     var axes: Bool = true
     var axesLabels: Bool = true
@@ -79,7 +79,7 @@ struct CanvasSettings: Codable, Hashable {
         gridColor = try c.decodeIfPresent(RGBA.self, forKey: .gridColor) ?? RGBA(hex: 0x1C1C1F)
         gridBold = try c.decodeIfPresent(Bool.self, forKey: .gridBold) ?? false
         backgroundColor = try c.decodeIfPresent(RGBA.self, forKey: .backgroundColor) ?? RGBA(1, 1, 1)
-        theme = try c.decodeIfPresent(CanvasTheme.self, forKey: .theme) ?? .light
+        theme = try c.decodeIfPresent(CanvasTheme.self, forKey: .theme) ?? .automatic
         useMetalRenderer = try c.decodeIfPresent(Bool.self, forKey: .useMetalRenderer) ?? false
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true
         axesLabels = try c.decodeIfPresent(Bool.self, forKey: .axesLabels) ?? true
@@ -270,9 +270,11 @@ extension CanvasSettings {
     /// the theme supplies the paper tint. A dark custom background flips the
     /// light tokens, and an unreadable grid colour is replaced by a neutral
     /// with the same alpha.
-    var palette: CanvasPalette {
-        let dark = backgroundColor.luminance < 0.45
-        let warm = theme == .paper
+    func palette(systemDark: Bool = false) -> CanvasPalette {
+        let base = theme.resolved(systemDark: systemDark)
+        let paper = theme == .automatic ? base.background : backgroundColor
+        let dark = paper.luminance < 0.45
+        let warm = base == .paper
         let ink = dark ? RGBA(0.92, 0.93, 0.95)
             : (warm ? RGBA(0.24, 0.20, 0.15) : RGBA.ink)
         let secondary = dark ? RGBA(0.68, 0.70, 0.76)
@@ -295,10 +297,16 @@ extension CanvasSettings {
         )
     }
 
+    /// The background actually drawn. Automatic ignores the stored custom
+    /// colour so the canvas follows the system appearance.
+    func displayBackground(systemDark: Bool = false) -> RGBA {
+        theme == .automatic ? theme.resolved(systemDark: systemDark).background : backgroundColor
+    }
+
     /// The white-page token set used by print and export. It keeps the
     /// document's grid colour unless that colour would vanish on paper.
     var paperPalette: CanvasPalette {
-        var result = palette
+        var result = palette()
         result.isDark = false
         result.ink = .ink
         result.secondaryInk = .secondaryInk

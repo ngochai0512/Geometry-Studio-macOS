@@ -195,7 +195,7 @@ struct SettingsView: View {
                         Text(theme.title).tag(theme)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
                 ColorPicker("Canvas background", selection: backgroundColorBinding)
             } header: {
                 Text("Background")
@@ -318,7 +318,10 @@ struct SettingsView: View {
             set: { theme in
                 var updated = settings
                 updated.theme = theme
-                updated.backgroundColor = theme.background
+                // Automatic and Custom keep the stored colour.
+                if theme == .light || theme == .dark || theme == .paper {
+                    updated.backgroundColor = theme.background
+                }
                 settings = updated
             }
         )
@@ -329,10 +332,16 @@ struct SettingsView: View {
             get: { settings.backgroundColor.color },
             set: { newValue in
                 let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .white
-                settings.backgroundColor = RGBA(Double(ns.redComponent),
-                                                Double(ns.greenComponent),
-                                                Double(ns.blueComponent),
-                                                Double(ns.alphaComponent))
+                var updated = settings
+                // A custom tint is only visible when Automatic is not in charge.
+                if updated.theme == .automatic {
+                    updated.theme = .custom
+                }
+                updated.backgroundColor = RGBA(Double(ns.redComponent),
+                                               Double(ns.greenComponent),
+                                               Double(ns.blueComponent),
+                                               Double(ns.alphaComponent))
+                settings = updated
             }
         )
     }

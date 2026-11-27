@@ -43,6 +43,7 @@ struct SketchCanvas: View {
     @FocusState var coordinateFieldFocused: Bool
     @State var hoveredObjectID: UUID?
     @State var dragNeedsHold = false
+    @Environment(\.colorScheme) private var colorScheme
     @State var hudScreen: CGPoint?
     @State var selectionHandle: SelectionHandleKind?
     @State var handleBasePositions: [UUID: Vec2] = [:]
@@ -61,7 +62,8 @@ struct SketchCanvas: View {
     /// Printing always uses the paper palette, so a dark-canvas sketch does
     /// not print light ink on a white page.
     var palette: CanvasPalette {
-        printing ? model.settings.paperPalette : model.settings.palette
+        printing ? model.settings.paperPalette
+            : model.settings.palette(systemDark: colorScheme == .dark)
     }
     var ink: Color {
         palette.ink.color
@@ -130,7 +132,7 @@ struct SketchCanvas: View {
                 if printing {
                     Color.white
                 } else {
-                    model.settings.backgroundColor.color
+                    model.settings.displayBackground(systemDark: colorScheme == .dark).color
                 }
             }
             .contentShape(Rectangle())
@@ -204,9 +206,9 @@ struct SketchCanvas: View {
             .accessibilityLabel("Geometry canvas")
             .accessibilityChildren {
                 ForEach(model.objects.filter(\.visible)) { object in
-                    Text(model.displayName(for: object))
-                        .accessibilityLabel(model.displayName(for: object))
-                        .accessibilityValue(accessibilityValue(for: object))
+                    Text(MathLabel.plainText(model.displayName(for: object)))
+                        .accessibilityLabel(MathLabel.plainText(model.displayName(for: object)))
+                        .accessibilityValue(MathLabel.plainText(accessibilityValue(for: object)))
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction {
                             model.select(object.id)

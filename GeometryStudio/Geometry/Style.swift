@@ -204,9 +204,11 @@ struct ObjectStyle: Codable, Hashable {
 /// background still wins, and the palette flips to the opposite ink set when
 /// that custom background is dark.
 enum CanvasTheme: String, Codable, CaseIterable, Identifiable {
+    case automatic
     case light
     case dark
     case paper
+    case custom
 
     var id: String {
         rawValue
@@ -214,24 +216,36 @@ enum CanvasTheme: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .automatic:
+            return "Automatic"
         case .light:
             return "Light"
         case .dark:
             return "Dark"
         case .paper:
             return "Paper"
+        case .custom:
+            return "Custom"
         }
     }
 
     var background: RGBA {
         switch self {
-        case .light:
+        case .automatic, .light, .custom:
             return RGBA(1, 1, 1)
         case .dark:
             return RGBA(0.07, 0.08, 0.10)
         case .paper:
             return RGBA(0.97, 0.95, 0.90)
         }
+    }
+
+    /// Automatic follows the system appearance; every other preset is fixed.
+    func resolved(systemDark: Bool) -> CanvasTheme {
+        guard self == .automatic else {
+            return self
+        }
+        return systemDark ? .dark : .light
     }
 }
 
@@ -258,5 +272,209 @@ struct CanvasPalette {
             return ink
         }
         return color
+    }
+}
+
+/// One run of a canvas label after lightweight math markup is expanded.
+struct MathLabelRun: Equatable {
+    enum Script: Equatable {
+        case normal
+        case superscript
+        case sub
+    }
+
+    var text: String
+    var script: Script
+}
+
+/// Canvas label markup: `^{…}` superscript, `_{…}` subscript, `\alpha`-style
+/// Greek names, `\overline{…}` and `\widehat{…}`. Everything else passes
+/// through, so plain labels keep working unchanged.
+enum MathLabel {
+    private static let greek: [String: String] = [
+        "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε",
+        "zeta": "ζ", "eta": "η", "theta": "θ", "iota": "ι", "kappa": "κ",
+        "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "omicron": "ο",
+        "pi": "π", "rho": "ρ", "sigma": "σ", "tau": "τ", "upsilon": "υ",
+        "phi": "φ", "chi": "χ", "psi": "ψ", "omega": "ω",
+        "Alpha": "Α", "Beta": "Β", "Gamma": "Γ", "Delta": "Δ", "Epsilon": "Ε",
+        "Zeta": "Ζ", "Eta": "Η", "Theta": "Θ", "Iota": "Ι", "Kappa": "Κ",
+        "Lambda": "Λ", "Mu": "Μ", "Nu": "Ν", "Xi": "Ξ", "Omicron": "Ο",
+        "Pi": "Π", "Rho": "Ρ", "Sigma": "Σ", "Tau": "Τ", "Upsilon": "Υ",
+        "Phi": "Φ", "Chi": "Χ", "Psi": "Ψ", "Omega": "Ω"
+    ]
+
+    private static let symbols: [String: String] = [
+        "degree": "°", "times": "×", "cdot": "·", "pm": "±", "mp": "∓",
+        "infty": "∞", "angle": "∠", "triangle": "△", "perp": "⊥",
+        "parallel": "∥", "prime": "′", "approx": "≈", "neq": "≠",
+        "leq": "≤", "geq": "≥"
+    ]
+
+    private static let combiningOverline = "\u{0305}"
+    private static let combiningArc = "\u{0311}"
+    private static let combiningWideArc = "\u{0361}"
+
+    static func parse(_ source: String) -> [MathLabelRun] {
+        var runs: [MathLabelRun] = []
+        var plain = ""
+        func flushPlain() {
+            guard !plain.isEmpty else {
+                return
+            }
+            runs.append(MathLabelRun(text: plain, script: .normal))
+            plain.removeAll()
+        }
+
+        var index = source.startIndex
+        while index < source.endIndex {
+            let character = source[index]
+
+            if character == "\\" {
+                let afterSlash = source.index(after: index)
+                guard afterSlash < source.endIndex else {
+                    plain.append(character)
+                    break
+                }
+                let (name, nameEnd) = readName(source, from: afterSlash)
+                if name == "overline" || name == "widehat" {
+                    let group = readGroup(source, from: nameEnd)
+                    plain += decorate(group.text, arc: name == "widehat")
+                    index = group.end
+                } else if let symbol = symbol(for: name) {
+                    plain += symbol
+                    index = nameEnd
+                } else if !name.isEmpty {
+                    plain += name
+                    index = nameEnd
+                } else {
+                    plain.append(source[afterSlash])
+                    index = source.index(after: afterSlash)
+                }
+                continue
+            }
+
+            if character == "^" || character == "_" {
+                flushPlain()
+                let group = readScript(source, from: index)
+                if !group.text.isEmpty {
+                    runs.append(MathLabelRun(text: group.text,
+                                             script: character == "^" ? .superscript : .sub))
+                }
+                index = group.end
+                continue
+            }
+
+            plain.append(character)
+            index = source.index(after: index)
+        }
+        flushPlain()
+        return runs
+    }
+
+    /// The spoken/exported form: markup removed, symbols kept as characters.
+    static func plainText(_ source: String) -> String {
+        parse(source).map(\.text).joined()
+    }
+
+    /// The canvas form, with scripts sized and raised/lowered per run.
+    static func attributed(_ source: String,
+                           base: Font = .body,
+                           script: Font = .caption2,
+                           superscriptOffset: CGFloat = 5,
+                           subscriptOffset: CGFloat = -2) -> AttributedString {
+        var attributed = AttributedString()
+        for run in parse(source) {
+            var piece = AttributedString(run.text)
+            switch run.script {
+            case .normal:
+                piece.font = base
+            case .superscript:
+                piece.font = script
+                piece.baselineOffset = superscriptOffset
+            case .sub:
+                piece.font = script
+                piece.baselineOffset = subscriptOffset
+            }
+            attributed.append(piece)
+        }
+        return attributed
+    }
+
+    private static func symbol(for name: String) -> String? {
+        greek[name] ?? symbols[name]
+    }
+
+    private static func readName(_ source: String, from index: String.Index)
+        -> (name: String, end: String.Index) {
+        var cursor = index
+        var name = ""
+        while cursor < source.endIndex, source[cursor].isLetter {
+            name.append(source[cursor])
+            cursor = source.index(after: cursor)
+        }
+        return (name, cursor)
+    }
+
+    private static func readGroup(_ source: String, from index: String.Index)
+        -> (text: String, end: String.Index) {
+        guard index < source.endIndex, source[index] == "{" else {
+            return ("", index)
+        }
+        var cursor = source.index(after: index)
+        var depth = 1
+        var text = ""
+        while cursor < source.endIndex {
+            let character = source[cursor]
+            if character == "{" {
+                depth += 1
+                text.append(character)
+            } else if character == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return (text, source.index(after: cursor))
+                }
+                text.append(character)
+            } else {
+                text.append(character)
+            }
+            cursor = source.index(after: cursor)
+        }
+        return (text, cursor)
+    }
+
+    private static func readScript(_ source: String, from index: String.Index)
+        -> (text: String, end: String.Index) {
+        let after = source.index(after: index)
+        guard after < source.endIndex else {
+            return ("", after)
+        }
+        if source[after] == "{" {
+            return readGroup(source, from: after)
+        }
+        if source[after] == "\\" {
+            let nameStart = source.index(after: after)
+            let (name, end) = readName(source, from: nameStart)
+            return (symbol(for: name) ?? "", end)
+        }
+        return (String(source[after]), source.index(after: after))
+    }
+
+    private static func decorate(_ text: String, arc: Bool) -> String {
+        let characters = Array(text)
+        guard !characters.isEmpty else {
+            return text
+        }
+        if arc {
+            if characters.count == 2 {
+                return String(characters[0]) + combiningWideArc + String(characters[1])
+            }
+            return characters.map {
+                $0 == " " ? " " : String($0) + combiningArc
+            }.joined()
+        }
+        return characters.map {
+            $0 == " " ? " " : String($0) + combiningOverline
+        }.joined()
     }
 }
