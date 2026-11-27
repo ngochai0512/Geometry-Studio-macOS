@@ -157,7 +157,7 @@ struct CircleRadiusSheet: View {
 private let welcomeTips: [(String, String)] = [
     ("hand.draw", "Drag a free point and every construction follows"),
     ("cursorarrow.click.2", "Shift-click adds to the selection; drag on empty space to marquee"),
-    ("character.cursor.ibeam", "Double-click a label to rename it, or drag the label grip"),
+    ("character.cursor.ibeam", "Double-click a free point to type its coordinates, or a label to rename it"),
     ("command", "⌘K opens the command palette; ⌘D duplicates the selection"),
     ("ruler", "Select regions and paths to see area and perimeter in the status bar")
 ]
@@ -556,6 +556,8 @@ struct UndoHistorySheet: View {
 struct ProtocolSheet: View {
     var steps: [String]
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         VStack(spacing: 0) {
             if steps.isEmpty {
@@ -574,9 +576,34 @@ struct ProtocolSheet: View {
                     }
                 }
             }
-            SheetFooter("Done") {}
+
+            Divider()
+
+            HStack(spacing: 10) {
+                Button {
+                    copySteps()
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .disabled(steps.isEmpty)
+                Spacer()
+                Button("Done") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(12)
         }
         .frame(minWidth: 560, minHeight: 420)
+    }
+
+    private func copySteps() {
+        let text = steps.enumerated()
+            .map { "\($0.offset + 1). \($0.element)" }
+            .joined(separator: "\n")
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
     }
 }
 
