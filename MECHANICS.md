@@ -32,19 +32,20 @@ This sheet records the behavior this build implements and the values it uses. Va
 | Toolbox | selection arrows, point, compass, straightedge, polygon, text, marker, information, custom tools | |
 | Grid | show/hide on a coordinate system; snap points to integer coordinates | |
 
-Defaults are inches, hundredths and degrees. The distance factor table is `[1, 72/2.54, 72]`,
-read as pixels, centimetres and inches.
+The observed original defaulted to inches, hundredths and degrees; this rebuild defaults new
+sketches to centimetres, hundredths and degrees. The distance factor table is
+`[1, 72/2.54, 72]`, read as pixels, centimetres and inches.
 
 ## Values used by this rebuild
 
 | Setting | Value | Note |
 | --- | --- | --- |
-| Distance unit | inches by default; cm, inches, pixels offered | factor table `[1, 72/2.54, 72]`, whose third entry is points per inch |
+| Distance unit | centimetres by default; cm, inches, pixels offered | factor table `[1, 72/2.54, 72]`, whose third entry is points per inch |
 | Angle unit | degrees by default; degrees, directed degrees, radians offered | |
 | Plain angle range | 0–180°, undirected | |
 | Directed angle range | −180…180° (radians −π…π) | |
 | Measurement decimals | 2 (hundredths), choices 0–5 | |
-| Grid spacing | 1 selected distance unit | snapping to integer coordinates; the grid follows the chosen unit |
+| Grid spacing | the smallest unit candidate (0.1–100) at least 50 points apart (24 for the dense grid) | the grid follows the chosen unit; labels drop to every fifth line when dense |
 | Canvas scale at 100% | 28.35 points per cm (72 points per inch) | |
 | Point sizes | Dot 3, Small 4.5, Medium 6, Large 8 px | **estimated** |
 | Line width | 1.5 px default; hairline…heavy presets 0.8–3.2 | **estimated** |
@@ -82,30 +83,52 @@ above.
 ## What this rebuild has
 
 - Native Swift 5.9 / SwiftUI app for macOS 27+, built for Apple silicon (`arm64`).
-- Tools: select/drag, point, segment, ray, line, circle, polygon, angle, text.
+- Tools: select/drag, pan, point, segment, ray, line, circle, polygon, angle, text.
 - Constructions: midpoint, perpendicular, parallel, angle bisector, intersection, segment,
-  circle by centre+point, polygon interior, point on object, and locus from a point on a path
-  plus the point it drives.
-- Measurements: distance, length, perimeter, circumference, angle, area, radius, ratio,
-  coordinates, equation, slope, and a calculation sheet.
+  circle by centre+point, circle by centre+radius, arc on a circle, arc through three points,
+  polygon interior, point on object, perpendicular bisector, tangents, radical axis, vector,
+  vector sum and difference, parameter, cartesian and polar coordinate systems, and locus from
+  a point on a path plus the point it drives.
+- Measurements: distance, length, perimeter, circumference, angle, arc angle and length, area,
+  radius, ratio, coordinates, abscissa/ordinate, polar distance and direction, coordinate
+  distance, equation, slope, measure all, and a calculation sheet.
 - Transforms: reflect, rotate, dilate, translate (copies recompute from their source).
-- Graph: grid, axes, snapping, function plots with an expression parser.
+- Graph: orthogonal (standard and dense), triangular, polar and isometric grids with a
+  selectable colour and bold style, axes with numbers and label styles, snapping, smart guides,
+  angle snapping, function plots with an expression parser, derivative plots, integral shading,
+  tangents, value tables and root/intersection solvers.
 - Animation and tracing: a point on a path can be animated to the 60 Hz canvas clock, traced
   objects leave a sampled trail, and traces can be erased.
-- Inspector for objects, labels, colour, line weight, dash, point shape and size, visibility,
-  units, angle unit and decimal precision.
-- Preferences for the units, precision and canvas defaults used by new sketches.
+- Inspector with one persistent panel: selected-object details and style above a searchable,
+  collapsible layer list with lock and front/back order. Labels, definitions, visibility,
+  colour, line weight, dash, ticks, angle markers, point shape and size, fills, parameters and
+  coordinate systems, plus editable X/Y, radius, length and angle for the objects that define
+  them.
+- Canvas: automatic (following the system appearance), light, dark, paper and custom themes,
+  with paper/notebook tints, automatic inverse tokens on dark backgrounds, and an optional
+  Metal renderer for geometry.
+- Labels support lightweight math markup: superscripts, subscripts, Greek names, overlines and
+  arcs.
+- Command palette (⌘K) with fuzzy search, shortcuts and recents; named undo history with a
+  history panel; onboarding tips with a built-in triangle sample.
+- Accessibility: a VoiceOver element per object, Escape to Select, arrow-key nudging and
+  Space-drag panning.
+- Presentation mode hides the toolbar, inspector and status bar, enters full screen and pages
+  through open sketches.
+- Preferences for the units, precision, object colours, canvas theme and background, GPU
+  rendering, and the canvas defaults used by new sketches.
 - Printing through the standard macOS print panel: the canvas is rendered at 2× to the imageable
   page area, with Page Setup controlling paper size, orientation and margins.
 - Export to vector PDF, SVG and PNG at 2× from File > Export; the sketch is fitted to a 3:2
-  canvas on a white page.
+  canvas on a white page, with a Finder toast and Export Again. The toolbar share menu sends a
+  lazily rendered PDF or PNG through the system share sheet.
 - Undo/redo with named steps, drag coalescing, an 80-step history and a history menu;
   hide/show and select all.
 - Documents carry a schema revision; decoding tolerates missing newer keys, refuses a document
   from a newer build, and salvages the readable objects from a damaged file. Open/save, autosave,
   Versions, Open Recent, multiple windows and tabs come from SwiftUI's document architecture.
   Closing a window with unsaved changes, or quitting, asks whether to save first.
-- A welcome sample that demonstrates a live circumcircle construction.
+- A welcome sheet with tips and a built-in triangle sample.
 - `--screenshot <file.png>` renders the window for 120 frames without activating the app and
   writes a PNG.
 

@@ -19,19 +19,18 @@ struct ContentView: View {
     @State private var welcomeFirstRun = true
     @State private var showPalette = false
     @State private var showHistory = false
+    @State private var recentPalette: [String] = []
+    @State private var exportNotice: ExportNotice?
+    @State private var enteredFullScreen = false
+    @State private var showPresentationHint = false
     @State private var circleRadius: Double = 2
     @State private var functionText = "sin(x)"
     @State private var calculationText = ""
     @State private var scrollMonitor: Any?
     @State private var keyMonitor: Any?
-    @State private var selectedTab: InspectorTab = .object
-
-    enum InspectorTab: String, CaseIterable, Identifiable {
-        case object = "Object"
-        case sketch = "Sketch"
-        var id: String {
-            rawValue
-        }
+    private struct ExportNotice: Equatable {
+        var message: String
+        var url: URL?
     }
 
     init(model: SketchModel, presentsOnboarding: Bool = true) {
@@ -40,136 +39,257 @@ struct ContentView: View {
     }
 
     var body: some View {
+        dialogs(
+            notifications(
+                interactions(
+                    overlays(
+                        chrome(canvas)
+                    )
+                )
+            )
+        )
+    }
+
+    // The modifier chain is split into groups: one long expression exceeded
+    // the compiler's type-check budget and failed the build.
+    private var canvas: some View {
         SketchCanvas(model: model) { point in
             textAnchor = point
             textDraft = ""
             showTextSheet = true
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .inspector(isPresented: $model.inspectorVisible) {
-            InspectorView(model: model,
-                          tab: $selectedTab,
-                          onTextAnnotation: { point in
-                              textAnchor = point
-                              textDraft = ""
-                              showTextSheet = true
-                          })
-                .inspectorColumnWidth(min: 280, ideal: 306, max: 380)
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            SketchStatusBar(model: model)
-        }
-        .navigationSubtitle("Dynamic Geometry")
-        .toolbar {
-            toolbarContent
-        }
-        .onChange(of: model.tool) { _, newValue in
-            model.draft = []
-            model.statusMessage = newValue.hint
-        }
-        .onChange(of: controlActiveState) { _, state in
-            if state != .inactive {
+    }
+
+    private func chrome<V: View>(_ content: V) -> some View {
+        content
+            .inspector(isPresented: inspectorVisibleBinding) {
+                InspectorView(model: model)
+                    .inspectorColumnWidth(min: 280, ideal: 306, max: 380)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !model.presentationMode {
+                    SketchStatusBar(model: model)
+                }
+            }
+            .toolbar {
+                toolbarContent
+            }
+            .toolbarVisibility(model.presentationMode ? .hidden : .visible,
+                               for: .windowToolbar)
+    }
+
+    private func overlays<V: View>(_ content: V) -> some View {
+        content
+            .overlay(alignment: .top) {
+                if showPalette {
+                    paletteOverlay
+                }
+            }
+            .overlay(alignment: .bottom) {
+                exportToast
+            }
+            .overlay(alignment: .bottom) {
+                if model.presentationMode, showPresentationHint {
+                    Text("Esc to exit   ← → switch sketches")
+                        .font(.callout)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(.bottom, 28)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: exportNotice)
+            .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private func interactions<V: View>(_ content: V) -> some View {
+        content
+            .onChange(of: model.tool) { _, _ in
+                model.draft = []
+            }
+            .onChange(of: model.presentationMode) { _, presenting in
+                applyPresentationChange(presenting)
+            }
+            .onChange(of: controlActiveState) { _, state in
+                if state != .inactive {
+                    ActiveSketch.model = model
+                } else {
+                    model.spacePanning = false
+                }
+            }
+            .onAppear(perform: installScrollMonitor)
+            .onAppear(perform: installKeyMonitor)
+            .onChange(of: showPalette) { _, open in
+                applyPaletteChange(open)
+            }
+            .onAppear {
                 ActiveSketch.model = model
             }
-        }
-        .background(Color(nsColor: .windowBackgroundColor))
-        .onAppear(perform: installScrollMonitor)
-        .onAppear(perform: installKeyMonitor)
-        .onAppear {
-            ActiveSketch.model = model
-        }
-        .onDisappear {
-            if let monitor = scrollMonitor {
-                NSEvent.removeMonitor(monitor)
+            .onDisappear {
+                removeEventMonitors()
+                if ActiveSketch.model === model {
+                    ActiveSketch.model = nil
+                }
             }
-            scrollMonitor = nil
+            .onExitCommand {
+                if model.presentationMode {
+                    model.presentationMode = false
+                } else if model.draft.isEmpty {
+                    model.tool = .select
+                } else {
+                    model.cancelDraft()
+                }
+            }
+            .onAppear {
+                if presentsOnboarding, !AppPreferences.hasCompletedOnboarding() {
+                    welcomeFirstRun = true
+                    showWelcome = true
+                }
+            }
+    }
+
+    private func notifications<V: View>(_ content: V) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .openCircleRadius)) { _ in
+                showCircleRadius = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openProtocol)) { _ in
+                showProtocol = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .exportFinished)) { note in
+                guard note.object as? SketchModel === model else {
+                    return
+                }
+                if let url = note.userInfo?["url"] as? URL {
+                    exportNotice = ExportNotice(message: "Exported \(url.lastPathComponent)",
+                                                url: url)
+                } else if let message = note.userInfo?["message"] as? String {
+                    exportNotice = ExportNotice(message: message, url: nil)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openTextAnnotation)) { _ in
+                textAnchor = model.settings.center
+                textDraft = ""
+                showTextSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openFunction)) { _ in
+                showFunction = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openCalculation)) { _ in
+                calculationText = ""
+                showCalculation = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
+                showPalette = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openUndoHistory)) { _ in
+                showHistory = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openTips)) { _ in
+                welcomeFirstRun = false
+                showWelcome = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .newSketchRequested)) { _ in
+                guard ActiveSketch.model === model else {
+                    return
+                }
+                newDocument(contentType: .geometryStudioSketch)
+            }
+    }
+
+    private func dialogs<V: View>(_ content: V) -> some View {
+        content
+            .sheet(isPresented: $showTextSheet) {
+                AddTextSheet(text: $textDraft) { text in
+                    model.checkpoint("Add Text")
+                    let id = model.add(kind: .caption(text), position: textAnchor, silent: true)
+                    model.selection = [id]
+                }
+            }
+            .sheet(isPresented: $showCircleRadius) {
+                CircleRadiusSheet(radius: $circleRadius,
+                                  centerName: circleCenterName(),
+                                  unit: model.settings.lengthUnit.short) { radius in
+                    model.constructCircleRadius(radius)
+                }
+            }
+            .sheet(isPresented: $showProtocol) {
+                ProtocolSheet(steps: model.constructionProtocol())
+            }
+            .sheet(isPresented: $showFunction) {
+                FunctionSheet(text: $functionText) { expression in
+                    model.addFunctionPlot(expression: expression)
+                }
+            }
+            .sheet(isPresented: $showCalculation) {
+                CalculationSheet(text: $calculationText, names: measurementNames()) { expression in
+                    model.addCalculation(expression: expression)
+                }
+            }
+            .sheet(isPresented: $showWelcome, onDismiss: {
+                AppPreferences.markOnboardingCompleted()
+            }) {
+                WelcomeSheet(isFirstRun: welcomeFirstRun,
+                             onTemplate: { template in
+                                 openTemplate(template)
+                             })
+            }
+            .sheet(isPresented: $showHistory) {
+                UndoHistorySheet(model: model)
+            }
+            .sheet(isPresented: $model.showAbout) { AboutView() }
+    }
+
+    private func applyPresentationChange(_ presenting: Bool) {
+        showPalette = false
+        guard let window = NSApp.keyWindow else {
+            return
+        }
+        let fullScreen = window.styleMask.contains(.fullScreen)
+        if presenting {
+            showPresentationHint = true
+            if !fullScreen {
+                enteredFullScreen = true
+                window.toggleFullScreen(nil)
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(5))
+                if model.presentationMode {
+                    showPresentationHint = false
+                }
+            }
+        } else if enteredFullScreen {
+            enteredFullScreen = false
+            if window.styleMask.contains(.fullScreen) {
+                window.toggleFullScreen(nil)
+            }
+        }
+    }
+
+    private func applyPaletteChange(_ open: Bool) {
+        // Tool letters belong to the palette search while it is open.
+        model.spacePanning = false
+        if open {
             if let monitor = keyMonitor {
                 NSEvent.removeMonitor(monitor)
+                keyMonitor = nil
             }
-            keyMonitor = nil
-            if ActiveSketch.model === model {
-                ActiveSketch.model = nil
-            }
+        } else {
+            installKeyMonitor()
         }
-        .onExitCommand { model.cancelDraft() }
-        .onReceive(NotificationCenter.default.publisher(for: .openCircleRadius)) { _ in
-            showCircleRadius = true
+    }
+
+    private func removeEventMonitors() {
+        if let monitor = scrollMonitor {
+            NSEvent.removeMonitor(monitor)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openProtocol)) { _ in
-            showProtocol = true
+        scrollMonitor = nil
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openFunction)) { _ in
-            showFunction = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openCalculation)) { _ in
-            calculationText = ""
-            showCalculation = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
-            showPalette = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openUndoHistory)) { _ in
-            showHistory = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openTips)) { _ in
-            welcomeFirstRun = false
-            showWelcome = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .newSketchRequested)) { _ in
-            guard ActiveSketch.model === model else {
-                return
-            }
-            newDocument(contentType: .geometryStudioSketch)
-        }
-        .onAppear {
-            if presentsOnboarding, !AppPreferences.hasCompletedOnboarding() {
-                welcomeFirstRun = true
-                showWelcome = true
-                AppPreferences.markOnboardingCompleted()
-            }
-        }
-        .sheet(isPresented: $showTextSheet) {
-            AddTextSheet(text: $textDraft) { text in
-                model.checkpoint("Add Text")
-                let id = model.add(kind: .caption(text), position: textAnchor, silent: true)
-                model.selection = [id]
-            }
-        }
-        .sheet(isPresented: $showCircleRadius) {
-            CircleRadiusSheet(radius: $circleRadius,
-                              centerName: circleCenterName(),
-                              unit: model.settings.lengthUnit.short) { radius in
-                model.constructCircleRadius(radius)
-            }
-        }
-        .sheet(isPresented: $showProtocol) {
-            ProtocolSheet(steps: model.constructionProtocol())
-        }
-        .sheet(isPresented: $showFunction) {
-            FunctionSheet(text: $functionText) { expression in
-                model.addFunctionPlot(expression: expression)
-            }
-        }
-        .sheet(isPresented: $showCalculation) {
-            CalculationSheet(text: $calculationText, names: measurementNames()) { expression in
-                model.addCalculation(expression: expression)
-            }
-        }
-        .sheet(isPresented: $showWelcome, onDismiss: {
-            AppPreferences.markOnboardingCompleted()
-        }) {
-            WelcomeSheet(isFirstRun: welcomeFirstRun,
-                         onTemplate: { template in
-                             openTemplate(template)
-                         })
-        }
-        .sheet(isPresented: $showPalette) {
-            CommandPaletteSheet(commands: paletteCommands)
-        }
-        .sheet(isPresented: $showHistory) {
-            UndoHistorySheet(model: model)
-        }
-        .sheet(isPresented: $model.showAbout) { AboutView() }
+        keyMonitor = nil
     }
 
     // MARK: toolbar
@@ -223,6 +343,8 @@ struct ContentView: View {
                 Button("200%") { model.setZoom(124) }
                 Divider()
                 Button("Fit Sketch") { model.fitCanvas(size: model.canvasSize) }
+                Button("Zoom to Selection") { model.zoomToSelection(size: model.canvasSize) }
+                    .disabled(model.selection.isEmpty)
                 Button("Actual Size") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
             } label: {
                 Text("\(Int(model.settings.scale / SketchMetrics.pixelsPerCentimetre * 100))%")
@@ -243,11 +365,8 @@ struct ContentView: View {
             constructMenu
             measureMenu
 
-            Toggle(isOn: $model.settings.grid) {
-                Label("Grid", systemImage: "squareshape.split.2x2")
-            }
-            .toggleStyle(.button)
-            .help("Show or hide the grid")
+            gridMenu
+            shareMenu
 
             Toggle(isOn: $model.inspectorVisible) {
                 Label("Inspector", systemImage: "sidebar.right")
@@ -269,6 +388,143 @@ struct ContentView: View {
                 }
             }
         )
+    }
+
+    /// Floating command palette, pinned near the top of the canvas.
+    @ViewBuilder
+    private var paletteOverlay: some View {
+        ZStack(alignment: .top) {
+            Color.black.opacity(0.12)
+                .ignoresSafeArea()
+                .onTapGesture { showPalette = false }
+            CommandPalettePanel(commands: paletteCommands,
+                                recents: $recentPalette,
+                                onClose: { showPalette = false })
+                .padding(.top, 64)
+        }
+    }
+
+    /// Export result, with a path to the file in Finder. Clears itself after
+    /// a few seconds or when dismissed.
+    @ViewBuilder
+    private var exportToast: some View {
+        if let notice = exportNotice {
+            HStack(spacing: 10) {
+                Image(systemName: notice.url == nil
+                      ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(notice.url == nil ? .orange : .green)
+                Text(notice.message)
+                    .font(.callout)
+                    .lineLimit(1)
+                if let url = notice.url {
+                    Button("Show in Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    }
+                    .buttonStyle(.link)
+                }
+                Button {
+                    exportNotice = nil
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Dismiss")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(.regularMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(.quaternary, lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+            .padding(.bottom, 36)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .task(id: notice.message) {
+                try? await Task.sleep(for: .seconds(5))
+                if exportNotice?.message == notice.message {
+                    exportNotice = nil
+                }
+            }
+        }
+    }
+
+    /// Toolbar grid control: the current state plus the grid, axis and snap
+    /// options that used to live in the inspector.
+    private var gridMenu: some View {
+        Menu {
+            Toggle("Show Grid", isOn: $model.settings.grid)
+
+            Picker("Grid Style", selection: $model.settings.gridType) {
+                ForEach(GridType.allCases) { type in
+                    Text(type.title).tag(type)
+                }
+            }
+
+            Picker("Grid Color", selection: $model.settings.gridColor) {
+                ForEach(RGBA.gridPalette, id: \.0) { name, color in
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(color.color)
+                            .frame(width: 10, height: 10)
+                        Text(name)
+                    }
+                    .tag(color)
+                }
+            }
+
+            Toggle("Bold Grid", isOn: $model.settings.gridBold)
+
+            Divider()
+
+            Toggle("Show Axes", isOn: $model.settings.axes)
+            Toggle("Axes Numbers", isOn: $model.settings.axesLabels)
+
+            Picker("Axis Label Style", selection: $model.settings.axesLabelStyle) {
+                ForEach(AxisLabelStyle.presets, id: \.self) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+
+            Divider()
+
+            Toggle("Snap to Grid", isOn: $model.settings.snap)
+            Toggle("Smart Guides", isOn: $model.settings.smartGuides)
+
+            Picker("Angle Snap", selection: $model.settings.angleSnap) {
+                ForEach(CanvasSettings.angleSnapChoices, id: \.self) { angle in
+                    Text(angle == 0 ? "Off" : "\(Int(angle))°").tag(angle)
+                }
+            }
+
+            Divider()
+
+            Button("Canvas Settings…") {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            }
+        } label: {
+            Label(model.settings.grid ? "Grid" : "Grid Off",
+                  systemImage: "squareshape.split.2x2")
+        }
+        .help("Grid, axes and snapping options")
+    }
+
+    /// Shares the sketch as a lazily rendered PDF or PNG.
+    private var shareMenu: some View {
+        let name = SketchExporter.suggestedName(for: model)
+        return Menu {
+            ShareLink(item: SketchPDFShare(document: model.document, name: name),
+                      preview: SharePreview("\(name).pdf")) {
+                Label("PDF", systemImage: "doc.richtext")
+            }
+            ShareLink(item: SketchPNGShare(document: model.document, name: name),
+                      preview: SharePreview("\(name).png")) {
+                Label("PNG", systemImage: "photo")
+            }
+        } label: {
+            Label("Share", systemImage: "square.and.arrow.up")
+        }
+        .help("Share the sketch as PDF or PNG")
     }
 
     private var constructMenu: some View {
@@ -337,19 +593,9 @@ struct ContentView: View {
             Divider()
             Button("Measure All") { model.measureAll() }
             Divider()
-            Button("Plot Derivative") { model.addDerivativePlot() }
-            Button("Shade Integral") { model.addIntegralPlot() }
-            Button("Tangent at x") { model.addTangentAt() }
-            Button("Value Table") { model.addValueTable() }
-            Button("Find Roots") { model.findFunctionRoots() }
-            Button("Find Intersections") { model.findFunctionIntersections() }
-            Divider()
             Button("Calculate…") {
                 calculationText = ""
                 showCalculation = true
-            }
-            Button("Plot Function…") {
-                showFunction = true
             }
         } label: {
             Label("Measure", systemImage: "ruler")
@@ -380,14 +626,21 @@ struct ContentView: View {
         }
     }
 
-    /// Tool letters and Return for the polygon draft. Text fields, command
-    /// shortcuts and sheets keep their normal keyboard behavior.
+    /// Tool letters, Return for the polygon draft, arrow-key nudging and
+    /// Space-to-pan. Text fields, command shortcuts and sheets keep their
+    /// normal keyboard behavior.
     private func installKeyMonitor() {
         guard keyMonitor == nil else {
             return
         }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { event in
             guard let window = NSApp.keyWindow, event.window === window else {
+                return event
+            }
+            if event.type == .keyUp {
+                if event.keyCode == 49 {
+                    model.spacePanning = false
+                }
                 return event
             }
             if window is NSPanel {
@@ -404,6 +657,48 @@ struct ContentView: View {
             }
             if !event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
                 return event
+            }
+            if model.presentationMode {
+                switch event.keyCode {
+                case 53:
+                    model.presentationMode = false
+                case 123:
+                    cycleSketchWindow(by: -1)
+                case 124:
+                    cycleSketchWindow(by: 1)
+                default:
+                    return event
+                }
+                return nil
+            }
+            if event.keyCode == 49 {
+                model.spacePanning = true
+                return nil
+            }
+            if [123, 124, 125, 126].contains(event.keyCode) {
+                guard !model.selection.isEmpty else {
+                    return event
+                }
+                let step = (event.modifierFlags.contains(.shift) ? 10.0 : 1.0)
+                    / model.settings.scale
+                let dx: Double
+                let dy: Double
+                switch event.keyCode {
+                case 123:
+                    dx = -step
+                    dy = 0
+                case 124:
+                    dx = step
+                    dy = 0
+                case 125:
+                    dx = 0
+                    dy = -step
+                default:
+                    dx = 0
+                    dy = step
+                }
+                model.nudgeSelection(by: Vec2(dx, dy))
+                return nil
             }
             if event.keyCode == 36 || event.keyCode == 76 {
                 guard model.tool == .polygon, !model.draft.isEmpty else {
@@ -423,6 +718,31 @@ struct ContentView: View {
         }
     }
 
+    private var inspectorVisibleBinding: Binding<Bool> {
+        Binding(
+            get: { model.presentationMode ? false : model.inspectorVisible },
+            set: { model.inspectorVisible = $0 }
+        )
+    }
+
+    /// Presentation paging: move to the previous or next open sketch window,
+    /// skipping panels, sheets and the Settings window.
+    private func cycleSketchWindow(by offset: Int) {
+        let windows = NSApp.orderedWindows.filter { window in
+            window.isVisible
+                && !(window is NSPanel)
+                && window.sheetParent == nil
+                && window.parent == nil
+                && window.identifier?.rawValue.contains("Settings") != true
+        }
+        guard windows.count > 1, let current = NSApp.keyWindow,
+              let index = windows.firstIndex(of: current) else {
+            return
+        }
+        let next = (index + offset + windows.count) % windows.count
+        windows[next].makeKeyAndOrderFront(nil)
+    }
+
     // MARK: palette and templates
 
     private func openTemplate(_ template: SketchTemplate) {
@@ -440,15 +760,15 @@ struct ContentView: View {
     private var paletteCommands: [PaletteCommand] {
         [
             PaletteCommand(title: "Duplicate Selection", category: "Edit",
-                           symbol: "plus.square.on.square") { model.duplicateSelection() },
+                           symbol: "plus.square.on.square", shortcut: "⌘D") { model.duplicateSelection() },
             PaletteCommand(title: "Copy Objects", category: "Edit",
-                           symbol: "doc.on.doc") { model.copySelection() },
+                           symbol: "doc.on.doc", shortcut: "⌘C") { model.copySelection() },
             PaletteCommand(title: "Cut Objects", category: "Edit",
-                           symbol: "scissors") { model.cutSelection() },
+                           symbol: "scissors", shortcut: "⌘X") { model.cutSelection() },
             PaletteCommand(title: "Paste Objects", category: "Edit",
-                           symbol: "doc.on.clipboard") { model.pasteObjects() },
+                           symbol: "doc.on.clipboard", shortcut: "⌘V") { model.pasteObjects() },
             PaletteCommand(title: "Paste in Place", category: "Edit",
-                           symbol: "doc.on.clipboard") { model.pasteObjects(inPlace: true) },
+                           symbol: "doc.on.clipboard", shortcut: "⇧⌘V") { model.pasteObjects(inPlace: true) },
             PaletteCommand(title: "Lock or Unlock Selection", category: "Edit",
                            symbol: "lock") { model.toggleLockSelection() },
             PaletteCommand(title: "Send to Back", category: "Edit",
@@ -532,10 +852,18 @@ struct ContentView: View {
                 calculationText = ""
                 showCalculation = true
             },
-            PaletteCommand(title: "Plot Function…", category: "Measure",
+            PaletteCommand(title: "Plot Function…", category: "Graph",
                            symbol: "function") { showFunction = true },
-            PaletteCommand(title: "Fit Sketch", category: "View",
+            PaletteCommand(title: "Zoom to Selection", category: "View",
                            symbol: "arrow.up.left.and.arrow.down.right") {
+                model.zoomToSelection(size: model.canvasSize)
+            },
+            PaletteCommand(title: "Actual Size", category: "View",
+                           symbol: "1.magnifyingglass", shortcut: "⌘0") {
+                model.setZoom(SketchMetrics.pixelsPerCentimetre)
+            },
+            PaletteCommand(title: "Fit Sketch", category: "View",
+                           symbol: "arrow.up.left.and.arrow.down.right", shortcut: "⇧⌘F") {
                 model.fitCanvas(size: model.canvasSize)
             },
             PaletteCommand(title: "Toggle Grid", category: "View",
@@ -545,11 +873,11 @@ struct ContentView: View {
             PaletteCommand(title: "Toggle Grid Snapping", category: "View",
                            symbol: "grid.circle") { model.settings.snap.toggle() },
             PaletteCommand(title: "Toggle Inspector", category: "View",
-                           symbol: "sidebar.right") { model.inspectorVisible.toggle() },
+                           symbol: "sidebar.right", shortcut: "⌥⌘I") { model.inspectorVisible.toggle() },
             PaletteCommand(title: "Undo", category: "Edit",
-                           symbol: "arrow.uturn.backward") { model.undo() },
+                           symbol: "arrow.uturn.backward", shortcut: "⌘Z") { model.undo() },
             PaletteCommand(title: "Redo", category: "Edit",
-                           symbol: "arrow.uturn.forward") { model.redo() }
+                           symbol: "arrow.uturn.forward", shortcut: "⇧⌘Z") { model.redo() }
         ]
     }
 

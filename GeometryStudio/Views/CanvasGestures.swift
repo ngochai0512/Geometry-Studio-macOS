@@ -1,6 +1,19 @@
 import SwiftUI
 import AppKit
 
+/// Custom haptics are deliberately narrow, following Apple's playing-haptics
+/// guidance: alignment for snapping to guides/grid, level change for discrete
+/// detents. Visual feedback always accompanies them.
+private enum Haptics {
+    static func alignment() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+    }
+
+    static func levelChange() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+    }
+}
+
 extension SketchCanvas {
 
     // MARK: gestures
@@ -8,7 +21,7 @@ extension SketchCanvas {
     func dragGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                if model.tool == .pan {
+                if model.tool == .pan || model.spacePanning {
                     if !isPanning {
                         isPanning = true
                         NSCursor.closedHand.set()
@@ -36,6 +49,7 @@ extension SketchCanvas {
                     holdSelectionDone = false
                     pressStartedAt = Date()
                     lastSnapWorld = nil
+                    dragNeedsHold = false
 
                     if model.tool == .select {
                         let tol = 9 / model.settings.scale
@@ -44,10 +58,13 @@ extension SketchCanvas {
                             handleBasePositions = model.movableSelectionPositions()
                             handleCenter = model.movableSelectionBounds()?.center ?? .zero
                             handleStartVector = model.worldPoint(value.startLocation, size: size) - handleCenter
+                            lastRotationDetent = nil
                             pressHitID = nil
+                            dragNeedsHold = false
                         } else if let labelHit = model.hitTestLabel(world, tolerance: tol),
                                   let object = model.objectByID(labelHit) {
                             pressHitID = labelHit
+                            dragNeedsHold = !model.selection.contains(labelHit)
                             dragLabelID = labelHit
                             dragLabelBaseOffset = object.offset
                             dragLabelBasePosition = object.position ?? .zero
@@ -55,6 +72,7 @@ extension SketchCanvas {
                         } else if let hit = model.hitTest(world, tolerance: tol),
                                   let object = model.objectByID(hit) {
                             pressHitID = hit
+                            dragNeedsHold = !model.selection.contains(hit)
                             if object.isPointLike || isTransformedPoint(object) {
                                 dragPointID = model.beginDrag(at: world, tolerance: tol)
                             } else if isLabelLike(object) {
@@ -62,9 +80,21 @@ extension SketchCanvas {
                                 dragLabelBaseOffset = object.offset
                                 dragLabelBasePosition = object.position ?? .zero
                                 dragLabelIsCaption = isPositionCard(object)
+                            } else {
+                                let movingIDs = model.selection.contains(hit) ? model.selection : [hit]
+                                let positions = model.canMoveObject(hit)
+                                    ? model.movablePositions(for: movingIDs)
+                                    : [:]
+                                if !positions.isEmpty {
+                                    dragObjectID = hit
+                                    dragObjectBasePositions = positions
+                                    dragObjectStartWorld = world
+                                    lastMoveSnap = nil
+                                }
                             }
                         } else {
                             pressHitID = nil
+                            dragNeedsHold = false
                             marqueeStart = value.startLocation
                             marqueeCurrent = value.startLocation
                         }
@@ -74,8 +104,19 @@ extension SketchCanvas {
                     }
                 }
 
-                if isDrawingTool(model.tool), dragPreviewStart != nil {
+                if isDrawingTool(model.tool), let start = dragPreviewStart {
                     dragPreviewCurrent = current
+                    let preview = model.smartSnappedPoint(
+                        current,
+                        tolerance: 9 / model.settings.scale,
+                        anchor: start,
+                        includeIntersections: false
+                    )
+                    if preview.point.distance(to: current) > 1e-6,
+                       lastSnapWorld != preview.point {
+                        lastSnapWorld = preview.point
+                        playSnapHaptic(preview.guides)
+                    }
                 }
 
                 if abs(value.translation.width) + abs(value.translation.height) > 2 {
@@ -90,10 +131,16 @@ extension SketchCanvas {
                     let vector = current - handleCenter
                     switch handle {
                     case .rotate:
+                        let rotation = vector.angle - handleStartVector.angle
+                        let detent = Int((rotation / (Double.pi / 12)).rounded())
+                        if let previous = lastRotationDetent, previous != detent {
+                            Haptics.levelChange()
+                        }
+                        lastRotationDetent = detent
                         model.applyMovableSelection(handleBasePositions,
                                                     around: handleCenter,
                                                     scale: 1,
-                                                    rotation: vector.angle - handleStartVector.angle)
+                                                    rotation: rotation)
                     case .scale:
                         let factor = vector.length / max(handleStartVector.length, 1e-6)
                         model.applyMovableSelection(handleBasePositions,
@@ -104,19 +151,16 @@ extension SketchCanvas {
                     return
                 }
 
-                if model.tool == .select, selectionHandle == nil {
+                if model.tool == .select, selectionHandle == nil, dragNeedsHold {
                     if !holdReached, Date().timeIntervalSince(pressStartedAt) >= holdToDragDelay {
                         holdReached = true
-                        if !holdSelectionDone, let id = dragPointID ?? dragLabelID ?? pressHitID {
+                        if !holdSelectionDone,
+                           let id = dragPointID ?? dragObjectID ?? dragLabelID ?? pressHitID {
                             model.select(id, additive: NSEvent.modifierFlags.contains(.shift))
                             holdSelectionDone = true
                         }
-                        if dragPointID == nil && dragLabelID == nil {
-                            marqueeStart = value.startLocation
-                            marqueeCurrent = value.location
-                        }
                     }
-                    guard holdReached || pressHitID == nil else {
+                    guard holdReached else {
                         return
                     }
                 }
@@ -133,8 +177,27 @@ extension SketchCanvas {
                     if let applied, applied.distance(to: current) > 1e-6,
                        lastSnapWorld != applied {
                         lastSnapWorld = applied
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                        Haptics.alignment()
                     }
+                } else if let id = dragObjectID, didMove {
+                    if !dragCheckpointed {
+                        let name = model.objectByID(id).map { model.displayName(for: $0) } ?? ""
+                        model.checkpoint(name.isEmpty ? "Move Object" : "Move \(name)")
+                        dragCheckpointed = true
+                    }
+                    let rawDelta = current - dragObjectStartWorld
+                    var delta = rawDelta
+                    if model.settings.snap {
+                        let snappedDelta = model.snapped(current) - model.snapped(dragObjectStartWorld)
+                        if lastMoveSnap != snappedDelta {
+                            lastMoveSnap = snappedDelta
+                            if snappedDelta.distance(to: rawDelta) > 1e-9 {
+                                Haptics.alignment()
+                            }
+                        }
+                        delta = snappedDelta
+                    }
+                    model.translateMovablePoints(dragObjectBasePositions, by: delta)
                 } else if let id = dragLabelID, didMove {
                     if !dragCheckpointed {
                         model.checkpoint("Move Label")
@@ -155,7 +218,7 @@ extension SketchCanvas {
                 defer {
                     if isPanning {
                         isPanning = false
-                        if model.tool == .pan, model.isPointerOverCanvas {
+                        if model.tool == .pan || model.spacePanning, model.isPointerOverCanvas {
                             NSCursor.openHand.set()
                         } else {
                             NSCursor.arrow.set()
@@ -164,6 +227,10 @@ extension SketchCanvas {
                     dragStartScreen = nil
                     panStartCenter = .zero
                     dragPointID = nil
+                    dragObjectID = nil
+                    dragObjectBasePositions = [:]
+                    dragObjectStartWorld = .zero
+                    lastMoveSnap = nil
                     dragLabelID = nil
                     dragLabelIsCaption = false
                     dragCheckpointed = false
@@ -172,7 +239,9 @@ extension SketchCanvas {
                     pressStartedAt = .distantPast
                     holdReached = false
                     holdSelectionDone = false
+                    dragNeedsHold = false
                     lastSnapWorld = nil
+                    lastRotationDetent = nil
                     marqueeStart = nil
                     marqueeCurrent = nil
                     hudScreen = nil
@@ -180,11 +249,11 @@ extension SketchCanvas {
                     handleBasePositions = [:]
                     dragPreviewStart = nil
                     dragPreviewCurrent = nil
-                    if model.tool != .pan {
+                    if model.tool != .pan, !model.spacePanning {
                         model.clearSmartGuides()
                     }
                 }
-                if model.tool == .pan {
+                if isPanning || model.tool == .pan || model.spacePanning {
                     return
                 }
                 let start = model.worldPoint(value.startLocation, size: size)
@@ -195,7 +264,7 @@ extension SketchCanvas {
                     if selectionHandle != nil {
                         return
                     }
-                    if holdReached, dragPointID != nil || dragLabelID != nil {
+                    if dragCheckpointed, dragPointID != nil || dragObjectID != nil || dragLabelID != nil {
                         return
                     }
                     if didMove, let ms = marqueeStart, let mc = marqueeCurrent {
@@ -211,7 +280,11 @@ extension SketchCanvas {
                     let clickCount = NSApp.currentEvent?.clickCount ?? 1
                     if !didMove, clickCount >= 2,
                        let id = pressHitID ?? model.hitTest(end, tolerance: tol) {
-                        beginLabelEditing(id)
+                        if let object = model.objectByID(id), case .freePoint = object.kind {
+                            beginCoordinateEditing(id)
+                        } else {
+                            beginLabelEditing(id)
+                        }
                     }
                     return
                 }
@@ -220,7 +293,7 @@ extension SketchCanvas {
                    [.point, .segment, .ray, .line, .circle, .polygon, .angle].contains(model.tool) {
                     let preview = model.smartSnappedPoint(start, tolerance: tol)
                     if preview.point.distance(to: start) > 1e-6 || !preview.guides.isEmpty {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                        playSnapHaptic(preview.guides)
                     }
                 }
 
@@ -238,7 +311,7 @@ extension SketchCanvas {
                             }
                             let kind: ObjectKind = tool == .segment ? .segment(a: a, b: b)
                                 : tool == .ray ? .ray(a: a, b: b) : .line(a: a, b: b)
-                            var object = SketchObject(kind: kind)
+                            var object = model.makeObject(kind: kind)
                             object.order = (model.objects.map(\.order).max() ?? 0) + 1
                             model.objects.append(object)
                             model.selection = [object.id]
@@ -256,7 +329,7 @@ extension SketchCanvas {
                             guard center != edge else {
                                 return
                             }
-                            var object = SketchObject(kind: .circle(center: center, through: edge))
+                            var object = model.makeObject(kind: .circle(center: center, through: edge))
                             object.order = (model.objects.map(\.order).max() ?? 0) + 1
                             model.objects.append(object)
                             model.selection = [object.id]
@@ -298,32 +371,24 @@ extension SketchCanvas {
     }
 
     private func marqueeSelect(from: CGPoint, to: CGPoint, size: CGSize) {
-        let rect = CGRect(x: min(from.x, to.x), y: min(from.y, to.y),
-                          width: abs(to.x - from.x), height: abs(to.y - from.y))
+        let a = model.worldPoint(CGPoint(x: min(from.x, to.x), y: min(from.y, to.y)), size: size)
+        let b = model.worldPoint(CGPoint(x: max(from.x, to.x), y: max(from.y, to.y)), size: size)
+        let rect = WorldRect(minX: min(a.x, b.x), minY: min(a.y, b.y),
+                             maxX: max(a.x, b.x), maxY: max(a.y, b.y))
         var e = model.evaluator()
         var hits: [UUID] = []
         for object in model.objects where object.visible {
             let r = e.evaluate(object.id)
-            if let p = r.point {
-                if rect.contains(model.screenPoint(p, size: size)) {
-                    hits.append(object.id)
-                    continue
-                }
+            if let p = r.point, rect.contains(p) {
+                hits.append(object.id)
+                continue
             }
-            if let box = r.path?.boundingBox {
-                let a = model.screenPoint(Vec2(box.minX, box.minY), size: size)
-                let b = model.screenPoint(Vec2(box.maxX, box.maxY), size: size)
-                let screenBox = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
-                                       width: abs(a.x - b.x), height: abs(a.y - b.y))
-                if rect.intersects(screenBox) {
-                    hits.append(object.id)
-                    continue
-                }
+            if let path = r.path, path.intersects(rect) {
+                hits.append(object.id)
+                continue
             }
-            if let anchor = r.anchor {
-                if rect.contains(model.screenPoint(anchor, size: size)) {
-                    hits.append(object.id)
-                }
+            if let anchor = r.anchor, rect.contains(anchor) {
+                hits.append(object.id)
             }
         }
         if NSEvent.modifierFlags.contains(.shift) {
@@ -361,6 +426,14 @@ extension SketchCanvas {
         return nil
     }
 
+    private func playSnapHaptic(_ guides: [SmartGuide]) {
+        if guides.contains(where: { $0.kind == .angle }) {
+            Haptics.levelChange()
+        } else {
+            Haptics.alignment()
+        }
+    }
+
     private func isLabelLike(_ object: SketchObject) -> Bool {
         switch object.kind {
         case .measurement, .calculation, .caption, .angle, .parameter:
@@ -370,7 +443,7 @@ extension SketchCanvas {
         }
     }
 
-    private func isDrawingTool(_ tool: SketchTool) -> Bool {
+    func isDrawingTool(_ tool: SketchTool) -> Bool {
         [.segment, .ray, .line, .circle, .polygon, .angle].contains(tool)
     }
 
@@ -390,5 +463,24 @@ extension SketchCanvas {
             return model.evaluated(object.id).point != nil
         }
         return false
+    }
+}
+
+extension SketchCanvas {
+    /// Drawing tools show a crosshair, geometry a hand, and everything else
+    /// the arrow. Panning manages its own open/closed hand.
+    func updateCursor(for hit: UUID?) {
+        guard !isPanning else {
+            return
+        }
+        if model.tool == .pan || model.spacePanning {
+            NSCursor.openHand.set()
+        } else if isDrawingTool(model.tool) {
+            NSCursor.crosshair.set()
+        } else if hit != nil {
+            NSCursor.openHand.set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 }

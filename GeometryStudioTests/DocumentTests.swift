@@ -4,10 +4,10 @@ import Testing
 
 @Suite("Document and units")
 struct DocumentTests {
-    @Test("observed defaults stay inches, hundredths and degrees")
+    @Test("new sketches default to centimetres, hundredths and degrees")
     func observedDefaults() {
         let settings = CanvasSettings()
-        #expect(settings.lengthUnit == .inches)
+        #expect(settings.lengthUnit == .cm)
         #expect(settings.precision == 2)
         #expect(settings.angleUnit == .degrees)
     }

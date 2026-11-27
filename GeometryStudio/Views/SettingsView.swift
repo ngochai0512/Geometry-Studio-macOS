@@ -6,13 +6,13 @@ import SwiftUI
 struct SettingsView: View {
     private enum Tab: Hashable {
         case general
+        case appearance
         case units
         case canvas
-        case update
-        case about
     }
 
     @State private var settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+    @State private var appearance = AppPreferences.appearance()
     @State private var launchAtLogin = LaunchAtLogin()
     @State private var tab: Tab = .general
 
@@ -24,6 +24,11 @@ struct SettingsView: View {
                         Label("General", systemImage: "gearshape")
                     }
                     .tag(Tab.general)
+                appearanceTab
+                    .tabItem {
+                        Label("Appearance", systemImage: "paintpalette")
+                    }
+                    .tag(Tab.appearance)
                 unitsTab
                     .tabItem {
                         Label("Units", systemImage: "ruler")
@@ -34,16 +39,6 @@ struct SettingsView: View {
                         Label("Canvas", systemImage: "squareshape.split.2x2")
                     }
                     .tag(Tab.canvas)
-                updateTab
-                    .tabItem {
-                        Label("Update", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .tag(Tab.update)
-                aboutTab
-                    .tabItem {
-                        Label("About", systemImage: "info.circle")
-                    }
-                    .tag(Tab.about)
             }
 
             if showsSketchActions {
@@ -63,16 +58,20 @@ struct SettingsView: View {
                 .padding(12)
             }
         }
-        .frame(width: 480, height: 500)
+        .frame(width: 540, height: 540)
         .onAppear {
             settings = ActiveSketch.model?.settings ?? AppPreferences.canvasSettings()
+            appearance = AppPreferences.appearance()
             launchAtLogin.refresh()
         }
         .onChange(of: settings) { _, newValue in
             persist(newValue)
         }
+        .onChange(of: appearance) { _, newValue in
+            AppPreferences.saveAppearance(newValue)
+        }
         .onDisappear {
-            persist(settings)
+            AppPreferences.saveAppearance(appearance)
         }
     }
 
@@ -112,6 +111,49 @@ struct SettingsView: View {
         .padding(12)
     }
 
+    private var appearanceTab: some View {
+        Form {
+            Section {
+                ForEach(AppearanceFamily.allCases) { family in
+                    LabeledContent(family.title) {
+                        ColorPicker(family.title,
+                                    selection: appearanceColorBinding(family))
+                            .labelsHidden()
+                            .accessibilityLabel(family.title)
+                    }
+                }
+            } header: {
+                Text("Default Object Colors")
+            } footer: {
+                Text("Applied to newly created objects. Existing objects keep their own colors.")
+            }
+
+            Section {
+                Button("Restore Default Colors") {
+                    appearance = AppearancePreferences()
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding(12)
+    }
+
+    private func appearanceColorBinding(_ family: AppearanceFamily) -> Binding<Color> {
+        Binding(
+            get: { appearance.color(for: family).color },
+            set: { newValue in
+                let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .black
+                var updated = appearance
+                updated.setColor(RGBA(Double(ns.redComponent),
+                                      Double(ns.greenComponent),
+                                      Double(ns.blueComponent),
+                                      Double(ns.alphaComponent)),
+                                 for: family)
+                appearance = updated
+            }
+        )
+    }
+
     private var unitsTab: some View {
         Form {
             Section {
@@ -147,6 +189,20 @@ struct SettingsView: View {
 
     private var canvasTab: some View {
         Form {
+            Section {
+                Picker("Theme", selection: themeBinding) {
+                    ForEach(CanvasTheme.allCases) { theme in
+                        Text(theme.title).tag(theme)
+                    }
+                }
+                .pickerStyle(.menu)
+                backgroundControl
+            } header: {
+                Text("Background")
+            } footer: {
+                Text("A dark background switches ink, labels, cards and halos to their light tokens automatically.")
+            }
+
             Section {
                 Toggle("Show grid", isOn: $settings.grid)
                 Picker("Grid style", selection: gridTypeBinding) {
@@ -192,7 +248,6 @@ struct SettingsView: View {
             }
 
             Section {
-                ColorPicker("Canvas background", selection: backgroundColorBinding)
                 Toggle("Snap points to grid", isOn: $settings.snap)
                 Toggle("Smart guides", isOn: $settings.smartGuides)
                 LabeledContent("Angle snap") {
@@ -215,38 +270,13 @@ struct SettingsView: View {
         .padding(12)
     }
 
-    private var updateTab: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Text("Updates")
-                .font(.headline)
-            Text("This build does not check for updates yet.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var aboutTab: some View {
-        ScrollView {
-            AboutContent()
-                .padding(26)
-                .frame(maxWidth: .infinity)
-        }
-    }
-
     /// The sketch footer only makes sense while editing canvas preferences;
-    /// the Update and About panes have nothing to restore or create.
+    /// the Appearance pane has nothing to restore or create.
     private var showsSketchActions: Bool {
         switch tab {
         case .general, .units, .canvas:
             return true
-        case .update, .about:
+        case .appearance:
             return false
         }
     }
@@ -282,15 +312,95 @@ struct SettingsView: View {
         value == 0 ? "Off" : "\(Int(value))°"
     }
 
+    private var themeBinding: Binding<CanvasTheme> {
+        Binding(
+            get: { settings.theme },
+            set: { theme in
+                var updated = settings
+                updated.theme = theme
+                switch theme {
+                case .light, .dark:
+                    updated.backgroundColor = theme.background
+                case .paper:
+                    updated.backgroundColor = updated.paperBackground
+                case .custom:
+                    updated.backgroundColor = updated.customBackground
+                case .automatic:
+                    break
+                }
+                settings = updated
+            }
+        )
+    }
+
+    /// The background control only appears where the user can change it: a
+    /// fixed preset hides it, Custom shows the colour well, Paper shows tints.
+    @ViewBuilder
+    private var backgroundControl: some View {
+        switch settings.theme {
+        case .automatic:
+            Text("Follows the system appearance.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .light, .dark:
+            Text("This theme has a fixed background.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .custom:
+            ColorPicker("Background colour", selection: backgroundColorBinding)
+        case .paper:
+            LabeledContent("Paper") {
+                HStack(spacing: 8) {
+                    ForEach(CanvasTheme.paperTints, id: \.0) { name, colour in
+                        paperSwatch(name: name, colour: colour)
+                    }
+                }
+            }
+        }
+    }
+
+    private func paperSwatch(name: String, colour: RGBA) -> some View {
+        let selected = settings.backgroundColor == colour
+        return Button {
+            applyPaperTint(colour)
+        } label: {
+            Circle()
+                .fill(colour.color)
+                .frame(width: 20, height: 20)
+                .overlay {
+                    Circle()
+                        .stroke(selected ? Color.accentColor
+                                : Color.secondary.opacity(0.35),
+                                lineWidth: selected ? 2 : 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .help(name)
+        .accessibilityLabel(selected ? "\(name), selected" : name)
+    }
+
+    private func applyPaperTint(_ tint: RGBA) {
+        var updated = settings
+        updated.theme = .paper
+        updated.paperBackground = tint
+        updated.backgroundColor = tint
+        settings = updated
+    }
+
     private var backgroundColorBinding: Binding<Color> {
         Binding(
             get: { settings.backgroundColor.color },
             set: { newValue in
                 let ns = NSColor(newValue).usingColorSpace(.sRGB) ?? .white
-                settings.backgroundColor = RGBA(Double(ns.redComponent),
-                                                Double(ns.greenComponent),
-                                                Double(ns.blueComponent),
-                                                Double(ns.alphaComponent))
+                let colour = RGBA(Double(ns.redComponent),
+                                  Double(ns.greenComponent),
+                                  Double(ns.blueComponent),
+                                  Double(ns.alphaComponent))
+                var updated = settings
+                updated.theme = .custom
+                updated.customBackground = colour
+                updated.backgroundColor = colour
+                settings = updated
             }
         )
     }

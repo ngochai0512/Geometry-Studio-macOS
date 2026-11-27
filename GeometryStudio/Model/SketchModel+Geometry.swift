@@ -276,13 +276,13 @@ extension SketchModel {
     /// polygon, circle or measurement collects the free points its construction
     /// depends on, so handles transform the whole object rather than nothing.
     var canTransformSelection: Bool {
-        movablePointIDs().count >= 2
+        movablePointIDs(for: selection).count >= 2
     }
 
-    private func movablePointIDs() -> [UUID] {
+    func movablePointIDs(for ids: [UUID]) -> [UUID] {
         var seen: Set<UUID> = []
         var result: [UUID] = []
-        var pending = selection
+        var pending = ids
         while let id = pending.popLast() {
             guard !seen.contains(id), let object = objectByID(id) else {
                 continue
@@ -292,7 +292,7 @@ extension SketchModel {
                 continue
             }
             switch object.kind {
-            case .freePoint, .caption:
+            case .freePoint, .caption, .parameter:
                 result.append(id)
             default:
                 pending.append(contentsOf: parents(of: object))
@@ -301,11 +301,66 @@ extension SketchModel {
         return result
     }
 
+    func movablePositions(for id: UUID) -> [UUID: Vec2] {
+        movablePositions(for: [id])
+    }
+
+    func movablePositions(for ids: [UUID]) -> [UUID: Vec2] {
+        var positions: [UUID: Vec2] = [:]
+        for pointID in movablePointIDs(for: ids) {
+            if let position = objectByID(pointID)?.position {
+                positions[pointID] = position
+            }
+        }
+        return positions
+    }
+
+    /// A whole construction can be dragged by its free ancestors. Computed
+    /// cards and images follow other state and are moved by their own controls.
+    func canMoveObject(_ id: UUID) -> Bool {
+        guard let object = objectByID(id), !object.isLocked else {
+            return false
+        }
+        switch object.kind {
+        case .transformed, .locus, .measurement, .calculation, .caption, .angle,
+             .parameter, .graph, .functionPlot:
+            return false
+        default:
+            return !movablePositions(for: id).isEmpty
+        }
+    }
+
+    /// Moves free positions by a delta from a captured starting state. The
+    /// caller supplies the base positions so a live drag does not accumulate.
+    func translateMovablePoints(_ base: [UUID: Vec2], by delta: Vec2) {
+        for (id, start) in base {
+            guard let index = index(of: id), !objects[index].isLocked else {
+                continue
+            }
+            objects[index].position = start + delta
+        }
+        recordTraceSamples()
+    }
+
+    /// Arrow-key nudging: move the free points under the selection by a world
+    /// delta. One undo step covers a run of key presses.
+    func nudgeSelection(by delta: Vec2) {
+        guard !selection.isEmpty, delta.x.isFinite, delta.y.isFinite else {
+            return
+        }
+        let positions = movablePositions(for: selection)
+        guard !positions.isEmpty else {
+            return
+        }
+        checkpoint("Nudge Selection", coalescing: "nudge-selection")
+        translateMovablePoints(positions, by: delta)
+    }
+
     func movableSelectionBounds() -> WorldRect? {
         guard canTransformSelection else {
             return nil
         }
-        let points = movablePointIDs().compactMap { id -> Vec2? in
+        let points = movablePointIDs(for: selection).compactMap { id -> Vec2? in
             objectByID(id)?.position
         }
         guard var box = points.first.map({
@@ -335,7 +390,7 @@ extension SketchModel {
 
     func movableSelectionPositions() -> [UUID: Vec2] {
         var positions: [UUID: Vec2] = [:]
-        for id in movablePointIDs() {
+        for id in movablePointIDs(for: selection) {
             if let position = objectByID(id)?.position {
                 positions[id] = position
             }
@@ -382,6 +437,9 @@ extension SketchModel {
         current.gridColor = new.gridColor
         current.gridBold = new.gridBold
         current.backgroundColor = new.backgroundColor
+        current.customBackground = new.customBackground
+        current.paperBackground = new.paperBackground
+        current.theme = new.theme
         current.useMetalRenderer = new.useMetalRenderer
         current.axes = new.axes
         current.axesLabels = new.axesLabels
@@ -416,8 +474,42 @@ extension SketchModel {
             settings.scale = SketchMetrics.pixelsPerCentimetre
             return
         }
-        var box = WorldRect(minX: pts[0].x, minY: pts[0].y, maxX: pts[0].x, maxY: pts[0].y)
-        for p in pts {
+        frame(points: pts, size: size)
+    }
+
+    /// Frames the current selection, leaving the zoom alone when nothing is
+    /// selected.
+    func zoomToSelection(size: CGSize) {
+        guard !selection.isEmpty, size.width > 40, size.height > 40 else {
+            return
+        }
+        var e = evaluator()
+        var pts: [Vec2] = []
+        for id in selection {
+            guard let object = objectByID(id), object.visible else {
+                continue
+            }
+            let r = e.evaluate(id)
+            if let p = r.point {
+                pts.append(p)
+            }
+            if let b = r.path?.boundingBox {
+                if b.width.isFinite && b.height.isFinite && b.width < 1_000 && b.height < 1_000 {
+                    pts.append(Vec2(b.minX, b.minY))
+                    pts.append(Vec2(b.maxX, b.maxY))
+                }
+            }
+        }
+        frame(points: pts, size: size)
+    }
+
+    private func frame(points: [Vec2], size: CGSize) {
+        guard !points.isEmpty else {
+            return
+        }
+        var box = WorldRect(minX: points[0].x, minY: points[0].y,
+                            maxX: points[0].x, maxY: points[0].y)
+        for p in points {
             box.minX = min(box.minX, p.x)
             box.maxX = max(box.maxX, p.x)
             box.minY = min(box.minY, p.y)

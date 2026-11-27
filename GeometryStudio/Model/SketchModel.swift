@@ -29,6 +29,10 @@ final class SketchModel {
     @ObservationIgnored
     var dragSnapExclusions: Set<UUID> = []
     var isPointerOverCanvas = false
+    /// Space held: pan without switching away from the current tool.
+    var spacePanning = false
+    /// Presentation: hide chrome, go full screen, page through open sketches.
+    var presentationMode = false
     /// The canvas's last laid-out size, so Fit and the inspector use the real
     /// window instead of a guessed frame.
     var canvasSize = CGSize(width: 900, height: 720)
@@ -558,12 +562,27 @@ final class SketchModel {
         objects.first(where: { $0.id == id })
     }
 
+    /// The colour family defaults applied to a newly created object.
+    func defaultObjectStyle(for kind: ObjectKind) -> ObjectStyle {
+        var style = ObjectStyle()
+        if let family = AppearanceFamily.family(for: kind) {
+            style.color = AppPreferences.appearance().color(for: family)
+        }
+        return style
+    }
+
+    func makeObject(kind: ObjectKind) -> SketchObject {
+        var object = SketchObject(kind: kind)
+        object.style = defaultObjectStyle(for: kind)
+        return object
+    }
+
     @discardableResult
     func add(kind: ObjectKind,
              label: String? = nil,
              kindLabel: String? = nil,
              position: Vec2? = nil,
-             style: ObjectStyle = ObjectStyle(),
+             style: ObjectStyle? = nil,
              silent: Bool = false) -> UUID {
         if !silent {
             let name = label ?? kindLabel
@@ -573,10 +592,12 @@ final class SketchModel {
                 checkpoint("Add Object")
             }
         }
-        var object = SketchObject(kind: kind)
+        var object = makeObject(kind: kind)
         object.label = label ?? kindLabel ?? autoLabel(for: kind)
         object.position = position
-        object.style = style
+        if let style {
+            object.style = style
+        }
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.showLabel = isLabelWorthy(kind)
         objects.append(object)

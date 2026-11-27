@@ -276,7 +276,7 @@ extension SketchModel {
         if let id = existingPoint(near: p, tolerance: 0.04) {
             return id
         }
-        var object = SketchObject(kind: .freePoint)
+        var object = makeObject(kind: .freePoint)
         object.position = p
         object.label = nextPointLabel()
         object.order = (objects.map(\.order).max() ?? 0) + 1
@@ -285,7 +285,7 @@ extension SketchModel {
     }
 
     func commit(kind: ObjectKind, label: String) -> UUID {
-        var object = SketchObject(kind: kind)
+        var object = makeObject(kind: kind)
         object.label = label
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.showLabel = isLabelWorthy(kind)
@@ -298,7 +298,7 @@ extension SketchModel {
     func addParameter() {
         let name = nextParameterName()
         checkpoint("Add Parameter")
-        var object = SketchObject(kind: .parameter(value: 1, minimum: 0, maximum: 10))
+        var object = makeObject(kind: .parameter(value: 1, minimum: 0, maximum: 10))
         object.label = name
         object.position = hoverWorld ?? lastPointerWorld ?? settings.center
         object.order = (objects.map(\.order).max() ?? 0) + 1

@@ -162,7 +162,7 @@ extension SketchModel {
             return
         }
         checkpoint("Construct Locus")
-        var object = SketchObject(kind: .locus(driver: driver.id, target: target.id))
+        var object = makeObject(kind: .locus(driver: driver.id, target: target.id))
         object.order = (objects.map(\.order).max() ?? 0) + 1
         object.style.color = .violet
         object.style.lineWidth = 1.6

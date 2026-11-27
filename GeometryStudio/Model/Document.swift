@@ -50,6 +50,11 @@ struct CanvasSettings: Codable, Hashable {
     var gridColor: RGBA = RGBA(hex: 0x1C1C1F)
     var gridBold: Bool = false
     var backgroundColor: RGBA = RGBA(1, 1, 1)
+    /// The remembered Custom colour and Paper tint, kept when another preset
+    /// takes over the canvas background.
+    var customBackground: RGBA = RGBA(1, 1, 1)
+    var paperBackground: RGBA = RGBA(0.97, 0.95, 0.90)
+    var theme: CanvasTheme = .automatic
     var useMetalRenderer: Bool = false
     var axes: Bool = true
     var axesLabels: Bool = true
@@ -61,9 +66,9 @@ struct CanvasSettings: Codable, Hashable {
     var smartGuides: Bool = true
     /// Degrees between snapped drawing directions; zero turns angle snapping off.
     var angleSnap: Double = 0
-    // Defaults: inches, hundredths. The factor table is [1, 72/2.54, 72],
-    // so index 2 is inches.
-    var lengthUnit: LengthUnit = .inches
+    // New sketches start in centimetres by product decision. The original
+    // defaulted to inches; the other observed defaults remain.
+    var lengthUnit: LengthUnit = .cm
     var angleUnit: AngleUnit = .degrees
     var precision: Int = 2
     var scale: Double = SketchMetrics.pixelsPerCentimetre
@@ -78,6 +83,11 @@ struct CanvasSettings: Codable, Hashable {
         gridColor = try c.decodeIfPresent(RGBA.self, forKey: .gridColor) ?? RGBA(hex: 0x1C1C1F)
         gridBold = try c.decodeIfPresent(Bool.self, forKey: .gridBold) ?? false
         backgroundColor = try c.decodeIfPresent(RGBA.self, forKey: .backgroundColor) ?? RGBA(1, 1, 1)
+        customBackground = try c.decodeIfPresent(RGBA.self, forKey: .customBackground)
+            ?? backgroundColor
+        paperBackground = try c.decodeIfPresent(RGBA.self, forKey: .paperBackground)
+            ?? backgroundColor
+        theme = try c.decodeIfPresent(CanvasTheme.self, forKey: .theme) ?? .automatic
         useMetalRenderer = try c.decodeIfPresent(Bool.self, forKey: .useMetalRenderer) ?? false
         axes = try c.decodeIfPresent(Bool.self, forKey: .axes) ?? true
         axesLabels = try c.decodeIfPresent(Bool.self, forKey: .axesLabels) ?? true
@@ -88,7 +98,7 @@ struct CanvasSettings: Codable, Hashable {
         smartGuides = try c.decodeIfPresent(Bool.self, forKey: .smartGuides) ?? true
         let storedAngleSnap = try c.decodeIfPresent(Double.self, forKey: .angleSnap) ?? 0
         angleSnap = CanvasSettings.angleSnapChoices.contains(storedAngleSnap) ? storedAngleSnap : 0
-        lengthUnit = try c.decodeIfPresent(LengthUnit.self, forKey: .lengthUnit) ?? .inches
+        lengthUnit = try c.decodeIfPresent(LengthUnit.self, forKey: .lengthUnit) ?? .cm
         angleUnit = try c.decodeIfPresent(AngleUnit.self, forKey: .angleUnit) ?? .degrees
         precision = try c.decodeIfPresent(Int.self, forKey: .precision) ?? 2
         scale = try c.decodeIfPresent(Double.self, forKey: .scale) ?? SketchMetrics.pixelsPerCentimetre
@@ -214,17 +224,20 @@ enum SketchTemplate {
             object.label = label
             object.position = Vec2(x, y)
             object.order = order
+            object.style.color = AppPreferences.appearance().color(for: .point)
             return object
         }
         func segment(_ a: SketchObject, _ b: SketchObject, _ order: Int) -> SketchObject {
             var object = SketchObject(kind: .segment(a: a.id, b: b.id))
             object.order = order
+            object.style.color = AppPreferences.appearance().color(for: .line)
             return object
         }
         func midpoint(_ a: SketchObject, _ b: SketchObject, _ label: String, _ order: Int) -> SketchObject {
             var object = SketchObject(kind: .midpoint(a: a.id, b: b.id))
             object.label = label
             object.order = order
+            object.style.color = AppPreferences.appearance().color(for: .point)
             return object
         }
 
@@ -258,4 +271,60 @@ enum SketchTemplate {
 /// `newDocument`, so the choice only has to survive that call.
 enum TemplateLibrary {
     static var pending: SketchTemplate?
+}
+
+extension CanvasSettings {
+    /// Display tokens for the canvas. The background decides light or dark;
+    /// the theme supplies the paper tint. A dark custom background flips the
+    /// light tokens, and an unreadable grid colour is replaced by a neutral
+    /// with the same alpha.
+    func palette(systemDark: Bool = false) -> CanvasPalette {
+        let base = theme.resolved(systemDark: systemDark)
+        let paper = theme == .automatic ? base.background : backgroundColor
+        let dark = paper.luminance < 0.45
+        let warm = base == .paper
+        let ink = dark ? RGBA(0.92, 0.93, 0.95)
+            : (warm ? RGBA(0.24, 0.20, 0.15) : RGBA.ink)
+        let secondary = dark ? RGBA(0.68, 0.70, 0.76)
+            : (warm ? RGBA(0.42, 0.36, 0.28) : RGBA.secondaryInk)
+        var effectiveGrid = gridColor
+        if dark, gridColor.luminance < 0.45 {
+            effectiveGrid = RGBA(0.82, 0.84, 0.88, gridColor.a)
+        } else if !dark, gridColor.luminance > 0.82 {
+            effectiveGrid = RGBA(0.35, 0.36, 0.40, gridColor.a)
+        }
+        return CanvasPalette(
+            isDark: dark,
+            ink: ink,
+            secondaryInk: secondary,
+            halo: dark ? RGBA(0.10, 0.11, 0.14, 0.9) : RGBA(1, 1, 1, 0.9),
+            card: dark ? RGBA(0.14, 0.15, 0.18, 0.94) : RGBA(1, 1, 1, 0.92),
+            cardBorder: RGBA(ink.r, ink.g, ink.b, 0.14),
+            axisLabel: dark ? RGBA(0.80, 0.82, 0.86, 0.85) : secondary,
+            grid: effectiveGrid
+        )
+    }
+
+    /// The background actually drawn. Automatic ignores the stored custom
+    /// colour so the canvas follows the system appearance.
+    func displayBackground(systemDark: Bool = false) -> RGBA {
+        theme == .automatic ? theme.resolved(systemDark: systemDark).background : backgroundColor
+    }
+
+    /// The white-page token set used by print and export. It keeps the
+    /// document's grid colour unless that colour would vanish on paper.
+    var paperPalette: CanvasPalette {
+        var result = palette()
+        result.isDark = false
+        result.ink = .ink
+        result.secondaryInk = .secondaryInk
+        result.halo = RGBA(1, 1, 1, 0.9)
+        result.card = RGBA(1, 1, 1, 0.92)
+        result.cardBorder = RGBA(0.12, 0.13, 0.16, 0.14)
+        result.axisLabel = .secondaryInk
+        result.grid = gridColor.luminance > 0.82
+            ? RGBA(0.35, 0.36, 0.40, gridColor.a)
+            : gridColor
+        return result
+    }
 }

@@ -5,6 +5,8 @@ A native macOS dynamic geometry sketchpad, written in **Swift and SwiftUI** for 
 It is an independent implementation: construct points, lines, circles and polygons, then drag a
 free point and watch every dependent object update.
 
+This app is insprired by Geometer's Sketchpad 5, which was first released in 2009.
+
 ## Build and run
 
 Two build descriptions share one source tree. `Package.swift` drives the SwiftPM targets and
@@ -67,13 +69,16 @@ app-bundle binary does not carry it.
   coordinates, abscissa/ordinate, polar distance/direction, coordinate distance, arc angle/length,
   equation, slope, measure-all and calculations.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
-  0–5 decimal places, with inches, hundredths and degrees as the defaults.
+  0–5 decimal places, with centimetres, hundredths and degrees as the defaults.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
-- **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
-- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback.
+- **Graph** — orthogonal (standard or dense), triangular, polar and isometric grids with a selectable colour and bold style, canvas background themes, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
+- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback; automatic (the default, following the system appearance), light, dark, paper (ivory, legal, manila and graph tints) and custom-tint canvas themes flip ink, labels, cards, axes and halos together, and a dark custom background inverts them automatically.
+- **Labels** — lightweight math markup: `^{2}` superscripts, `_{1}` subscripts, `\alpha`-style
+  Greek names, `\overline{AB}` overlines and `\widehat{AB}` arcs, rendered on the canvas and
+  carried into SVG export as positioning tspans.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
-- **Inspector** — object browser, label, definition, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
+- **Inspector** — one panel with the selected object above a persistent, collapsible layer list: label, definition, editable X/Y, radius, length and angle, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
 - **Construction protocol** — a sheet listing every construction step in order.
 - **Documents** — a document-based app: new, open, save and save as (`.gsp`, JSON document format),
   autosave, Versions, Open Recent, multiple windows and tabs, a revision stamp in the document,
@@ -82,20 +87,28 @@ app-bundle binary does not carry it.
 - **Printing** — File > Print (⌘P) fits the sketch to one page and uses the standard macOS print
   panel and preview; Page Setup controls paper size, orientation and margins.
 - **Export** — File > Export writes a vector PDF, an SVG or a 2× PNG, fitted to a 3:2 canvas
-  and drawn on a white page.
-- **Preferences** — General, Units, Canvas, Update and About panes, covering start at login,
-  GPU rendering, and the default length unit, angle unit, precision, grid, axes, snapping and
-  labels for new sketches.
+  and drawn on a white page, with a Finder toast and Export Again; the toolbar share menu sends
+  a PDF or PNG through the system share sheet.
+- **Preferences** — General, Appearance, Units and Canvas panes, covering start at login,
+  default object colours, GPU rendering, canvas theme and background, and the default length
+  unit, angle unit, precision, grid, axes, snapping and labels for new sketches.
 - **Drawing aids** — smart guides that snap to points, midpoints, intersections, parallel and
   perpendicular lines; selectable angle increments (5°, 15°, 30°, 45°, 90°); square, dense,
-  triangular, polar and isometric grids.
-- **Editing** — object browser with search, kind filter, lock and front/back layer order;
-  in-place label editing; on-canvas scale and rotate handles; duplicate (⌘D), copy and paste
-  across documents, and paste in place.
-- **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K command
-  palette and an undo history panel.
-- **Live feedback** — a readout of a dragged point's position and dependent measurements, plus
-  area and perimeter for the current selection in the status bar.
+  triangular, polar and isometric grids. The toolbar grid menu switches visibility, style, colour,
+  axes, labels, snapping and angle increments in one place.
+- **Editing** — a persistent layer list with search, kind filter, collapsible groups, lock and
+  front/back order; numeric X/Y, radius, length and angle fields; double-click a free point to
+  type its coordinates, or a label to rename it; drag any construction by its free points;
+  on-canvas scale and rotate handles; duplicate (⌘D), copy and paste across documents, and
+  paste in place.
+- **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K floating
+  command palette with fuzzy search, shortcuts and recents, and an undo history panel.
+- **Presentation** — hide the toolbar, inspector and status bar, enter full screen, and page
+  through open sketches with the arrow keys.
+- **Live feedback** — a readout of a dragged point's position and dependent measurements, a
+  dimension chip while a segment, circle, polygon or angle is being drawn, and area and perimeter
+  for the current selection in the status bar. Haptics accompany snap
+  alignment and rotation detents on Force Touch trackpads.
 - **New documents** — a new sketch starts blank, with only the grid and axes from your
   preferences.
 
@@ -114,12 +127,16 @@ app-bundle binary does not carry it.
 | T | Text |
 
 `⌘Z` / `⇧⌘Z` undo and redo, `⌘A` select all, `⌘P` prints the sketch, Delete removes the
-selection. Scroll to pan, pinch or `⌘`-scroll to zoom. Return closes a polygon; Escape cancels a
-draft.
+selection. Scroll to pan, pinch or `⌘`-scroll to zoom; `⌘+` / `⌘−` zoom, `⌘0` is actual size,
+`⇧⌘F` fits the sketch and `⇧⌘0` frames the selection. Arrow keys nudge the selection (hold Shift
+for 10× steps), holding Space pans without changing tools, and Return closes a polygon. Escape
+cancels a draft or returns to the Select tool.
 
-`⌘K` opens the command palette, `⌘D` duplicates the selection, `⌥⌘C` / `⌥⌘X` / `⌥⌘V` copy,
-cut and paste objects across documents, `⌃⌘V` pastes in place, and `⌥⌘Z` opens the undo
-history. Double-click a label to edit it in place.
+`⌘K` opens the command palette, `⌘D` duplicates the selection, `⌘C` / `⌘X` / `⌘V` copy, cut
+and paste objects across documents (text fields keep the native clipboard), `⇧⌘V` pastes in
+place, `⌥⌘P` plays or pauses the animation, and `⌥⌘Z` opens the undo history. `⌥⌘Return` enters
+presentation mode, where Escape exits and `←` / `→` switch sketches. Double-click a free point
+to type its coordinates, or a label to edit it in place.
 
 ## Design notes
 

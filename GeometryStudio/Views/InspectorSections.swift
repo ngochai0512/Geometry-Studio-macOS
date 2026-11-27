@@ -67,7 +67,18 @@ extension InspectorView {
                             .textInputBorderShape(.roundedRectangle)
                             .frame(minWidth: 120)
                             .font(.subheadline)
+                            .help("Math: ^{2}, _{1}, \\alpha, \\overline{AB}, \\widehat{AB}")
                     }
+                }
+
+                if needsLabel(object), !object.label.isEmpty {
+                    Text(MathLabel.attributed(object.label,
+                                              base: .callout,
+                                              script: .caption2,
+                                              superscriptOffset: 5,
+                                              subscriptOffset: -2))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
 
                 if case .caption = object.kind {
@@ -101,8 +112,53 @@ extension InspectorView {
             } else {
                 Text("Nothing selected")
                     .font(.callout.weight(.medium))
-                Text("Pick an object on the canvas, or choose Sketch to browse every object.")
+                Text("Pick an object on the canvas or in Layers below.")
                     .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    var numericSection: some View {
+        if model.selection.count == 1, let id = model.selection.first,
+           let object = model.objectByID(id) {
+            if case .freePoint = object.kind {
+                Section("Position") {
+                    lengthField("X", pointXBinding(id))
+                    lengthField("Y", pointYBinding(id))
+                }
+            } else if case .circleRadius = object.kind {
+                Section("Geometry") {
+                    lengthField("Radius", circleRadiusBinding(id))
+                }
+            } else if case .segment = object.kind, segmentLengthEditable(id) {
+                Section("Geometry") {
+                    lengthField("Length", segmentLengthBinding(id))
+                }
+            } else if case .angle = object.kind, angleEditable(id) {
+                Section("Geometry") {
+                    LabeledContent("Angle") {
+                        HStack(spacing: 6) {
+                            TextField("Angle", value: angleBinding(id), format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 72)
+                            Text(model.settings.angleUnit == .radians ? "rad" : "°")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func lengthField(_ title: String, _ value: Binding<Double>) -> some View {
+        LabeledContent(title) {
+            HStack(spacing: 6) {
+                TextField(title, value: value, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 72)
+                Text(model.settings.lengthUnit.short)
                     .foregroundStyle(.secondary)
             }
         }
@@ -245,6 +301,51 @@ extension InspectorView {
                 .buttonStyle(.borderless)
                 .selectionDisabled()
 
+                Menu {
+                    Text("Mirror: \(model.markName(model.marks.mirror))")
+                    Text("Center: \(model.markName(model.marks.center))")
+                    Text("Angle: \(angleMarkName)")
+                    Text("Ratio: \(ratioMarkName)")
+                    Text("Vector: \(vectorMarkName)")
+                    Divider()
+                    Button("Clear Marks") { model.clearMarks() }
+                        .disabled(model.marks.isEmpty)
+                } label: {
+                    Label("Marks", systemImage: "point.3.connected.trianglepath.dotted")
+                }
+                .menuStyle(.button)
+                .buttonStyle(.borderless)
+                .selectionDisabled()
+
+                // Four labelled buttons do not fit one inspector row; two
+                // columns keep every word visible at the narrowest width.
+                LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading),
+                                    GridItem(.flexible(), alignment: .leading)],
+                          alignment: .leading, spacing: 6) {
+                    actionButton("Duplicate", "plus.square.on.square") {
+                        model.duplicateSelection()
+                    }
+                    actionButton(lockLabel, selectionIsLocked ? "lock.open" : "lock") {
+                        model.toggleLockSelection()
+                    }
+                    actionButton("Front", "chevron.up.square") {
+                        model.bringSelectionToFront()
+                    }
+                    actionButton("Back", "chevron.down.square") {
+                        model.sendSelectionToBack()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .selectionDisabled()
+            }
+        }
+    }
+
+    @ViewBuilder
+    var animationSection: some View {
+        if !model.selection.isEmpty {
+            Section("Animation") {
                 HStack(spacing: 8) {
                     Button {
                         model.toggleAnimation()
@@ -257,33 +358,6 @@ extension InspectorView {
                     } label: {
                         Label(traceLabel,
                               systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .selectionDisabled()
-
-                HStack(spacing: 8) {
-                    Button {
-                        model.duplicateSelection()
-                    } label: {
-                        Label("Duplicate", systemImage: "plus.square.on.square")
-                    }
-                    Button {
-                        model.toggleLockSelection()
-                    } label: {
-                        Label(lockLabel,
-                              systemImage: selectionIsLocked ? "lock.open" : "lock")
-                    }
-                    Button {
-                        model.bringSelectionToFront()
-                    } label: {
-                        Label("Front", systemImage: "chevron.up.square")
-                    }
-                    Button {
-                        model.sendSelectionToBack()
-                    } label: {
-                        Label("Back", systemImage: "chevron.down.square")
                     }
                 }
                 .buttonStyle(.bordered)
@@ -383,22 +457,8 @@ extension InspectorView {
     }
 
     @ViewBuilder
-    var sketchSection: some View {
-        ForEach(objectGroups, id: \.0) { title, objects in
-            if !objects.isEmpty {
-                Section(title) {
-                    ForEach(objects.sorted(by: { $0.order < $1.order })) { object in
-                        objectRow(object)
-                            .tag(object.id)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    var browserSection: some View {
-        Section("Objects") {
+    var layersSection: some View {
+        Section("Layers") {
             TextField("Search objects", text: $browserQuery)
                 .textFieldStyle(.roundedBorder)
                 .accessibilityLabel("Search objects")
@@ -415,6 +475,20 @@ extension InspectorView {
                 Text("No objects match.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+
+        ForEach(objectGroups, id: \.0) { title, objects in
+            if !objects.isEmpty {
+                DisclosureGroup(isExpanded: expandedGroup(title)) {
+                    ForEach(objects.sorted(by: { $0.order < $1.order })) { object in
+                        objectRow(object)
+                            .tag(object.id)
+                    }
+                } label: {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                }
             }
         }
     }
@@ -450,19 +524,6 @@ extension InspectorView {
         }
     }
 
-    var marksSection: some View {
-        Section("Marks") {
-            LabeledContent("Mirror", value: model.markName(model.marks.mirror))
-            LabeledContent("Center", value: model.markName(model.marks.center))
-            LabeledContent("Angle", value: angleMarkName)
-            LabeledContent("Ratio", value: ratioMarkName)
-            LabeledContent("Vector", value: vectorMarkName)
-            Button("Clear Marks") { model.clearMarks() }
-                .disabled(model.marks.isEmpty)
-                .selectionDisabled()
-        }
-    }
-
     private var angleMarkName: String {
         guard let mark = model.marks.angle else {
             return "—"
@@ -484,155 +545,19 @@ extension InspectorView {
         return "\(model.markName(mark.from)) → \(model.markName(mark.to))"
     }
 
-    var canvasSection: some View {
-        Section("Canvas") {
-            Group {
-                Toggle("Grid", isOn: $model.settings.grid)
-                LabeledContent("Grid style") {
-                    Picker("Grid style", selection: $model.settings.gridType) {
-                        ForEach(GridType.allCases) { type in
-                            Text(type.title).tag(type)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                LabeledContent("Grid color") {
-                    Picker("Grid color", selection: $model.settings.gridColor) {
-                        ForEach(RGBA.gridPalette, id: \.0) { name, color in
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 10, height: 10)
-                                Text(name)
-                            }
-                            .tag(color)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                Toggle("Bold grid", isOn: $model.settings.gridBold)
-                Toggle("GPU rendering", isOn: $model.settings.useMetalRenderer)
-                    .disabled(!MetalCanvas.isSupported)
-                    .help(MetalCanvas.isSupported
-                          ? "Draw sketch geometry with Metal"
-                          : "Metal is not available on this Mac")
-                LabeledContent("Background") {
-                    ColorPicker("Background", selection: canvasBackgroundBinding)
-                        .labelsHidden()
-                }
-                Toggle("Axes", isOn: $model.settings.axes)
-                Toggle("Axes numbers", isOn: $model.settings.axesLabels)
-                LabeledContent("Label style") {
-                    Picker("Label style", selection: $model.settings.axesLabelStyle) {
-                        ForEach(AxisLabelStyle.presets, id: \.self) { style in
-                            Text(style.title).tag(style)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                Toggle("Snap points to grid", isOn: $model.settings.snap)
-                Toggle("Smart guides", isOn: $model.settings.smartGuides)
-                LabeledContent("Angle snap") {
-                    Picker("Angle snap", selection: $model.settings.angleSnap) {
-                        ForEach(CanvasSettings.angleSnapChoices, id: \.self) { angle in
-                            Text(angle == 0 ? "Off" : "\(Int(angle))°").tag(angle)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                Toggle("Show labels", isOn: $model.settings.showLabels)
-                LabeledContent("Length") {
-                    Picker("Length", selection: $model.settings.lengthUnit) {
-                        ForEach(LengthUnit.allCases) { unit in
-                            Text(unit.name).tag(unit)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                LabeledContent("Angle") {
-                    Picker("Angle", selection: $model.settings.angleUnit) {
-                        ForEach(AngleUnit.allCases) { unit in
-                            Text(unit.name).tag(unit)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                LabeledContent("Decimals") {
-                    Picker("Decimals", selection: $model.settings.precision) {
-                        ForEach(0...5, id: \.self) { p in
-                            Text("\(p)").tag(p)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                }
-                HStack(spacing: 8) {
-                    Button("Fit") { model.fitCanvas(size: model.canvasSize) }
-                    Button("100%") { model.setZoom(SketchMetrics.pixelsPerCentimetre) }
-                    Button("Reset") {
-                        model.settings.center = .zero
-                        model.setZoom(SketchMetrics.pixelsPerCentimetre)
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
-            .font(.subheadline)
-            .selectionDisabled()
-        }
-    }
-
-    var constructSection: some View {
-        Section("Construct") {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                constructButton("Midpoint", "circle.dotted") { model.constructMidpoint() }
-                constructButton("Intersection", "circle.circle") { model.constructIntersection() }
-                constructButton("Perpendicular", "arrow.up.and.line.horizontal.and.arrow.down") { model.constructPerpendicular() }
-                constructButton("Parallel", "equal") { model.constructParallel() }
-                constructButton("Bisector", "angle") { model.constructBisector() }
-                constructButton("Circle", "circle") { model.constructCircle() }
-                constructButton("Circle by Radius", "circle.dashed") {
-                    NotificationCenter.default.post(name: .openCircleRadius, object: nil)
-                }
-                constructButton("Arc on Circle", "circle.dotted") { model.constructArcOnCircle() }
-                constructButton("Arc Through 3", "circle.dashed") { model.constructArcThroughPoints() }
-                constructButton("Polygon", "pentagon") { model.constructPolygon() }
-                constructButton("Point on Object", "smallcircle.filled.circle") { model.constructPointOnPath() }
-                constructButton("Perp Bisector", "line.diagonal") { model.constructPerpendicularBisector() }
-                constructButton("Tangents", "line.diagonal.arrow") { model.constructTangents() }
-                constructButton("Radical Axis", "line.diagonal") { model.constructRadicalAxis() }
-                constructButton("Vector", "arrow.right") { model.constructVector() }
-                constructButton("Vector Sum", "arrow.triangle.merge") { model.constructVectorSum(subtract: false) }
-                constructButton("Vector Diff", "arrow.triangle.branch") { model.constructVectorSum(subtract: true) }
-                constructButton("Parameter", "slider.horizontal.3") { model.addParameter() }
-                constructButton("Cartesian", "grid") { model.constructCoordinateSystem(.cartesian) }
-                constructButton("Polar", "circle.grid.cross") { model.constructCoordinateSystem(.polar) }
-            }
-            .selectionDisabled()
-
-            Button {
-                onTextAnnotation(model.settings.center)
-            } label: {
-                Label("Add a caption", systemImage: "textformat")
-            }
-            .selectionDisabled()
-        }
-    }
-
     // MARK: - Row and section helpers
 
     private var objectGroups: [(String, [SketchObject])] {
         [
             ("Points", filteredObjects.filter { $0.isPointLike }),
-            ("Lines", filteredObjects.filter { isLineObject($0) }),
+            ("Lines", filteredObjects.filter {
+                isLineObject($0) && !isVectorObject($0) && !isConstructionObject($0)
+                    && !isGraphObject($0)
+            }),
             ("Arcs", filteredObjects.filter { isArcObject($0) }),
-            ("Circles & Regions", filteredObjects.filter { isRegionObject($0) }),
+            ("Circles & Regions", filteredObjects.filter {
+                isRegionObject($0) && !isGraphObject($0)
+            }),
             ("Vectors & Constructions", filteredObjects.filter {
                 isVectorObject($0) || isConstructionObject($0)
             }),
@@ -730,20 +655,20 @@ extension InspectorView {
         }
     }
 
+    private func actionButton(_ title: String, _ symbol: String,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     private func selectForRow(_ id: UUID) {
         if !model.selection.contains(id) {
             model.selection = [id]
         }
     }
 
-    private func constructButton(_ title: String, _ symbol: String,
-                                 action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-    }
 }

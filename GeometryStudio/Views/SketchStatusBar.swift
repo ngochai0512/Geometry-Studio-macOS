@@ -1,22 +1,23 @@
 import SwiftUI
 
-/// The bottom strip: pointer position or tool hint on the left, draft actions
-/// in the middle, status and counts on the right.
+/// The bottom strip. The tool hint is persistent on the left, live pointer and
+/// selection numbers sit in the middle, and save/status messages fade on the
+/// right instead of lingering forever.
 struct SketchStatusBar: View {
     let model: SketchModel
 
+    @State private var fadingStatus = ""
+
     var body: some View {
         HStack(spacing: 10) {
-            if let hover = model.hoverWorld {
-                Text("x \(fmt(hover.x / model.settings.lengthUnit.perUnit))   y \(fmt(hover.y / model.settings.lengthUnit.perUnit)) \(model.settings.lengthUnit.short)")
-                    .font(.system(.caption, design: .monospaced, weight: .medium))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(model.tool.hint)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            Label(model.tool.title, systemImage: model.tool.symbol)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Text(model.tool.hint)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
 
             if !model.draft.isEmpty {
                 Divider().frame(height: 14)
@@ -35,18 +36,11 @@ struct SketchStatusBar: View {
 
             Spacer(minLength: 6)
 
-            if !model.statusMessage.isEmpty {
-                Text(model.statusMessage)
-                    .font(.caption)
+            if let hover = model.hoverWorld {
+                Text("x \(fmt(hover.x / model.settings.lengthUnit.perUnit))   y \(fmt(hover.y / model.settings.lengthUnit.perUnit)) \(model.settings.lengthUnit.short)")
+                    .font(.system(.caption, design: .monospaced, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
-
-            Divider().frame(height: 14)
-
-            Text("\(model.objects.filter(\.visible).count) objects")
-                .font(.system(.caption, design: .rounded, weight: .medium))
-                .foregroundStyle(.secondary)
 
             if !model.selection.isEmpty {
                 Text("\(model.selection.count) selected")
@@ -58,12 +52,37 @@ struct SketchStatusBar: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Text("\(model.objects.filter(\.visible).count) objects")
+                .font(.system(.caption, design: .rounded, weight: .medium))
+                .foregroundStyle(.tertiary)
+
+            if !fadingStatus.isEmpty {
+                Divider().frame(height: 14)
+                Text(fadingStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .transition(.opacity)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
         .frame(minHeight: 26)
         .background(.bar)
         .overlay(alignment: .top) { Divider().opacity(0.5) }
+        .animation(.easeInOut(duration: 0.25), value: fadingStatus)
+        .task(id: model.statusMessage) {
+            let message = model.statusMessage
+            fadingStatus = message
+            guard !message.isEmpty else {
+                return
+            }
+            try? await Task.sleep(for: .seconds(3))
+            if model.statusMessage == message {
+                fadingStatus = ""
+            }
+        }
     }
 
     private func fmt(_ v: Double) -> String {

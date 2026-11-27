@@ -11,6 +11,10 @@ struct SketchCanvas: View {
     @State var panStartCenter: Vec2 = .zero
     @State var isPanning = false
     @State var dragPointID: UUID?
+    @State var dragObjectID: UUID?
+    @State var dragObjectBasePositions: [UUID: Vec2] = [:]
+    @State var dragObjectStartWorld: Vec2 = .zero
+    @State var lastMoveSnap: Vec2?
     @State var dragLabelID: UUID?
     @State var dragLabelBaseOffset: Vec2 = .zero
     @State var dragLabelBasePosition: Vec2 = .zero
@@ -22,6 +26,7 @@ struct SketchCanvas: View {
     @State var holdReached = false
     @State var holdSelectionDone = false
     @State var lastSnapWorld: Vec2?
+    @State var lastRotationDetent: Int?
     @State var marqueeStart: CGPoint?
     @State var marqueeCurrent: CGPoint?
     @State var magnifyBase: Double?
@@ -32,6 +37,13 @@ struct SketchCanvas: View {
     @State var editingLabelID: UUID?
     @State var labelDraft = ""
     @FocusState var labelFieldFocused: Bool
+    @State var editingCoordinateID: UUID?
+    @State var coordinateDraftX = ""
+    @State var coordinateDraftY = ""
+    @FocusState var coordinateFieldFocused: Bool
+    @State var hoveredObjectID: UUID?
+    @State var dragNeedsHold = false
+    @Environment(\.colorScheme) private var colorScheme
     @State var hudScreen: CGPoint?
     @State var selectionHandle: SelectionHandleKind?
     @State var handleBasePositions: [UUID: Vec2] = [:]
@@ -43,16 +55,21 @@ struct SketchCanvas: View {
         case scale(corner: Int)
     }
 
-    /// A click selects; the pointer must rest this long before a drag moves
-    /// anything. The delay keeps click-selection from turning into an
-    /// accidental micro-drag.
+    /// A press on an unselected object waits this long before it drags, so the
+    /// click can select instead. Already-selected geometry drags immediately.
     let holdToDragDelay: TimeInterval = 0.16
 
+    /// Printing always uses the paper palette, so a dark-canvas sketch does
+    /// not print light ink on a white page.
+    var palette: CanvasPalette {
+        printing ? model.settings.paperPalette
+            : model.settings.palette(systemDark: colorScheme == .dark)
+    }
     var ink: Color {
-        RGBA.ink.color
+        palette.ink.color
     }
     var secondaryInk: Color {
-        RGBA.secondaryInk.color
+        palette.secondaryInk.color
     }
     var accent: Color {
         Color.accentColor
@@ -74,11 +91,13 @@ struct SketchCanvas: View {
         Set<UUID>,
         [UUID: [Vec2]],
         SketchTool,
-        [SmartGuide]
+        [SmartGuide],
+        UUID?
     ) {
         let hover = model.draft.isEmpty ? nil : model.hoverWorld
         return (model.document, model.selection, model.draft, hover,
-                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides)
+                model.tracedIDs, model.tracePaths, model.tool, model.smartGuides,
+                hoveredObjectID)
     }
 
     var body: some View {
@@ -113,7 +132,7 @@ struct SketchCanvas: View {
                 if printing {
                     Color.white
                 } else {
-                    model.settings.backgroundColor.color
+                    model.settings.displayBackground(systemDark: colorScheme == .dark).color
                 }
             }
             .contentShape(Rectangle())
@@ -133,8 +152,14 @@ struct SketchCanvas: View {
                         model.hoverWorld = world
                     }
                     model.lastPointerWorld = world
-                    if model.tool == .pan, !isPanning {
-                        NSCursor.openHand.set()
+                    if dragStartScreen == nil {
+                        let tolerance = 9 / model.settings.scale
+                        let hit = model.hitTestLabel(world, tolerance: tolerance)
+                            ?? model.hitTest(world, tolerance: tolerance)
+                        if hoveredObjectID != hit {
+                            hoveredObjectID = hit
+                        }
+                        updateCursor(for: hit)
                     }
                 case .ended:
                     if model.isPointerOverCanvas {
@@ -143,18 +168,22 @@ struct SketchCanvas: View {
                     if model.hoverWorld != nil {
                         model.hoverWorld = nil
                     }
+                    if hoveredObjectID != nil {
+                        hoveredObjectID = nil
+                    }
                     if !isPanning {
                         NSCursor.arrow.set()
                     }
                 }
             }
-            .onChange(of: model.tool) { _, tool in
-                if tool == .pan {
-                    if model.isPointerOverCanvas, !isPanning {
-                        NSCursor.openHand.set()
-                    }
-                } else if !isPanning {
-                    NSCursor.arrow.set()
+            .onChange(of: model.tool) { _, _ in
+                if !isPanning {
+                    updateCursor(for: hoveredObjectID)
+                }
+            }
+            .onChange(of: model.spacePanning) { _, _ in
+                if !isPanning {
+                    updateCursor(for: hoveredObjectID)
                 }
             }
             .onChange(of: model.settings.useMetalRenderer) { _, _ in
@@ -175,7 +204,30 @@ struct SketchCanvas: View {
                 }
             }
             .accessibilityLabel("Geometry canvas")
+            .accessibilityChildren {
+                ForEach(model.objects.filter(\.visible)) { object in
+                    Text(MathLabel.plainText(model.displayName(for: object)))
+                        .accessibilityLabel(MathLabel.plainText(model.displayName(for: object)))
+                        .accessibilityValue(MathLabel.plainText(accessibilityValue(for: object)))
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction {
+                            model.select(object.id)
+                        }
+                }
+            }
         }
+    }
+
+    /// The spoken value: measurement text when the object has one, otherwise
+    /// its construction definition.
+    private func accessibilityValue(for object: SketchObject) -> String {
+        if case .caption(let text) = object.kind {
+            return text
+        }
+        if let measurement = model.evaluated(object.id).text, !measurement.isEmpty {
+            return measurement
+        }
+        return model.definition(for: object)
     }
 }
 
