@@ -72,7 +72,10 @@ app-bundle binary does not carry it.
   0–5 decimal places, with centimetres, hundredths and degrees as the defaults.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
 - **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
-- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback; light, dark and paper canvas themes flip ink, labels, cards, axes and halos together, and a dark custom background inverts them automatically.
+- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback; automatic (the default, following the system appearance), light, dark, paper and custom-tint canvas themes flip ink, labels, cards, axes and halos together, and a dark custom background inverts them automatically.
+- **Labels** — lightweight math markup: `^{2}` superscripts, `_{1}` subscripts, `\alpha`-style
+  Greek names, `\overline{AB}` overlines and `\widehat{AB}` arcs, rendered on the canvas and
+  flattened in SVG export.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
 - **Inspector** — one panel with the selected object above a persistent, collapsible layer list: label, definition, editable X/Y, radius, length and angle, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
@@ -84,10 +87,11 @@ app-bundle binary does not carry it.
 - **Printing** — File > Print (⌘P) fits the sketch to one page and uses the standard macOS print
   panel and preview; Page Setup controls paper size, orientation and margins.
 - **Export** — File > Export writes a vector PDF, an SVG or a 2× PNG, fitted to a 3:2 canvas
-  and drawn on a white page.
-- **Preferences** — General, Appearance, Units, Canvas, Update and About panes, covering start
-  at login, default object colours, GPU rendering, and the default length unit, angle unit,
-  precision, grid, axes, snapping and labels for new sketches.
+  and drawn on a white page, with a Finder toast and Export Again; the toolbar share menu sends
+  a PDF or PNG through the system share sheet.
+- **Preferences** — General, Appearance, Units and Canvas panes, covering start at login,
+  default object colours, GPU rendering, canvas theme and background, and the default length
+  unit, angle unit, precision, grid, axes, snapping and labels for new sketches.
 - **Drawing aids** — smart guides that snap to points, midpoints, intersections, parallel and
   perpendicular lines; selectable angle increments (5°, 15°, 30°, 45°, 90°); square, dense,
   triangular, polar and isometric grids. The toolbar grid menu switches visibility, style, colour,
@@ -97,6 +101,8 @@ app-bundle binary does not carry it.
   handles; duplicate (⌘D), copy and paste across documents, and paste in place.
 - **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K command
   palette and an undo history panel.
+- **Presentation** — hide the toolbar, inspector and status bar, enter full screen, and page
+  through open sketches with the arrow keys.
 - **Live feedback** — a readout of a dragged point's position and dependent measurements, plus
   area and perimeter for the current selection in the status bar. Haptics accompany snap
   alignment and rotation detents on Force Touch trackpads.
@@ -125,8 +131,9 @@ cancels a draft or returns to the Select tool.
 
 `⌘K` opens the command palette, `⌘D` duplicates the selection, `⌘C` / `⌘X` / `⌘V` copy, cut
 and paste objects across documents (text fields keep the native clipboard), `⇧⌘V` pastes in
-place, `⌥⌘P` plays or pauses the animation, and `⌥⌘Z` opens the undo history. Double-click a
-free point to type its coordinates, or a label to edit it in place.
+place, `⌥⌘P` plays or pauses the animation, and `⌥⌘Z` opens the undo history. `⌥⌘Return` enters
+presentation mode, where Escape exits and `←` / `→` switch sketches. Double-click a free point
+to type its coordinates, or a label to edit it in place.
 
 ## Design notes
 

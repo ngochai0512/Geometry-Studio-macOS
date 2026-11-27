@@ -341,6 +341,12 @@ struct SketchCommands: Commands {
             .keyboardShortcut("i", modifiers: [.command, .option])
             .disabled(model == nil)
             Divider()
+            Button(model?.presentationMode == true ? "Exit Presentation" : "Enter Presentation") {
+                model?.presentationMode.toggle()
+            }
+            .keyboardShortcut(.return, modifiers: [.command, .option])
+            .disabled(model == nil)
+            Divider()
             Button("Command Palette…") {
                 NotificationCenter.default.post(name: .openCommandPalette, object: nil)
             }
