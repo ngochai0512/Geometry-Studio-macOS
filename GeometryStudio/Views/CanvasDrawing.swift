@@ -977,8 +977,9 @@ extension SketchCanvas {
             let position = model.screenPoint(object.position ?? .zero, size: size)
             let name = object.label.isEmpty ? "x" : object.label
             let valueText = String(format: "%.\(precision)f", value)
-            let text = Text("\(name) = \(valueText)")
-                .font(.system(.callout, design: .rounded, weight: .semibold))
+            let text = mathLabelText("\(name) = \(valueText)",
+                                     base: .system(.callout, design: .rounded, weight: .semibold),
+                                     script: .system(.caption2, design: .rounded, weight: .semibold))
                 .foregroundStyle(palette.resolve(object.style.color).color)
             let width: CGFloat = 128
             let height: CGFloat = 38
@@ -1148,8 +1149,9 @@ extension SketchCanvas {
                 // Selection is shown on the letter, not with a grip dot: a dot
                 // at the point size reads as a second point once the label is
                 // dragged away from its point.
-                let text = Text(object.label)
-                    .font(.system(.callout, design: .rounded, weight: .semibold))
+                let text = mathLabelText(object.label,
+                                         base: .system(.callout, design: .rounded, weight: .semibold),
+                                         script: .system(.caption2, design: .rounded, weight: .semibold))
                     .foregroundStyle(selected ? accent : palette.resolve(object.style.color).color.opacity(0.95))
                 context.draw(text, at: CGPoint(x: labelPoint.x + 7, y: labelPoint.y - 7),
                              anchor: .bottomLeading)
@@ -1178,13 +1180,14 @@ extension SketchCanvas {
 
             let style: Font.TextStyle = isCaption ? .body : .callout
             var font = Font.system(style, design: .rounded, weight: .medium)
+            var scriptFont = Font.system(.caption2, design: .rounded, weight: .medium)
             if case .caption = object.kind {
                 font = font.italic()
+                scriptFont = scriptFont.italic()
             }
             let fg = selected ? accent : (isCaption ? secondaryInk : palette.resolve(object.style.color).color)
             let resolved = context.resolve(
-                Text(text)
-                    .font(font)
+                mathLabelText(text, base: font, script: scriptFont)
                     .foregroundStyle(fg)
             )
             let measured = resolved.measure(in: CGSize(width: 800, height: 200))
@@ -1228,6 +1231,15 @@ extension SketchCanvas {
         }
     }
 
+    /// Renders label markup with math scripts at the requested fonts.
+    private func mathLabelText(_ source: String, base: Font, script: Font) -> Text {
+        Text(MathLabel.attributed(source,
+                                  base: base,
+                                  script: script,
+                                  superscriptOffset: 5,
+                                  subscriptOffset: -2))
+    }
+
     /// The point labels already drawn, so measure cards can step around them
     /// instead of covering a letter.
     private func pointLabelRects(context: inout GraphicsContext,
@@ -1244,8 +1256,9 @@ extension SketchCanvas {
             }
             let labelPoint = model.screenPoint(p + object.offset, size: size)
             let resolved = context.resolve(
-                Text(object.label)
-                    .font(.system(.callout, design: .rounded, weight: .semibold))
+                mathLabelText(object.label,
+                              base: .system(.callout, design: .rounded, weight: .semibold),
+                              script: .system(.caption2, design: .rounded, weight: .semibold))
             )
             let measured = resolved.measure(in: CGSize(width: 400, height: 80))
             rects.append(CGRect(x: labelPoint.x + 7 - 2,

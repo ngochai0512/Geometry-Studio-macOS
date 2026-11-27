@@ -67,7 +67,18 @@ extension InspectorView {
                             .textInputBorderShape(.roundedRectangle)
                             .frame(minWidth: 120)
                             .font(.subheadline)
+                            .help("Math: ^{2}, _{1}, \\alpha, \\overline{AB}, \\widehat{AB}")
                     }
+                }
+
+                if needsLabel(object), !object.label.isEmpty {
+                    Text(MathLabel.attributed(object.label,
+                                              base: .callout,
+                                              script: .caption2,
+                                              superscriptOffset: 5,
+                                              subscriptOffset: -2))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
 
                 if case .caption = object.kind {

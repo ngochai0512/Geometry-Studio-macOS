@@ -174,13 +174,38 @@ extension SVGExporter {
         parts.append(pointShapeElement(object.style.pointShape, at: p, radius: r, color: color))
 
         if object.showLabel && settings.showLabels && !object.label.isEmpty {
-            parts.append(element("text", [("x", num(p.x + 7)), ("y", num(p.y - 10)),
-                                          ("font-family", svgFontFamily), ("font-size", "12.5"),
-                                          ("font-weight", "600"), ("fill", color),
-                                          ("fill-opacity", "0.95")],
-                                 text: object.label))
+            parts.append(textElement(
+                [("x", num(p.x + 7)), ("y", num(p.y - 10)),
+                 ("font-family", svgFontFamily), ("font-size", "12.5"),
+                 ("font-weight", "600"), ("fill", color),
+                 ("fill-opacity", "0.95")],
+                content: mathLabelContent(object.label)))
         }
         return parts
+    }
+
+    /// Label markup becomes SVG tspans, so scripts keep their position on the
+    /// exported page. Overlines and arcs travel as combining characters.
+    private func mathLabelContent(_ source: String) -> String {
+        MathLabel.parse(source).map { run in
+            let text = escape(run.text)
+            switch run.script {
+            case .normal:
+                return text
+            case .superscript:
+                return "<tspan baseline-shift=\"super\" font-size=\"8\">\(text)</tspan>"
+            case .sub:
+                return "<tspan baseline-shift=\"sub\" font-size=\"8\">\(text)</tspan>"
+            }
+        }.joined()
+    }
+
+    private func textElement(_ attributes: [(String, String)], content: String) -> String {
+        var out = "<text"
+        for (key, value) in attributes {
+            out += " \(key)=\"\(value)\""
+        }
+        return out + ">" + content + "</text>"
     }
 
     private func pointHaloElement(at p: (x: Double, y: Double), radius: Double) -> String {
