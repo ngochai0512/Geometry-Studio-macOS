@@ -71,11 +71,11 @@ app-bundle binary does not carry it.
 - **Units and precision** — cm, inches or pixels; plain degrees, directed degrees or radians;
   0–5 decimal places, with centimetres, hundredths and degrees as the defaults.
 - **Transforms** — mark a mirror, center, angle, ratio or vector, then reflect, rotate, dilate or translate. Images keep their source and update.
-- **Graph** — orthogonal (standard or dense), triangular and polar grids with a selectable colour and bold style, a custom canvas background, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
-- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback; automatic (the default, following the system appearance), light, dark, paper and custom-tint canvas themes flip ink, labels, cards, axes and halos together, and a dark custom background inverts them automatically.
+- **Graph** — orthogonal (standard or dense), triangular, polar and isometric grids with a selectable colour and bold style, canvas background themes, axes with optional numbers and bold/italic/serif labels, snapping with haptic feedback, function plots, derivative plots, integral shading, tangents, value tables and root/intersection solvers.
+- **Rendering** — optional Metal geometry rendering for fills, paths, traces and ticks, with the SwiftUI Canvas as the default and fallback; automatic (the default, following the system appearance), light, dark, paper (ivory, legal, manila and graph tints) and custom-tint canvas themes flip ink, labels, cards, axes and halos together, and a dark custom background inverts them automatically.
 - **Labels** — lightweight math markup: `^{2}` superscripts, `_{1}` subscripts, `\alpha`-style
   Greek names, `\overline{AB}` overlines and `\widehat{AB}` arcs, rendered on the canvas and
-  flattened in SVG export.
+  carried into SVG export as positioning tspans.
 - **Animation and tracing** — animate a point along its constraint, trace moving objects, and
   construct a locus from a driver point and the point it drives.
 - **Inspector** — one panel with the selected object above a persistent, collapsible layer list: label, definition, editable X/Y, radius, length and angle, colour, line width, dash, tick marks, angle marker, point shape and size, fill, arc fill, parameters, coordinate systems, units, angle unit and decimal precision.
@@ -96,15 +96,18 @@ app-bundle binary does not carry it.
   perpendicular lines; selectable angle increments (5°, 15°, 30°, 45°, 90°); square, dense,
   triangular, polar and isometric grids. The toolbar grid menu switches visibility, style, colour,
   axes, labels, snapping and angle increments in one place.
-- **Editing** — object browser with search, kind filter, lock and front/back layer order;
-  in-place label editing; drag any construction by its free points; on-canvas scale and rotate
-  handles; duplicate (⌘D), copy and paste across documents, and paste in place.
-- **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K command
-  palette and an undo history panel.
+- **Editing** — a persistent layer list with search, kind filter, collapsible groups, lock and
+  front/back order; numeric X/Y, radius, length and angle fields; double-click a free point to
+  type its coordinates, or a label to rename it; drag any construction by its free points;
+  on-canvas scale and rotate handles; duplicate (⌘D), copy and paste across documents, and
+  paste in place.
+- **Discovery** — a one-time welcome with tips and a built-in triangle sample, a ⌘K floating
+  command palette with fuzzy search, shortcuts and recents, and an undo history panel.
 - **Presentation** — hide the toolbar, inspector and status bar, enter full screen, and page
   through open sketches with the arrow keys.
-- **Live feedback** — a readout of a dragged point's position and dependent measurements, plus
-  area and perimeter for the current selection in the status bar. Haptics accompany snap
+- **Live feedback** — a readout of a dragged point's position and dependent measurements, a
+  dimension chip while a segment, circle, polygon or angle is being drawn, and area and perimeter
+  for the current selection in the status bar. Haptics accompany snap
   alignment and rotation detents on Force Touch trackpads.
 - **New documents** — a new sketch starts blank, with only the grid and axes from your
   preferences.

@@ -6,7 +6,7 @@ Anyone adding a new **object family** (arc, mark, vector, table, picture, button
 
 ## Status snapshot
 
-Implemented today: 10 tools, 13 constructions, 17 measurements, 4 transforms, graph with function plots and snapping, inspector (style, definition, units, precision), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep) and an undo history panel, versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, export to vector PDF, SVG and PNG, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode, arc fills, circle by radius, a hand/pan tool, a construction protocol, smart guides, angle snapping, an isometric grid, an object browser with search/filter/lock/layer order, in-place label editing, on-canvas transform handles, duplicate and cross-document copy/paste, onboarding tips with a built-in triangle sample, a command palette, a live drag readout and selection area/perimeter, a share sheet for PDF and PNG, canvas themes with an automatic dark mode and custom tints, math label markup, and a presentation mode.
+Implemented today: 10 tools, construction and measurement commands, 4 transforms, graph with function plots and snapping, a persistent inspector (layers, style, definitions, editable coordinates, radius, length and angle), labels and captions, animation, tracing, locus, calculations, named undo/redo with history menu (80 deep) and an undo history panel, versioned JSON `.gsp` save/open, document-based windows with autosave, Versions, Open Recent and tabs, preferences for new sketches, printing with page setup, export to vector PDF, SVG and PNG, an XcodeGen-built app bundle with exported `gsp` type and icon, CI plus tagged GitHub releases, `--screenshot` mode, arc fills, circle by radius, a hand/pan tool, a construction protocol, smart guides, angle snapping, an isometric grid, a persistent layer list with search/filter/lock/order, in-place label editing, on-canvas transform handles, duplicate and cross-document copy/paste, onboarding tips with a built-in triangle sample, a command palette, live drag and creation readouts and selection area/perimeter, a share sheet for PDF and PNG, canvas themes with an automatic dark mode and custom tints, math label markup, VoiceOver object descriptions with keyboard nudging and space-panning, and a presentation mode.
 
 Missing outright: tables, iterations, custom tools, scripts, action buttons, pictures, pages, parametric plots, hot text.
 
@@ -85,6 +85,8 @@ Item 12 ships as two fill modes on the arc object: Sector (centre wedge) and Seg
 | 48 | Window state restore, tabs, Stage Manager behaviour | S | [ ] |
 | 49 | Math labels: superscripts, subscripts, Greek, overline, arc notation | M | [x] |
 | 50 | Presentation mode: hide chrome, full screen, page through | S | [x] |
+
+Item 47 is partial: VoiceOver object descriptions and the Escape/arrow/Space keyboard support are in; high contrast and full keyboard-only construction are not.
 
 ## Tier 5 — Editing and UX depth
 
