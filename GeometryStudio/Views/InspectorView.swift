@@ -6,15 +6,12 @@ import AppKit
 /// menu; marks live next to the transform actions.
 struct InspectorView: View {
     @Bindable var model: SketchModel
-    var onTextAnnotation: (Vec2) -> Void
     @State var browserQuery = ""
     @State var browserFilter: ObjectBrowserFilter = .all
     @State private var collapsedGroups: Set<String> = []
 
-    init(model: SketchModel,
-         onTextAnnotation: @escaping (Vec2) -> Void) {
+    init(model: SketchModel) {
         _model = Bindable(wrappedValue: model)
-        self.onTextAnnotation = onTextAnnotation
     }
 
     var body: some View {
@@ -28,6 +25,7 @@ struct InspectorView: View {
                 objectSection
                 numericSection
                 actionsSection
+                animationSection
                 stylingSection
                 layersSection
             }
@@ -62,7 +60,6 @@ struct InspectorView: View {
 }
 
 #Preview("Inspector") {
-    InspectorView(model: SketchModel.sample(),
-                  onTextAnnotation: { _ in })
+    InspectorView(model: SketchModel.sample())
         .frame(width: 320, height: 720)
 }

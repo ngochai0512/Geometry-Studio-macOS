@@ -64,12 +64,7 @@ struct ContentView: View {
     private func chrome<V: View>(_ content: V) -> some View {
         content
             .inspector(isPresented: inspectorVisibleBinding) {
-                InspectorView(model: model,
-                              onTextAnnotation: { point in
-                                  textAnchor = point
-                                  textDraft = ""
-                                  showTextSheet = true
-                              })
+                InspectorView(model: model)
                     .inspectorColumnWidth(min: 280, ideal: 306, max: 380)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
