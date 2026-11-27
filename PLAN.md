@@ -2,7 +2,7 @@
 
 Feature plan for Geometry Studio, written 2026-11-16. Effort is rough: **S** ≤ 1 day, **M** 1–3 days, **L** 1–2 weeks. Nothing here is committed to a date.
 
-Anyone adding a new **object family** (arc, mark, vector, table, picture, button) must land it in all four places: `ObjectKind` (`Model/ObjectModel.swift`), `GeometryEval` (`Model/GeometryEval.swift`), drawing plus hit-testing (`Views/CanvasDrawing.swift`, `Model/SketchModel+Geometry.swift`), and the inspector/measure UI (`Views/InspectorView.swift`, `Views/ContentView.swift`). See AGENTS.md §3.
+Anyone adding a new **object family** (arc, mark, vector, table, picture, button) must land it in all four places: `ObjectKind` (`Model/Objects/ObjectModel.swift`), `GeometryEval` (`Model/Evaluation/GeometryEval.swift`), drawing plus hit-testing (`View/Canvas/CanvasDrawing.swift`, `Model/Sketch/SketchModel_Geometry.swift`), and the inspector/measure UI (`View/Inspector/InspectorView.swift`, `View/Workspace/ContentView.swift`). See AGENTS.md §3.
 
 ## Status snapshot
 
@@ -15,12 +15,12 @@ Missing outright: tables, iterations, custom tools, scripts, action buttons, pic
 | # | Feature | Why it matters | Where it lands | Effort | Done |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Document schema version + migration | `SketchDocument` is unversioned; one new non-optional field breaks every saved sketch, because synthesized `Decodable` requires keys even when the property has a default | `Model/Document.swift` | S | [x] |
-| 2 | Real document app: `DocumentGroup`, autosave, Versions, Open Recent, multiple windows and tabs | A single `WindowGroup` with hand-rolled `NSOpenPanel` gave no autosave, Versions, recents or window tabs | `App/GeometryStudioApp.swift`, `Views/DocumentWorkspace.swift` | M | [x] |
+| 2 | Real document app: `DocumentGroup`, autosave, Versions, Open Recent, multiple windows and tabs | A single `WindowGroup` with hand-rolled `NSOpenPanel` gave no autosave, Versions, recents or window tabs | `App/GeometryStudioApp.swift`, `View/Workspace/DocumentWorkspace.swift` | M | [x] |
 | 3 | App bundle, Info.plist, exported `gsp` UTType, icon | Without it `UTType(filenameExtension: "gsp")` returns `nil`, so panels filter as JSON; no Dock identity | `project.yml`, `App/` | S | [x] |
 | 4 | Preferences window: default units, precision, angle unit, canvas defaults | Preferences were hidden inside the inspector, and every new sketch reset to the same defaults | new `Settings` scene | S | [x] |
-| 5 | Printing: `NSPrintOperation`, page setup, print preview | Printing was not implemented at all | `Printing/` | M | [x] |
-| 6 | Export: PDF (vector), SVG, PNG @2x| A geometry tool's output goes into papers and slides; currently there is no way to get a picture out | new `Export/` | M | [x] |
-| 7 | Undo polish: coalesce drags into one step, name actions, history menu | Every `checkpoint()` was one opaque step, and a click without movement pushed a no-op | `Model/SketchModel.swift` | S | [x] |
+| 5 | Printing: `NSPrintOperation`, page setup, print preview | Printing was not implemented at all | `Service/Printing/` | M | [x] |
+| 6 | Export: PDF (vector), SVG, PNG @2x| A geometry tool's output goes into papers and slides; currently there is no way to get a picture out | new `Service/Export/` | M | [x] |
+| 7 | Undo polish: coalesce drags into one step, name actions, history menu | Every `checkpoint()` was one opaque step, and a click without movement pushed a no-op | `Model/Sketch/SketchModel.swift` | S | [x] |
 | 8 | Error handling: alerts for failed open/save, corrupt-file recovery | Errors only reached `statusMessage` and were easy to miss | `Model/SketchFileDocument.swift` | S | [x] |
 | 9 | CI and release: build/test on push, signed and notarized `arm64` `.app` to GitHub Releases | Nothing existed; blocks distributing at all. Sparkle updates need an EdDSA keypair and appcast, deferred | `.github/workflows/` | M | [x] |
 | 10 | Docs truth pass: README/MECHANICS claimed animation, tracing and loci were absent — they had shipped | Misleading for users and for future agents | `README.md`, `MECHANICS.md` | S | [x] |
@@ -35,17 +35,17 @@ Deferred within Tier 1: window appearance moved to #45, where the canvas theme l
 | 12 | Arc interior, sector and segment fills | four places | M | [x] |
 | 13 | Arc angle and arc length measurements | `MeasureKind`, `GeometryEval` | S | [x] |
 | 14 | Persistent marks: mirror, center, angle, ratio, vector (replacing modal dialogs) | `ObjectKind` + inspector | M | [x] |
-| 15 | Circle by center + numeric radius | `SketchModel+Construction` | S | [x] |
+| 15 | Circle by center + numeric radius | `SketchModel_Construction` | S | [x] |
 | 16 | Parameter / slider objects | `ObjectKind` | S | [x] |
-| 17 | Tangents (point→circle, circle→circle), perpendicular bisector, radical axis | `GeometryEval`, `SketchModel+Construction` | S/M | [x] |
+| 17 | Tangents (point→circle, circle→circle), perpendicular bisector, radical axis | `GeometryEval`, `SketchModel_Construction` | S/M | [x] |
 | 18 | Polar distance/direction, abscissa/ordinate, coordinate distance | `MeasureKind` | S | [x] |
 | 19 | Vector objects, vector sum and difference | `ObjectKind`, canvas arrows | S | [x] |
-| 20 | Tick marks, angle-marker styles, richer point shapes and sizes | `Geometry/Style.swift`, `CanvasDrawing` | S | [x] |
-| 21 | Construction protocol: ordered list of every construction step | `Views/SketchSheets.swift` (ProtocolSheet) | S | [x] |
-| 22 | Describe / Information tool: click an object, read its definition | `Model/GeometryEval+Definition.swift` + inspector | S | [x] |
+| 20 | Tick marks, angle-marker styles, richer point shapes and sizes | `Model/Geometry/Style.swift`, `CanvasDrawing` | S | [x] |
+| 21 | Construction protocol: ordered list of every construction step | `View/Sheets/SketchSheets.swift` (ProtocolSheet) | S | [x] |
+| 22 | Describe / Information tool: click an object, read its definition | `Model/Evaluation/GeometryEval_Definition.swift` + inspector | S | [x] |
 | 23 | Measure-all, and label placement rules | `GeometryEval.measurement` | S | [x] |
 | 24 | Coordinate systems as objects: multiple axes, polar grid, per-graph units | `ObjectKind` + `CanvasDrawing` | M | [x] |
-| 25 | Graph extras: derivative and integral shading, tangent at x, root/intersection solver, value table | `Geometry/Expression`, model extensions | M | [x] |
+| 25 | Graph extras: derivative and integral shading, tangent at x, root/intersection solver, value table | `Model/Geometry/Expression`, model extensions | M | [x] |
 
 Item 18: abscissa, ordinate, polar distance/direction and coordinate distance are implemented. Coordinate distance uses the origin and unit of a selected coordinate-system object when one is in the selection; otherwise it uses the document axes and unit.
 
@@ -64,8 +64,8 @@ Item 12 ships as two fill modes on the arc object: Sector (centre wedge) and Seg
 | 32 | Pictures: embed PNG/JPEG, move, scale, rotate, transform | `ObjectKind` + asset storage (needs #1) | M | [ ] |
 | 33 | Multiple pages per document, page thumbnails | `SketchDocument`, document UI | M | [ ] |
 | 34 | Parametric plots and plotted points | `EvalPath`, `Expression` | M | [ ] |
-| 35 | Motion controller: play/pause, speed, direction, animate along a path | `SketchModel+Animation` | S/M | [ ] |
-| 36 | Locus upgrades: adaptive sampling, gooseneck handling, trace fade and length | `SketchModel+Animation` | S/M | [ ] |
+| 35 | Motion controller: play/pause, speed, direction, animate along a path | `SketchModel_Animation` | S/M | [ ] |
+| 36 | Locus upgrades: adaptive sampling, gooseneck handling, trace fade and length | `SketchModel_Animation` | S/M | [ ] |
 | 37 | Hot links and hyperlinks inside text | text object | S | [ ] |
 
 ## Tier 4 — Modern macOS
