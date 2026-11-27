@@ -29,6 +29,8 @@ final class SketchModel {
     @ObservationIgnored
     var dragSnapExclusions: Set<UUID> = []
     var isPointerOverCanvas = false
+    /// Space held: pan without switching away from the current tool.
+    var spacePanning = false
     /// The canvas's last laid-out size, so Fit and the inspector use the real
     /// window instead of a guessed frame.
     var canvasSize = CGSize(width: 900, height: 720)

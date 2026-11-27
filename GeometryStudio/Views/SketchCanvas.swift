@@ -179,6 +179,11 @@ struct SketchCanvas: View {
                     updateCursor(for: hoveredObjectID)
                 }
             }
+            .onChange(of: model.spacePanning) { _, _ in
+                if !isPanning {
+                    updateCursor(for: hoveredObjectID)
+                }
+            }
             .onChange(of: model.settings.useMetalRenderer) { _, _ in
                 metalReady = false
             }
@@ -197,7 +202,30 @@ struct SketchCanvas: View {
                 }
             }
             .accessibilityLabel("Geometry canvas")
+            .accessibilityChildren {
+                ForEach(model.objects.filter(\.visible)) { object in
+                    Text(model.displayName(for: object))
+                        .accessibilityLabel(model.displayName(for: object))
+                        .accessibilityValue(accessibilityValue(for: object))
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction {
+                            model.select(object.id)
+                        }
+                }
+            }
         }
+    }
+
+    /// The spoken value: measurement text when the object has one, otherwise
+    /// its construction definition.
+    private func accessibilityValue(for object: SketchObject) -> String {
+        if case .caption(let text) = object.kind {
+            return text
+        }
+        if let measurement = model.evaluated(object.id).text, !measurement.isEmpty {
+            return measurement
+        }
+        return model.definition(for: object)
     }
 }
 

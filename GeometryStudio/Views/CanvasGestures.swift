@@ -21,7 +21,7 @@ extension SketchCanvas {
     func dragGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                if model.tool == .pan {
+                if model.tool == .pan || model.spacePanning {
                     if !isPanning {
                         isPanning = true
                         NSCursor.closedHand.set()
@@ -218,7 +218,7 @@ extension SketchCanvas {
                 defer {
                     if isPanning {
                         isPanning = false
-                        if model.tool == .pan, model.isPointerOverCanvas {
+                        if model.tool == .pan || model.spacePanning, model.isPointerOverCanvas {
                             NSCursor.openHand.set()
                         } else {
                             NSCursor.arrow.set()
@@ -249,11 +249,11 @@ extension SketchCanvas {
                     handleBasePositions = [:]
                     dragPreviewStart = nil
                     dragPreviewCurrent = nil
-                    if model.tool != .pan {
+                    if model.tool != .pan, !model.spacePanning {
                         model.clearSmartGuides()
                     }
                 }
-                if model.tool == .pan {
+                if isPanning || model.tool == .pan || model.spacePanning {
                     return
                 }
                 let start = model.worldPoint(value.startLocation, size: size)
@@ -473,7 +473,7 @@ extension SketchCanvas {
         guard !isPanning else {
             return
         }
-        if model.tool == .pan {
+        if model.tool == .pan || model.spacePanning {
             NSCursor.openHand.set()
         } else if isDrawingTool(model.tool) {
             NSCursor.crosshair.set()

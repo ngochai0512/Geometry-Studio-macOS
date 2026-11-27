@@ -342,6 +342,20 @@ extension SketchModel {
         recordTraceSamples()
     }
 
+    /// Arrow-key nudging: move the free points under the selection by a world
+    /// delta. One undo step covers a run of key presses.
+    func nudgeSelection(by delta: Vec2) {
+        guard !selection.isEmpty, delta.x.isFinite, delta.y.isFinite else {
+            return
+        }
+        let positions = movablePositions(for: selection)
+        guard !positions.isEmpty else {
+            return
+        }
+        checkpoint("Nudge Selection", coalescing: "nudge-selection")
+        translateMovablePoints(positions, by: delta)
+    }
+
     func movableSelectionBounds() -> WorldRect? {
         guard canTransformSelection else {
             return nil
