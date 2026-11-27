@@ -1159,7 +1159,7 @@ extension SketchCanvas {
 
     private func drawTexts(context: inout GraphicsContext, size: CGSize, evaluator: inout GeometryEval) {
         let ordered = model.objects.sorted { $0.order < $1.order }
-        var occupied: [CGRect] = []
+        var occupied = pointLabelRects(context: &context, size: size)
         for object in ordered where object.visible && object.showLabel {
             if case .parameter = object.kind {
                 continue
@@ -1226,6 +1226,34 @@ extension SketchCanvas {
                 context.fill(Path(ellipseIn: grip), with: .color(accent.opacity(0.8)))
             }
         }
+    }
+
+    /// The point labels already drawn, so measure cards can step around them
+    /// instead of covering a letter.
+    private func pointLabelRects(context: inout GraphicsContext,
+                                 size: CGSize) -> [CGRect] {
+        guard model.settings.showLabels else {
+            return []
+        }
+        var rects: [CGRect] = []
+        var evaluator = model.evaluator()
+        for object in model.objects where object.visible && object.showLabel {
+            guard !object.label.isEmpty,
+                  let p = evaluator.evaluate(object.id).point else {
+                continue
+            }
+            let labelPoint = model.screenPoint(p + object.offset, size: size)
+            let resolved = context.resolve(
+                Text(object.label)
+                    .font(.system(.callout, design: .rounded, weight: .semibold))
+            )
+            let measured = resolved.measure(in: CGSize(width: 400, height: 80))
+            rects.append(CGRect(x: labelPoint.x + 7 - 2,
+                                y: labelPoint.y - 7 - measured.height - 2,
+                                width: measured.width + 4,
+                                height: measured.height + 4))
+        }
+        return rects
     }
 
     private func drawDraft(context: inout GraphicsContext, size: CGSize) {
