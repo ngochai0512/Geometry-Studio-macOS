@@ -40,6 +40,7 @@
 		80EB49AE566C1BB316B33C09 /* ArcFill.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBED27E4FF8CDE8C00DE8732 /* ArcFill.swift */; };
 		826DE0559E3D9908C1269446 /* SketchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C504DC3BD0627A7B2832842D /* SketchModel.swift */; };
 		829DF0B3749AC48FCE6CE820 /* InspectorBindings_Editors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B5EF2E544A48A5E449443C /* InspectorBindings_Editors.swift */; };
+		86EF811D30B9C8D30020EE0F /* GSIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 86EF811C30B9C8D30020EE0F /* GSIcon.icon */; };
 		875F9F947878D1E05DE60FB7 /* SketchModel_Transforms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FB520B2878BD34F65C217E2 /* SketchModel_Transforms.swift */; };
 		8B8788BC489E508F7EC57FED /* SketchModel_Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C6A430C6078E6D20C16A32E /* SketchModel_Animation.swift */; };
 		8D15DFEAD17FD008CA31513F /* SketchFileDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BD9E53B43AB5CDC20C3B0A6 /* SketchFileDocument.swift */; };
@@ -133,6 +134,7 @@
 		760D16CE83D156258FB32949 /* ObjectModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectModel.swift; sourceTree = "<group>"; };
 		78D19522C4B0303D4FFE592F /* GeometryEval_Constructions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryEval_Constructions.swift; sourceTree = "<group>"; };
 		854D8A97208F6AF3CD7F0F9F /* SketchModel_ToolActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchModel_ToolActions.swift; sourceTree = "<group>"; };
+		86EF811C30B9C8D30020EE0F /* GSIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = GSIcon.icon; sourceTree = "<group>"; };
 		968A99A688205178658FDCD1 /* MeasureKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasureKind.swift; sourceTree = "<group>"; };
 		A143D9269D8CFF44C65ADF7D /* TransformSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformSpec.swift; sourceTree = "<group>"; };
 		A29C01EB83DD5CF3DA0207CA /* DocumentWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentWorkspace.swift; sourceTree = "<group>"; };
@@ -155,7 +157,7 @@
 		DDBD36E07CBC44635B56D81E /* VectorKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorKind.swift; sourceTree = "<group>"; };
 		DDCD4B2E247E4B74A2E0805B /* GeometryEval_Graphs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryEval_Graphs.swift; sourceTree = "<group>"; };
 		E7FDC64F19077D154A90EF9C /* EvalPath_Intersections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvalPath_Intersections.swift; sourceTree = "<group>"; };
-		E94BD59BC83A8F9EC6FC9EAE /* GeometryStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeometryStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E94BD59BC83A8F9EC6FC9EAE /* Geometry Studio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Geometry Studio.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EAEA65A1DA1365B44ACBF4AE /* GraphFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphFeature.swift; sourceTree = "<group>"; };
 		EBED27E4FF8CDE8C00DE8732 /* ArcFill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcFill.swift; sourceTree = "<group>"; };
 		F00974386D797ABA5495CACB /* SVGExporter_Grid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter_Grid.swift; sourceTree = "<group>"; };
@@ -245,7 +247,7 @@
 		54943C2C3A14D734B9517891 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E94BD59BC83A8F9EC6FC9EAE /* GeometryStudio.app */,
+				E94BD59BC83A8F9EC6FC9EAE /* Geometry Studio.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -374,6 +376,7 @@
 			children = (
 				56F2ECC38BF2D20A5F641BCC /* App */,
 				6305C66E8BCB457233DA59B6 /* GeometryStudio */,
+				86EF811C30B9C8D30020EE0F /* GSIcon.icon */,
 				54943C2C3A14D734B9517891 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -422,7 +425,7 @@
 			packageProductDependencies = (
 			);
 			productName = GeometryStudio;
-			productReference = E94BD59BC83A8F9EC6FC9EAE /* GeometryStudio.app */;
+			productReference = E94BD59BC83A8F9EC6FC9EAE /* Geometry Studio.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -432,7 +435,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					5739AD860436FE0D192B040F = {
 						ProvisioningStyle = Automatic;
@@ -464,6 +467,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9EE8CEE82FC0465DA11AD86A /* Assets.xcassets in Resources */,
+				86EF811D30B9C8D30020EE0F /* GSIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -559,14 +563,18 @@
 		1615C50363D172256B6582C5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = GSIcon;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				LM_FILTER_WARNINGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MARKETING_VERSION = 0.1.0;
@@ -611,9 +619,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -627,6 +637,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -636,14 +647,18 @@
 		344C12CAE8868AE4BEE4A36C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = GSIcon;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				LM_FILTER_WARNINGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MARKETING_VERSION = 0.1.0;
@@ -688,9 +703,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -711,6 +728,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
