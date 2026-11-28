@@ -134,8 +134,8 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          APP="build/GeometryStudio.xcarchive/Products/Applications/GeometryStudio.app"
-          test -d "$APP"
+          APP=$(find build/GeometryStudio.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$APP"
           ditto -c -k --keepParent "$APP" "build/GeometryStudio-$VERSION.zip"
 
           xcrun notarytool submit "build/GeometryStudio-$VERSION.zip" \
@@ -154,8 +154,8 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          APP="build/GeometryStudio.xcarchive/Products/Applications/GeometryStudio.app"
-          test -d "$APP"
+          APP=$(find build/GeometryStudio.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$APP"
           NAME="GeometryStudio-$VERSION-unsigned.zip"
           ditto -c -k --keepParent "$APP" "build/$NAME"
           (cd build && shasum -a 256 "$NAME" > checksums.txt)
