@@ -145,3 +145,8 @@ to type its coordinates, or a label to edit it in place.
 - The document format is this app's own JSON-based `.gsp`.
 - Custom tools/scripts, action buttons, iterations, tables, pictures and multiple pages are not
   included in this version.
+  
+## Contributions
+- The app's icon uses SVG resources from [SVG Repo](https://www.svgrepo.com).
+
+2026 Ngoc Hari - developed by Hanoian student.
