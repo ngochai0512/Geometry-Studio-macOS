@@ -91,6 +91,7 @@ opencode.json
 # Uncomment if these files are local-only
 # local.xcconfig
 # Secrets.xcconfig
+graphify-out/
 
 # =========================
 # Logs and temporary files
